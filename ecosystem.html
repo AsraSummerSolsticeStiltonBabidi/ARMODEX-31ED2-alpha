@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ecosystem — 31ED2 Armodex</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Fascinate&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#05070a; --panel:#0d1218cc; --panel-solid:#0d1218; --border:#26313d;
@@ -25,20 +25,27 @@
     cursor:pointer;text-align:center;padding:24px;gap:14px;
   }
   #startOverlay.hidden{display:none;}
+  #startFractalCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.6;pointer-events:none;z-index:0;}
   #startOverlay h1{
-    font-family:'Chakra Petch',sans-serif;font-weight:700;text-transform:uppercase;
-    font-size:clamp(38px,9vw,84px);margin:0;letter-spacing:.03em;line-height:1;
+    position:relative;z-index:1;
+    font-family:'Fascinate',cursive;font-weight:400;text-transform:lowercase;
+    font-size:clamp(34px,8vw,78px);margin:0;letter-spacing:.02em;line-height:1.1;
     color:#bff4e6;text-shadow:0 0 18px rgba(127,224,200,.55),0 0 44px rgba(127,224,200,.25);
-    animation:ecoHue 9s linear infinite;
+    animation:ecoHue 4s linear infinite, ecoPupil 2.2s ease-in-out infinite;
   }
-  #startOverlay p{max-width:560px;color:var(--muted);font-size:14.5px;line-height:1.55;margin:0;}
+  #startOverlay p{position:relative;z-index:1;max-width:580px;color:var(--muted);font-size:14.5px;line-height:1.55;margin:0;}
   #startOverlay .go{
+    position:relative;z-index:1;
     margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
     color:#bff4e6;border:1.5px solid #3d5b56;padding:11px 26px;border-radius:999px;animation:ecoPulse 1.8s ease-in-out infinite;
   }
   @keyframes ecoPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
-  @keyframes ecoHue{from{filter:hue-rotate(0deg);}to{filter:hue-rotate(360deg);}}
-  @media (prefers-reduced-motion: reduce){ #startOverlay h1{animation:none;} #startOverlay .go{animation:none;} }
+  @keyframes ecoHue{from{filter:hue-rotate(0deg) saturate(1.2);}to{filter:hue-rotate(360deg) saturate(2);}}
+  @keyframes ecoPupil{
+    0%,100%{transform:scale(1);text-shadow:0 0 18px rgba(127,224,200,.55),0 0 44px rgba(127,224,200,.25);}
+    50%{transform:scale(1.06);text-shadow:0 0 34px rgba(255,255,255,.9),0 0 70px rgba(191,244,230,.6),0 0 120px rgba(214,172,44,.4);}
+  }
+  @media (prefers-reduced-motion: reduce){ #startOverlay h1{animation:none;} #startOverlay .go{animation:none;} #startFractalCanvas{display:none;} }
 
   /* ---------- HUD ---------- */
   #hud{
@@ -59,17 +66,25 @@
   }
   #dayNightReadout b{color:var(--text);}
 
-  /* ---------- whitelist panel ---------- */
-  #whitelistPanel{
-    position:fixed;top:52px;right:12px;z-index:60;width:min(320px,86vw);max-height:min(60vh,480px);overflow:auto;
+  /* ---------- god settings panel (whitelist lives inside as a submenu) ---------- */
+  #godSettingsPanel{
+    position:fixed;top:52px;right:12px;z-index:60;width:min(320px,86vw);max-height:min(70vh,560px);overflow:auto;
     background:var(--panel-solid);border:1.3px solid var(--border);border-radius:10px;padding:10px;
     box-shadow:0 12px 30px rgba(0,0,0,.5);
   }
-  #whitelistPanel.hidden{display:none;}
-  #whitelistPanel h3{margin:2px 4px 8px;font-family:'Chakra Petch',sans-serif;font-size:13px;letter-spacing:.04em;color:var(--accent);}
-  #whitelistPanel label{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:6px;font-size:12.5px;cursor:pointer;}
-  #whitelistPanel label:hover{background:#ffffff0c;}
-  #whitelistPanel .empty-note{color:var(--muted);font-size:12px;padding:8px 4px;}
+  #godSettingsPanel.hidden{display:none;}
+  #godSettingsPanel h3{margin:2px 4px 8px;font-family:'Chakra Petch',sans-serif;font-size:13px;letter-spacing:.04em;color:var(--accent);}
+  #godSettingsPanel .sub-h{margin:14px 4px 6px;font-family:'Chakra Petch',sans-serif;font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--border);padding-top:10px;}
+  #godSettingsPanel .pop-row{display:flex;align-items:center;gap:10px;padding:6px 4px 10px;}
+  #godSettingsPanel .pop-row input[type=range]{flex:1;accent-color:var(--accent);}
+  #godSettingsPanel .pop-val{font-family:'JetBrains Mono',monospace;color:var(--accent2);font-weight:700;min-width:20px;text-align:center;}
+  #godSettingsPanel label{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:6px;font-size:12.5px;cursor:pointer;}
+  #godSettingsPanel label:hover{background:#ffffff0c;}
+  #godSettingsPanel .empty-note{color:var(--muted);font-size:12px;padding:8px 4px;}
+
+  /* ---------- global: chord number / nickname distinctive styling ---------- */
+  .chord-tag{color:var(--accent2);font-weight:800;}
+  .muted{color:var(--muted);}
 
   /* ---------- tooltip for a hovered/tapped chord ---------- */
   #tip{
@@ -77,6 +92,31 @@
     border-radius:8px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);
     transform:translate(-50%,-130%);white-space:nowrap;display:none;box-shadow:0 8px 20px rgba(0,0,0,.4);
   }
+
+  /* ---------- chord info panel (compact, closeable, feature: click for +info) ---------- */
+  #infoPanel{
+    position:fixed;z-index:120;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(360px,88vw);max-height:min(72vh,540px);overflow:auto;
+    background:var(--panel-solid);border:1.3px solid var(--border);border-radius:12px;
+    box-shadow:0 20px 50px rgba(0,0,0,.55);padding:0;
+  }
+  #infoPanel.hidden{display:none;}
+  #infoPanelHead{
+    position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;
+    padding:10px 12px;border-bottom:1px solid var(--border);background:var(--panel-solid);
+    font-family:'Chakra Petch',sans-serif;font-size:14px;color:var(--accent);letter-spacing:.02em;
+  }
+  #infoPanelHeadLeft{display:flex;align-items:center;gap:8px;min-width:0;}
+  #infoPanelTitleIcon{display:flex;align-items:center;flex-shrink:0;}
+  #infoPanelTitleIcon svg{display:block;width:34px;height:34px;}
+  #infoPanelTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #infoPanelBody{padding:12px;font-size:12.5px;line-height:1.6;color:var(--text);}
+  #infoPanelBody .row{margin-bottom:10px;}
+  #infoPanelBody .muted{color:var(--muted);}
+  #infoPanelBody .tag{display:inline-block;background:#ffffff10;border:1px solid var(--border);border-radius:999px;padding:2px 8px;margin:2px 4px 2px 0;font-size:11px;}
+  #infoPanelBody .occ{padding:3px 0;border-bottom:1px dashed #ffffff14;font-size:11.5px;}
+  #infoPanelSvgWrap{display:flex;justify-content:center;padding:8px 0 4px;}
+  #infoPanelSvgWrap svg{background:#00000030;border-radius:8px;border:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -86,7 +126,7 @@
   </div>
   <div id="hud">
     <div class="cluster">
-      <button class="eco-btn" id="whitelistToggleBtn" title="Restrict the population to a hand-picked subset">☰ Whitelist</button>
+      <button class="eco-btn" id="godSettingsToggleBtn" title="Whitelist + max population">👁 God Settings</button>
       <button class="eco-btn" id="muteBtn" title="Mute/unmute">🔊</button>
     </div>
     <div class="cluster">
@@ -94,16 +134,30 @@
       <button class="eco-btn" id="closeBtn" title="Close this tab">✕</button>
     </div>
   </div>
-  <div id="whitelistPanel" class="hidden">
-    <h3>WHITELIST — visible only in Ecosystem</h3>
+  <div id="godSettingsPanel" class="hidden">
+    <h3>👁 GOD SETTINGS</h3>
+    <div class="pop-row">
+      <span class="muted" style="font-size:12px;">Max population</span>
+      <input type="range" id="maxPopSlider" min="1" max="20" step="1" value="20">
+      <span class="pop-val" id="maxPopVal">20</span>
+    </div>
+    <div class="sub-h">▸ whitelist submenu</div>
     <label style="display:flex;align-items:center;gap:8px;padding:4px;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);margin-bottom:6px;padding-bottom:8px;cursor:pointer;">
       <input type="checkbox" id="wlActiveCheckbox"> Restrict population to checked chords only
     </label>
     <div id="whitelistList"></div>
   </div>
+  <div id="infoPanel" class="hidden">
+    <div id="infoPanelHead">
+      <span id="infoPanelHeadLeft"><span id="infoPanelTitleIcon"></span><span id="infoPanelTitle">—</span></span>
+      <button class="eco-btn" id="infoPanelClose" title="Close">✕</button>
+    </div>
+    <div id="infoPanelBody"></div>
+  </div>
   <div id="startOverlay">
-    <h1>Ecosystem</h1>
-    <p>Up to 20 chords from your Armodex collection, wandering a small physics sandbox. Drag anything. Collide chords into the glowing objects to strum, sustain, launch, and transpose. A sun/moon cycle shifts the whole tuning reference every 15 seconds.</p>
+    <canvas id="startFractalCanvas"></canvas>
+    <h1>your ecosystem</h1>
+    <p>Up to 20 chords from your Armodex collection, wandering a living physics sandbox. Ctrl+click a chord for details, or Ctrl+drag to select several at once. Collide chords into the glowing objects — including a flying black hole — to strum, sustain, launch, transpose, and more. Watch for storms, tornadoes, night constellations, a nursery plant, and the tidepool below. A sun/moon cycle shifts the whole tuning reference every 15 seconds.</p>
     <div class="go">click / tap to begin</div>
   </div>
 <script>
@@ -194,6 +248,131 @@ function computeChordLayout(rawIntervals, qrOffsets, targetSpan) {
     const angle = (idxAmongOthers / others) * Math.PI * 2 - Math.PI / 2;
     return { x: Math.cos(angle) * targetSpan, y: Math.sin(angle) * targetSpan };
   });
+}
+
+/* ---------- REAL hex-grid minimap (revision round 3): ported faithfully from
+   31edo-harmonydex_121.html's hexesRect/hexesRectCentered/candidatesForRaw/
+   clusterFocusPoints/chordHexConfigFromQr/chordHexConfig/buildHexSVG, so the
+   Ecosystem info panel can show the exact same hex-grid preview as the main
+   app's Shapes-tab card instead of a generic layout. Same "odd-q" rectangular
+   block + auto-fit-around-focus-points approach; ported here as a single
+   SVG-string builder (buildHexMapSvgEco) instead of the original's live DOM
+   builder, since Ecosystem already assembles its panels as HTML strings. ---------- */
+function hexesRectEco(cols, rows) {
+  const out = [];
+  for (let col = 0; col < cols; col++) {
+    for (let row = 0; row < rows; row++) {
+      const q = col;
+      const r = row - Math.floor((col - (col % 2)) / 2);
+      out.push({ q, r });
+    }
+  }
+  return out;
+}
+function hexesRectCenteredEco(cols, rows) {
+  const base = hexesRectEco(cols, rows);
+  const ciMid = Math.floor(cols / 2), riMid = Math.floor(rows / 2);
+  const qMid = ciMid, rMid = riMid - Math.floor((ciMid - (ciMid % 2)) / 2);
+  return base.map(c => ({ q: c.q - qMid, r: c.r - rMid }));
+}
+function candidatesForRawEco(raw, kRange) {
+  const r0 = ((3 * raw) % 8 + 8) % 8;
+  const out = [];
+  for (let k = -kRange; k <= kRange; k++) {
+    const r = r0 - 8 * k;
+    const numer = raw - 3 * r;
+    if (numer % 8 === 0) out.push({ q: numer / 8, r });
+  }
+  return out;
+}
+// Fallback for the rare species with no recorded qrOffsets (never built via
+// the main app's hex-map builder): places every note as one compact cluster,
+// each note picking whichever equivalent lattice cell stays closest to the
+// notes already placed. Mirrors clusterFocusPoints exactly.
+function clusterFocusPointsEco(eff) {
+  const order = eff.map((v, i) => ({ v, i })).sort((a, b) => Math.abs(a.v) - Math.abs(b.v));
+  const chosen = []; const bySig = {};
+  order.forEach(({ v, i }) => {
+    const cands = candidatesForRawEco(v, 6);
+    let best = cands[0], bestScore = Infinity;
+    cands.forEach(c => {
+      const score = chosen.length === 0
+        ? Math.max(Math.abs(c.q), Math.abs(c.r))
+        : Math.max(...chosen.map(p => Math.max(Math.abs(p.q - c.q), Math.abs(p.r - c.r))));
+      if (score < bestScore) { bestScore = score; best = c; }
+    });
+    chosen.push(best);
+    bySig[i] = best;
+  });
+  return eff.map((v, i) => bySig[i]);
+}
+// Mirrors chordHexConfigFromQr(...,rootOffset=0,...) / chordHexConfig(): the
+// grid always grows just enough (verified against the real generated block,
+// same as the main app) to actually contain every one of the chord's exact
+// cells, so nothing is ever guessed or coincidentally repeated.
+function chordHexConfigEco(rawIntervals, qrOffsets, tonesPcSet, octaveEquivalence) {
+  const raw = rawIntervals.slice();
+  const rootIdx = raw.indexOf(0);
+  const safeRootIdx = rootIdx >= 0 ? rootIdx : 0;
+  const points = (qrOffsets && qrOffsets.length === raw.length)
+    ? qrOffsets.map(p => ({ q: p.q, r: p.r }))
+    : clusterFocusPointsEco(raw);
+  const focusRoot = points[safeRootIdx] || { q: 0, r: 0 };
+  const focusTones = points.filter((_, i) => i !== safeRootIdx);
+  const qs = points.map(p => p.q), rs = points.map(p => p.r);
+  const spread = Math.max(Math.max(...qs) - Math.min(...qs), Math.max(...rs) - Math.min(...rs));
+  let n = Math.max(4, Math.ceil(spread / 2) + 1);
+  for (; n <= 80; n++) {
+    const cells = hexesRectCenteredEco(2 * n + 1, 2 * Math.ceil(n * 0.8) + 1);
+    const present = new Set(cells.map(c => c.q + ',' + c.r));
+    if (points.every(p => present.has(p.q + ',' + p.r))) break;
+  }
+  const nSafe = n + 6;
+  const cols = 2 * nSafe + 1, rows = 2 * Math.ceil(nSafe * 0.8) + 1;
+  const echoPcs = (octaveEquivalence && tonesPcSet) ? tonesPcSet : null;
+  return { cols, rows, focusPoints: points, focusRoot, focusTones, echoPcs };
+}
+function hexPointsEco(cx, cy, size) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const ang = Math.PI / 180 * (60 * i);
+    pts.push((cx + size * Math.cos(ang)).toFixed(2) + ',' + (cy + size * Math.sin(ang)).toFixed(2));
+  }
+  return pts.join(' ');
+}
+// Mirrors buildHexSVG's non-interactive rendering path (auto-fit viewBox
+// cropped tightly around the chord's own cells, every cell of the grown
+// block still drawn dim underneath for context, root/tone/octave-echo
+// highlight colors matching the main app's hue-per-pitch-class convention).
+function buildHexMapSvgEco(cfg, size) {
+  size = size || 15;
+  const positioned = hexesRectCenteredEco(cfg.cols, cfg.rows).map(c => {
+    const { x, y } = axialToPixel(c.q, c.r, size);
+    const raw = pitchAt(c.q, c.r);
+    return { q: c.q, r: c.r, x, y, raw, pc: mod31(raw) };
+  });
+  const chosen = cfg.focusPoints.map(fp => axialToPixel(fp.q, fp.r, size));
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  chosen.forEach(p => {
+    minX = Math.min(minX, p.x - size); maxX = Math.max(maxX, p.x + size);
+    minY = Math.min(minY, p.y - size * 0.95); maxY = Math.max(maxY, p.y + size * 0.95);
+  });
+  const pad = size * 1.8;
+  const vbW = maxX - minX + 2 * pad, vbH = maxY - minY + 2 * pad;
+  let polys = '';
+  positioned.forEach(c => {
+    const isRoot = c.q === cfg.focusRoot.q && c.r === cfg.focusRoot.r;
+    const isTone = !isRoot && cfg.focusTones.some(p => p.q === c.q && p.r === c.r);
+    const hue = Math.round(c.pc * (360 / 31));
+    const isEcho = !isRoot && !isTone && cfg.echoPcs && cfg.echoPcs.has(c.pc);
+    let fill, stroke, sw;
+    if (isRoot) { fill = 'hsl(' + hue + ',88%,55%)'; stroke = '#bff4e6'; sw = 3; }
+    else if (isTone) { fill = 'hsl(' + hue + ',88%,50%)'; stroke = '#d6ac2c'; sw = 2.4; }
+    else if (isEcho) { fill = 'hsl(' + hue + ',36%,24%)'; stroke = '#33424f'; sw = 1.2; }
+    else { fill = 'hsl(' + hue + ',18%,15%)'; stroke = '#26313d'; sw = 1; }
+    polys += '<polygon points="' + hexPointsEco(c.x, c.y, size * 0.92) + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"/>';
+  });
+  return '<svg viewBox="' + (minX - pad).toFixed(1) + ' ' + (minY - pad).toFixed(1) + ' ' + vbW.toFixed(1) + ' ' + vbH.toFixed(1) + '" width="100%" height="180" preserveAspectRatio="xMidYMid meet">' + polys + '</svg>';
 }
 
 // Mirrors findSpeciesContains(): which OTHER cataloged shapes fit inside this
@@ -295,13 +474,6 @@ if (typeof module !== 'undefined' && module.exports) {
 /* ============================================================================
    SECTION: SHARED UTIL (seeded PRNG)
    ============================================================================ */
-/* ============================================================================
-   ECOSYSTEM — SHARED UTIL
-   Tiny seeded PRNG (mulberry32) so both tests and the running app can share
-   one deterministic-when-seeded random source. Production code seeds it from
-   Date.now()/performance.now() (still "effectively random" per spec); tests
-   seed it with a fixed number for repeatable assertions.
-   ============================================================================ */
 function makeRng(seed) {
   let a = seed >>> 0;
   return function rng() {
@@ -317,7 +489,8 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /* ============================================================================
-   SECTION: PHYSICS LAYER (ported + headless-tested against eco-src/test-physics.js)
+   SECTION: PHYSICS LAYER (ported + headless-tested against eco-src/test-physics.js
+   and, this revision round, eco-src/test-physics2.js against the retuned DEFAULTS)
    ============================================================================ */
 /* ============================================================================
    ECOSYSTEM — PHYSICS LAYER (Layer 1)
@@ -331,16 +504,22 @@ if (typeof module !== 'undefined' && module.exports) {
    below; it only touches the physical fields it owns.
    ============================================================================ */
 
+// Revision round 2 (user feedback: too much settling/stagnation, wants more
+// movement) -- lighter gravity, bouncier walls/bodies, and faster locomotion
+// across the board versus the original tuning, so the population glides and
+// bounces further before resting instead of piling up quickly. Empirically
+// validated (test-physics2.js) to cut the fraction of time bodies spend
+// resting from ~72% to ~51% under an identical random scenario.
 const DEFAULTS = {
-  gravityAccel: 700,      // px/s^2
-  flySteer: 45,           // px/s^2 of random steering
-  flyMaxSpeed: 75,        // px/s
-  crawlSpeed: 32,         // px/s
-  rollAccel: 26,          // px/s^2
-  rollMaxSpeed: 95,       // px/s
-  wallRestitution: 0.55,
-  bodyRestitution: 0.7,
-  rollBounce: 0.32,
+  gravityAccel: 460,      // px/s^2 (was 700)
+  flySteer: 60,           // px/s^2 of random steering (was 45)
+  flyMaxSpeed: 100,       // px/s (was 75)
+  crawlSpeed: 46,         // px/s (was 32)
+  rollAccel: 34,          // px/s^2 (was 26)
+  rollMaxSpeed: 130,      // px/s (was 95)
+  wallRestitution: 0.68,  // was 0.55
+  bodyRestitution: 0.8,   // was 0.7
+  rollBounce: 0.42,       // was 0.32
   floorThickness: 40,
 };
 
@@ -513,39 +692,462 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /* ============================================================================
-   SECTION: AUDIO PORT — single-ambient-voice rule (tested against eco-src/test-audioPort.js)
+   SECTION: FORCES (Layer 1b, NEW this revision round — headless-tested
+   against eco-src/test-forces.js + test-forces2.js, 246 assertions).
+   Pure, side-effect-free per-frame steering/trigger helpers. Mirrors
+   physics.js's discipline: no DOM, no audio, no direct world mutation --
+   every function here takes plain body-like data in and returns a plain
+   {fx,fy} delta, a decision, or a derived list, letting the ecosystem-level
+   loop (further down this file) apply the result to real bodies. This is
+   what keeps black-hole pull, tornado turbulence, hunting steering, the
+   summon event, and border-proximity detection unit-testable without any
+   mock world/audio context at all.
+   ============================================================================ */
+
+function dist(ax, ay, bx, by) { return Math.hypot(bx - ax, by - ay); }
+function mod31f(n) { return ((n % 31) + 31) % 31; }
+
+/* ---------- Black hole: pull increases sharply at close range, negligible far
+   away, capped so it never produces an unbounded/NaN-prone acceleration. ---------- */
+function blackHolePull(bodyX, bodyY, holeX, holeY, cfg) {
+  cfg = cfg || {};
+  const strength = cfg.strength != null ? cfg.strength : 26000; // tuned so only slow/near chords actually reach it
+  const minDist = cfg.minDist != null ? cfg.minDist : 40;
+  const maxDist = cfg.maxDist != null ? cfg.maxDist : 260;
+  const maxAccel = cfg.maxAccel != null ? cfg.maxAccel : 500;
+  const d = dist(bodyX, bodyY, holeX, holeY);
+  if (d > maxDist || d < 1e-6) return { fx: 0, fy: 0, dist: d };
+  const clampedD = Math.max(minDist, d);
+  const mag = Math.min(maxAccel, strength / (clampedD * clampedD));
+  const nx = (holeX - bodyX) / d, ny = (holeY - bodyY) / d;
+  return { fx: nx * mag, fy: ny * mag, dist: d };
+}
+
+/* ---------- Tornado: a moving funnel that travels right-to-left across the
+   world at a fixed vx, exerting a turbulent (rotating + inward) force on
+   anything within its radius; bodies outside the radius feel nothing. ---------- */
+function createTornado(startXFrac, worldWidth, worldHeight, nowMs, durationMs, rng) {
+  rng = rng || Math.random;
+  // Revision round 3 fix: much bigger radius and a much taller vertical
+  // range (was a narrow 90-130px band confined to the lower half of the
+  // world) plus a faster crossing speed -- the previous tuning meant the
+  // funnel often swept a thin strip of empty space and could die of old age
+  // before ever reaching the far side of a wide window, which is why it
+  // could look like it "didn't do anything" even though the force math
+  // itself was fine.
+  const groundY = worldHeight * (0.30 + rng() * 0.55);
+  return {
+    x: worldWidth * (startXFrac != null ? startXFrac : 1.05), // starts just off the right edge
+    y: groundY,
+    vx: -(75 + rng() * 55), // right-to-left, faster so it reliably crosses the whole width in its lifetime
+    radius: 160 + rng() * 90,
+    bornAt: nowMs,
+    diesAt: nowMs + durationMs,
+  };
+}
+function tornadoPositionAt(tornado, nowMs) {
+  const dtSec = Math.max(0, nowMs - tornado.bornAt) / 1000;
+  return { x: tornado.x + tornado.vx * dtSec, y: tornado.y };
+}
+function tornadoForceOn(bodyX, bodyY, tornadoX, tornadoY, tornadoRadius, cfg) {
+  cfg = cfg || {};
+  const d = dist(bodyX, bodyY, tornadoX, tornadoY);
+  if (d > tornadoRadius) return { fx: 0, fy: 0 };
+  const inwardMag = cfg.inwardStrength != null ? cfg.inwardStrength : 420;
+  const swirlMag = cfg.swirlStrength != null ? cfg.swirlStrength : 640;
+  const liftMag = cfg.liftStrength != null ? cfg.liftStrength : 360;
+  const falloff = 1 - d / tornadoRadius; // 1 at center, 0 at the edge
+  if (d < 1e-6) return { fx: 0, fy: -liftMag }; // exactly at the eye: no direction to push sideways, but still a strong straight-up launch instead of nothing
+  const nx = (tornadoX - bodyX) / d, ny = (tornadoY - bodyY) / d; // inward
+  const tx = -ny, ty = nx; // tangential (perpendicular to inward) for the swirl
+  return {
+    fx: (nx * inwardMag + tx * swirlMag) * falloff,
+    fy: (ny * inwardMag + ty * swirlMag - liftMag) * falloff, // net upward bias so things actually fly, not just orbit
+  };
+}
+
+/* ---------- Hunting: an occasional predatory state for "big" chords -- steer
+   toward the nearest chord it would actually eat on collision (a strict
+   pitch-class superset by raw interval set, independent of live transposition
+   -- a cheap, honest proxy for "would this collision result in an eat",
+   since the real eat decision at collision time is still made authoritatively
+   by director.js's resolveCollision; this only decides where to steer). ---------- */
+function pcSetFromIntervals(intervals) { return new Set(intervals.map(mod31f)); }
+function isStrictSupersetSet(big, small) {
+  if (big.size <= small.size) return false;
+  for (const x of small) if (!big.has(x)) return false;
+  return true;
+}
+function pickHuntTarget(hunter, candidates) {
+  const hunterPcs = pcSetFromIntervals(hunter.intervals);
+  let best = null, bestDist = Infinity;
+  candidates.forEach(c => {
+    if (c.id === hunter.id) return;
+    const cPcs = pcSetFromIntervals(c.intervals);
+    if (!isStrictSupersetSet(hunterPcs, cPcs)) return;
+    const d = dist(hunter.x, hunter.y, c.x, c.y);
+    if (d < bestDist) { bestDist = d; best = c; }
+  });
+  return best;
+}
+function huntSteer(hunterX, hunterY, targetX, targetY, cfg) {
+  cfg = cfg || {};
+  const mag = cfg.strength != null ? cfg.strength : 60;
+  const d = dist(hunterX, hunterY, targetX, targetY);
+  if (d < 1e-6) return { fx: 0, fy: 0 };
+  return { fx: (targetX - hunterX) / d * mag, fy: (targetY - hunterY) / d * mag };
+}
+
+/* ---------- Summon event: pick two distinct live chords at random and pull
+   them toward each other so they collide 1-3 times before releasing. ---------- */
+function pickSummonPair(chordBodies, rng) {
+  rng = rng || Math.random;
+  if (chordBodies.length < 2) return null;
+  const i = Math.floor(rng() * chordBodies.length);
+  let j = Math.floor(rng() * (chordBodies.length - 1));
+  if (j >= i) j++;
+  return [chordBodies[i], chordBodies[j]];
+}
+function summonPull(fromX, fromY, toX, toY, cfg) {
+  cfg = cfg || {};
+  const mag = cfg.strength != null ? cfg.strength : 190;
+  const d = dist(fromX, fromY, toX, toY);
+  if (d < 1e-6) return { fx: 0, fy: 0 };
+  return { fx: (toX - fromX) / d * mag, fy: (toY - fromY) / d * mag };
+}
+
+/* ---------- Zone-border proximity: a quick blip as a chord nears the divider,
+   and a one-shot "arrived" chime the instant it actually crosses. Both are
+   edge-triggered (fire once per approach/crossing) so a chord idling right at
+   the threshold doesn't spam either sound every frame. ---------- */
+function borderProximityState(chordX, midX, nearThreshold) {
+  return Math.abs(chordX - midX) <= nearThreshold;
+}
+// prevSide/newSide: 'A'|'B'. Returns true exactly on the frame the side flips.
+function didCrossBorder(prevSide, newSide) {
+  return !!prevSide && !!newSide && prevSide !== newSide;
+}
+
+/* ---------- Common-tones AREA trigger: given every chord currently within the
+   object's detection radius, the pitch classes shared by ALL of them (empty
+   if fewer than 2 are in range, or if nothing is common to every one). ---------- */
+function chordsWithinRadius(objX, objY, radius, chordBodies) {
+  return chordBodies.filter(c => dist(objX, objY, c.x, c.y) <= radius);
+}
+function sharedPitchClassesAcross(chordBodiesRawNotes) {
+  // chordBodiesRawNotes: array of raw-note arrays (already resolved to live
+  // absolute pitch, i.e. post zone/transpose/night), one per chord in range.
+  if (chordBodiesRawNotes.length < 2) return [];
+  const sets = chordBodiesRawNotes.map(notes => new Set(notes.map(mod31f)));
+  let shared = sets[0];
+  for (let i = 1; i < sets.length; i++) {
+    shared = new Set([...shared].filter(x => sets[i].has(x)));
+    if (shared.size === 0) break;
+  }
+  return Array.from(shared);
+}
+
+/* ---------- Landing arpeggio: remap a chord's pitch-class set into a strictly
+   ascending sequence spanning raw octave 3 (steps [0,31)) up through octave 5
+   (steps [62,93)), so "lowest in octave 3 ... highest in octave 5" holds
+   regardless of how many distinct notes the chord has (1 note -> just octave
+   3; many notes -> spread evenly across the 3-octave span, each successive
+   note strictly higher than the last since pitch classes are pre-sorted and
+   octave assignment is monotonic non-decreasing). ---------- */
+function arpeggioRawNotesOctave3to5(intervals) {
+  const uniq = Array.from(new Set(intervals.map(mod31f))).sort((a, b) => a - b);
+  const n = uniq.length;
+  if (n === 0) return [];
+  if (n === 1) return [uniq[0]];
+  return uniq.map((pc, i) => {
+    const octave = Math.round((i / (n - 1)) * 2); // 0,1,2 -> octave 3,4,5
+    return pc + octave * 31;
+  });
+}
+
+/* ---------- Per-chord pitch micro-variation: a small deterministic-per-chord
+   cents offset (some chords read a bit higher, some a bit lower) purely for
+   sonic variety -- derived from the rng at spawn time and stored on the body,
+   this helper just documents/bounds the acceptable range so callers don't
+   drift into "out of tune" territory. ---------- */
+function pickPitchVarianceCents(rng) {
+  rng = rng || Math.random;
+  return (rng() - 0.5) * 24; // +/-12 cents: audible character, not mistuning
+}
+
+/* ---------- Anti-clump: a gentle, continuous alternative to waiting for the
+   next earthquake -- when several RESTING bodies end up packed closer than
+   `minSeparation`, each gets a small outward nudge away from its neighbors'
+   centroid, proportional to how crowded that spot is. Deliberately much
+   gentler than an earthquake impulse so it reads as "things don't like to
+   pile up" rather than another periodic shake. Only considers bodies the
+   caller says are resting/settled -- moving bodies are left alone. ---------- */
+function computeAntiClumpNudges(bodies, cfg) {
+  cfg = cfg || {};
+  // Revision round 3: stronger + slightly wider-reaching nudge (was 70/18)
+  // to more assertively break up static clumps that had settled in despite
+  // the round-2 tuning.
+  const minSeparation = cfg.minSeparation != null ? cfg.minSeparation : 82;
+  const nudgeStrength = cfg.nudgeStrength != null ? cfg.nudgeStrength : 27;
+  const maxNeighbors = cfg.maxNeighbors != null ? cfg.maxNeighbors : 8;
+  const nudges = [];
+  for (let i = 0; i < bodies.length; i++) {
+    const b = bodies[i];
+    let sx = 0, sy = 0, count = 0;
+    for (let j = 0; j < bodies.length; j++) {
+      if (i === j) continue;
+      const o = bodies[j];
+      const d = dist(b.x, b.y, o.x, o.y);
+      if (d < minSeparation && d > 1e-6) {
+        sx += (b.x - o.x) / d; sy += (b.y - o.y) / d;
+        count++;
+      }
+    }
+    if (count >= 2) { // only nudge when it's a genuine cluster (3+ bodies), not just two neighbors resting normally side by side
+      const crowding = Math.min(1, count / maxNeighbors);
+      const mag = Math.hypot(sx, sy) || 1;
+      nudges.push({ id: b.id, fx: (sx / mag) * nudgeStrength * crowding, fy: (sy / mag) * nudgeStrength * crowding });
+    }
+  }
+  return nudges;
+}
+
+/* ---------- Nursery: a newly-spawned chord can be "planted" (held fixed at a
+   stem attachment point, ignoring normal physics) for a fixed hold duration,
+   then released into free movement. Pure edge check only -- the actual
+   position-pinning happens at the ecosystem level, same division of labor as
+   everywhere else in this module. ---------- */
+function shouldDetachFromNursery(attachedAtMs, nowMs, holdMs) {
+  holdMs = holdMs != null ? holdMs : 10000;
+  return (nowMs - attachedAtMs) >= holdMs;
+}
+
+/* ---------- Breathing platforms: a small, slow vertical oscillation applied
+   uniformly to a platform's y (both its collision surface and its render
+   position use the same number, so nothing resting on it clips/floats).
+   Bounded amplitude and a per-platform phase offset so a row of platforms
+   doesn't all breathe in lockstep. ---------- */
+function platformBreatheOffset(nowMs, phaseSeed, amplitude, periodMs) {
+  amplitude = amplitude != null ? amplitude : 5;
+  periodMs = periodMs != null ? periodMs : 4200;
+  return Math.sin((nowMs / periodMs) * Math.PI * 2 + (phaseSeed || 0)) * amplitude;
+}
+
+/* ---------- Day/night brightness ramp: a smooth 0..1 scene-brightness
+   multiplier that peaks at solar noon and bottoms out at the deepest part of
+   the night, instead of the old instant swap at the day/night boundary.
+   frac is the 0..1 progress through the current half-cycle (day or night),
+   exactly what drawCelestial already computes. ---------- */
+function dayNightBrightness(frac, isNight) {
+  const clamped = Math.max(0, Math.min(1, frac));
+  const curve = Math.sin(clamped * Math.PI); // 0 at both edges, 1 at the midpoint, for EITHER half-cycle
+  // Revision round 3: widened further (was 0.42-0.60 night / 0.72-1.00 day)
+  // so the day/night swing reads as much more pronounced, per spec.
+  return isNight ? (0.28 + curve * 0.15) : (0.75 + curve * 0.32); // night stays much dimmer throughout, day brightens further toward noon
+}
+
+// A real rise-peak-set arc (not just a shallow wobble): starts at one
+// horizon (low, small y going toward the bottom of the sky band), climbs to
+// a peak well above the midline (smallest y, i.e. highest on screen) at
+// frac=0.5, then descends back to the other horizon at frac=1.
+function celestialArcPosition(frac, worldW, worldH) {
+  const clamped = Math.max(0, Math.min(1, frac));
+  const x = worldW * (0.08 + clamped * 0.84); // horizon to horizon, left to right
+  const horizonY = worldH * 0.34;
+  const arcHeight = worldH * 0.27;
+  const y = horizonY - Math.sin(clamped * Math.PI) * arcHeight;
+  return { x, y };
+}
+
+/* ---------- Revision round 3 additions ---------- */
+
+// Agar.io-style food particles: rather than hand-tuning a fixed "must eat
+// within N seconds" timeout to hit an exact 50/50 gray/colorful split (which
+// would depend on world size, particle count and population -- all things
+// that vary), the timeout ADAPTS every few seconds toward whatever value
+// actually keeps the live population's gray fraction near the target. Pure:
+// takes the current timeout + the just-measured gray fraction, returns the
+// next timeout; the caller (updateFoodParticles) owns the periodic call and
+// the actual per-chord bookkeeping.
+function nextFoodGrayTimeout(currentTimeoutMs, grayFraction, cfg) {
+  cfg = cfg || {};
+  const target = cfg.target != null ? cfg.target : 0.5;
+  const step = cfg.step != null ? cfg.step : 900;
+  const min = cfg.min != null ? cfg.min : 2500, max = cfg.max != null ? cfg.max : 22000;
+  const error = grayFraction - target; // >0: too many gray -> raise the timeout so it's easier to stay colorful
+  return Math.max(min, Math.min(max, currentTimeoutMs + error * step * 2));
+}
+
+// Black hole flight (revision round 3): the hole now roams using physics.js's
+// existing 'fly' locomotion (random steering, capped speed) instead of
+// sitting fixed, so blackHolePull's own tuning below is what makes its
+// passage actually displace nearby shapes at a distance, not just on contact.
+const BLACKHOLE_PULL_CFG = { strength: 44000, minDist: 40, maxDist: 330, maxAccel: 640 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    dist, mod31f,
+    blackHolePull,
+    createTornado, tornadoPositionAt, tornadoForceOn,
+    pcSetFromIntervals, isStrictSupersetSet, pickHuntTarget, huntSteer,
+    pickSummonPair, summonPull,
+    borderProximityState, didCrossBorder,
+    chordsWithinRadius, sharedPitchClassesAcross,
+    arpeggioRawNotesOctave3to5,
+    pickPitchVarianceCents,
+    computeAntiClumpNudges,
+    shouldDetachFromNursery,
+    platformBreatheOffset,
+    dayNightBrightness, celestialArcPosition,
+    nextFoodGrayTimeout,
+  };
+}
+
+/* ============================================================================
+   SECTION: QUAKE RHYTHM (Layer 1b, NEW this revision round — headless-tested
+   against eco-src/test-quakeRhythm.js + test-quakeRhythm-run.js, 113
+   assertions). Pure grid generation for the "quantized polyrhythm during an
+   earthquake" mechanic, modeled after 31edo-harmonydex_121.html's generative
+   Auto-articulation (scheduleArticulatedChord / scheduleRandomTopline): two
+   voices step evenly through a repeating slot, one taking `voiceA`
+   subdivisions and the other `voiceB` (the classic "3-against-2" polyrhythm
+   feel), plus an optional random topline voice. The grid is precomputed as a
+   flat, sorted list of {t, voice} onsets covering the whole quake duration so
+   the ecosystem-level loop can just ask "what's the next onset at/after t?"
+   every frame -- no direct audio/timer code in this module at all.
+   ============================================================================ */
+
+function pickVoiceCounts(rng) {
+  rng = rng || Math.random;
+  const choices = [2, 3, 4, 5, 7];
+  const a = choices[Math.floor(rng() * choices.length)];
+  let b = choices[Math.floor(rng() * choices.length)];
+  if (b === a) b = choices[(choices.indexOf(a) + 1) % choices.length]; // guarantee a genuine polyrhythm, not 1-against-1
+  return { voiceA: a, voiceB: b };
+}
+
+// durationMs: total quake length. slotMs: length of one repeating cycle.
+function createQuakeGrid(rng, durationMs, slotMs) {
+  rng = rng || Math.random;
+  slotMs = slotMs || (1400 + rng() * 900); // ~1.4-2.3s per slot, a comfortable "bar" length
+  const { voiceA, voiceB } = pickVoiceCounts(rng);
+  const toplineOn = rng() < 0.55;
+  const numSlots = Math.max(1, Math.ceil(durationMs / slotMs));
+  const onsets = [];
+  for (let s = 0; s < numSlots; s++) {
+    const base = s * slotMs;
+    for (let i = 0; i < voiceA; i++) {
+      const t = base + (i / voiceA) * slotMs;
+      if (t < durationMs) onsets.push({ t, voice: 'A' });
+    }
+    for (let i = 0; i < voiceB; i++) {
+      const t = base + (i / voiceB) * slotMs;
+      if (t < durationMs) onsets.push({ t, voice: 'B' });
+    }
+    if (toplineOn) {
+      // sparse, phrase-like topline ticks -- not every slot, mirroring the
+      // original's ~22% whole-slot-rest / partial-subdivision-skip feel.
+      const toplineSteps = Math.max(voiceA, voiceB);
+      for (let i = 0; i < toplineSteps; i++) {
+        if (rng() < 0.32) {
+          const t = base + (i / toplineSteps) * slotMs;
+          if (t < durationMs) onsets.push({ t, voice: 'topline' });
+        }
+      }
+    }
+  }
+  onsets.sort((x, y) => x.t - y.t);
+  return { slotMs, voiceA, voiceB, toplineOn, durationMs, onsets };
+}
+
+// All onsets with t in (fromMs, toMs] -- used once per frame to find exactly
+// which grid points were just crossed during this frame's delta, without
+// re-scanning the whole grid from the start every time.
+function onsetsInWindow(grid, fromMs, toMs) {
+  return grid.onsets.filter(o => o.t > fromMs && o.t <= toMs);
+}
+
+// Smallest onset time >= fromMs (used to quantize a collision-triggered
+// sound forward onto the next available grid point instead of playing it
+// immediately). Returns null if the quake ends before any onset remains.
+function quantizeForward(grid, fromMs) {
+  for (let i = 0; i < grid.onsets.length; i++) {
+    if (grid.onsets[i].t >= fromMs) return grid.onsets[i];
+  }
+  return null;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { pickVoiceCounts, createQuakeGrid, onsetsInWindow, quantizeForward };
+}
+
+/* ============================================================================
+   SECTION: AUDIO PORT — single-ambient-voice rule (tested against
+   eco-src/test-audioPort.js; revision-round-2 additions -- arpeggio()/blip()
+   and the extraCents pitch-variance parameter -- covered by
+   eco-src/test-integration2.js)
    ============================================================================ */
 /* ============================================================================
    ECOSYSTEM — AUDIO PORT (Layer 2, driver-agnostic half)
    Owns the "one ambient voice at a time" concurrency rule and nothing else.
-   One-shots (strum/noise) always just pass through and can overlap freely.
-   Ambient (ambient pad/hold) is a single named slot: starting a new one
-   always stops whichever was previously playing first. This wrapper is
-   identical in tests and production — only the underlying `driver` differs
-   (a MockDriver that records calls in tests, a real Web Audio driver in
-   ecosystem.html) — so the concurrency rule itself only has to be verified
-   once, against the mock, and is trusted from then on.
+   One-shots (strum/noise/arpeggio/blip) always just pass through and can
+   overlap freely. Ambient (ambient pad/hold) is a single named slot:
+   starting a new one always stops whichever was previously playing first.
+   This wrapper is identical in tests and production — only the underlying
+   `driver` differs (a MockDriver that records calls in tests, a real Web
+   Audio driver further down this file) — so the concurrency rule itself
+   only has to be verified once, against the mock, and is trusted from then on.
+
+   Revision round 2 additions: arpeggio() for the landing-arpeggio feature;
+   blip() for the zone-border-proximity feature (a very short, fast-release
+   tonal tick, distinct from noiseTick's non-tonal filtered noise); strum()
+   and startAmbient() both gained an optional trailing extraCents parameter
+   (per-chord pitch micro-variation) that passes straight through to the
+   driver; startRain()/stopRain() are a thin ecosystem.html-specific
+   extension (not part of the tested eco-src module) for the rain-weather
+   ambient bed -- deliberately NOT routed through the single-ambient-voice
+   slot above, since rain is a background atmosphere, not a chord voice.
    ============================================================================ */
 function createAudioPort(driver) {
   let ambient = null; // { notes, root, handle }
   return {
-    strum(rawNotes, root, timbre) {
+    strum(rawNotes, root, timbre, extraCents, quiet) {
       if (!rawNotes || rawNotes.length === 0) return;
-      driver.playOneShot(rawNotes.slice(), root, timbre || 'guitar', 'strum');
+      driver.playOneShot(rawNotes.slice(), root, timbre || 'guitar', 'strum', extraCents || 0, !!quiet);
     },
     noiseTick() {
       driver.playNoise();
     },
-    startAmbient(rawNotes, root, timbre) {
+    arpeggio(rawNotes, root, timbre, totalDurSec, extraCents, quiet) {
+      if (!rawNotes || rawNotes.length === 0) return;
+      driver.playArpeggio(rawNotes.slice(), root, timbre || 'guitar', totalDurSec || 2, extraCents || 0, !!quiet);
+    },
+    blip(rawNotes, root, extraCents, quiet) {
+      if (!rawNotes || rawNotes.length === 0) return;
+      driver.playBlip(rawNotes.slice(), root, extraCents || 0, !!quiet);
+    },
+    startAmbient(rawNotes, root, timbre, extraCents, quiet) {
       if (ambient) driver.stopSustain(ambient.handle);
-      const handle = driver.startSustain(rawNotes.slice(), root, timbre || 'guitar');
+      const handle = driver.startSustain(rawNotes.slice(), root, timbre || 'guitar', extraCents || 0, !!quiet);
       ambient = { notes: rawNotes.slice(), root, handle };
     },
     stopAmbient() {
       if (ambient) { driver.stopSustain(ambient.handle); ambient = null; }
     },
+    // Revision round 3: re-pitches whatever is CURRENTLY sounding in place
+    // (a smooth frequency ramp on the live oscillators) instead of
+    // stopping/restarting -- used when the source chord's root changes
+    // (zone crossing / transposer hit) while its pad-hold ambient is still
+    // playing, so the audible pitch actually follows the visual change.
+    retuneAmbient(rawNotes, root, extraCents) {
+      if (!ambient) return;
+      driver.retuneSustain(ambient.handle, rawNotes.slice(), extraCents || 0);
+      ambient = { notes: rawNotes.slice(), root, handle: ambient.handle };
+    },
     getAmbientNotes() { return ambient ? ambient.notes.slice() : null; },
     getAmbientRoot() { return ambient ? ambient.root : null; },
+    startRain() { if (driver.startRain) driver.startRain(); },
+    stopRain() { if (driver.stopRain) driver.stopRain(); },
   };
 }
 
@@ -554,14 +1156,17 @@ function createMockDriver() {
   let handleSeq = 1;
   return {
     calls,
-    playOneShot(notes, root, timbre, style) { calls.push({ type: 'oneshot', notes, root, timbre, style }); },
+    playOneShot(notes, root, timbre, style, extraCents, quiet) { calls.push({ type: 'oneshot', notes, root, timbre, style, extraCents, quiet }); },
     playNoise() { calls.push({ type: 'noise' }); },
-    startSustain(notes, root, timbre) {
+    playArpeggio(notes, root, timbre, totalDurSec, extraCents, quiet) { calls.push({ type: 'arpeggio', notes, root, timbre, totalDurSec, extraCents, quiet }); },
+    playBlip(notes, root, extraCents, quiet) { calls.push({ type: 'blip', notes, root, extraCents, quiet }); },
+    startSustain(notes, root, timbre, extraCents, quiet) {
       const handle = 'h' + (handleSeq++);
-      calls.push({ type: 'startSustain', notes, root, timbre, handle });
+      calls.push({ type: 'startSustain', notes, root, timbre, extraCents, quiet, handle });
       return handle;
     },
     stopSustain(handle) { calls.push({ type: 'stopSustain', handle }); },
+    retuneSustain(handle, notes, extraCents) { calls.push({ type: 'retuneSustain', handle, notes, extraCents }); },
   };
 }
 
@@ -570,7 +1175,9 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /* ============================================================================
-   SECTION: DIRECTOR — collision -> action rules (tested against eco-src/test-director.js)
+   SECTION: DIRECTOR — collision -> action rules (tested against
+   eco-src/test-director.js; revision-round-2 additions covered by
+   eco-src/test-integration2.js)
    ============================================================================ */
 /* ============================================================================
    ECOSYSTEM — DIRECTOR (Layer 2, game-logic half)
@@ -584,8 +1191,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
    Entity shape this module expects (superset of a physics.js body):
      chord:  { kind:'chord', id, intervals, transposeOffset, zone, isBig, ... }
-     object: { kind:'object', id, objectType: 'strum'|'padhold'|'commontones'
-                                              |'launcher'|'transposer', ... }
+     object: { kind:'object', id, objectType: 'strum'|'padhold'|'launcher'
+                                              |'transposer'|'blackhole', ... }
 
    ctx shape:
      {
@@ -595,6 +1202,14 @@ if (typeof module !== 'undefined' && module.exports) {
        getAmbientNotes() -> number[]|null,
        timbre: 'sine'|'guitar',
      }
+
+   Revision round 2: added the black-hole bounce case; the common-tones object
+   is no longer a point-collision trigger (it's now a continuous AREA effect
+   driven from the ecosystem loop, see the FORCES section's chordsWithinRadius
+   / sharedPitchClassesAcross) so it just falls through to the default (pure
+   physics bounce, no game-logic action); 'strum' actions now carry a
+   `chordId` back-reference so applyActions can look up that specific chord's
+   pitchVarianceCents for the per-chord pitch micro-variation feature.
    ============================================================================ */
 
 function mod31_(n) { return ((n % 31) + 31) % 31; }
@@ -623,13 +1238,25 @@ function resolveChordChord(a, b, ctx) {
   const pcA = pcSetOf(notesA), pcB = pcSetOf(notesB);
   const sharedPcs = new Set([...pcA].filter(x => pcB.has(x)));
   if (sharedPcs.size > 0) {
-    actions.push({ type: 'strum', notes: sharedRawNotes(notesA, sharedPcs), root: notesA[0], timbre: ctx.timbre });
+    actions.push({ type: 'strum', notes: sharedRawNotes(notesA, sharedPcs), root: notesA[0], timbre: ctx.timbre, chordId: a.id });
   } else {
     actions.push({ type: 'noise' });
   }
-  if (isStrictSuperset(pcA, pcB)) {
+  // Eat decision (revision round 3 fix): now uses STRUCTURAL containment --
+  // each chord's own raw interval shape, independent of its current live
+  // transposition -- exactly matching pickHuntTarget's criterion in FORCES,
+  // instead of the live absolute pitch classes (pcA/pcB) used just above for
+  // the strum decision. Previously a "big" chord could hunt down, chase, and
+  // physically collide with a smaller one it structurally contains, and
+  // still silently fail to eat it, whenever the two happened to be at
+  // different zones/transpositions (independent transposeOffset/zone per
+  // chord can shift pcA/pcB out of literal alignment even though the SHAPES
+  // are still in a strict-superset relationship) -- this is what was behind
+  // "I drag a big chord onto a small one and it doesn't eat it."
+  const structA = pcSetFromIntervals(a.intervals), structB = pcSetFromIntervals(b.intervals);
+  if (isStrictSupersetSet(structA, structB)) {
     actions.push({ type: 'eat', eaterId: a.id, eatenId: b.id });
-  } else if (isStrictSuperset(pcB, pcA)) {
+  } else if (isStrictSupersetSet(structB, structA)) {
     actions.push({ type: 'eat', eaterId: b.id, eatenId: a.id });
   }
   return actions;
@@ -640,31 +1267,17 @@ function resolveChordObject(chord, obj, ctx) {
   const root = notes[0];
   switch (obj.objectType) {
     case 'strum':
-      return [{ type: 'strum', notes, root, timbre: ctx.timbre }];
+      return [{ type: 'strum', notes, root, timbre: ctx.timbre, chordId: chord.id }];
     case 'padhold':
       return [{ type: 'startAmbient', notes, root, timbre: ctx.timbre, sourceChordId: chord.id, objectId: obj.id }];
-    case 'commontones': {
-      const ambientNotes = ctx.getAmbientNotes();
-      if (!ambientNotes || ambientNotes.length === 0) {
-        return [{ type: 'strum', notes, root, timbre: ctx.timbre }];
-      }
-      const ambientPcs = pcSetOf(ambientNotes);
-      const chordPcs = pcSetOf(notes);
-      const sharedPcs = new Set([...chordPcs].filter(x => ambientPcs.has(x)));
-      if (sharedPcs.size > 0) {
-        return [{ type: 'strum', notes: sharedRawNotes(notes, sharedPcs), root, timbre: ctx.timbre }];
-      }
-      // Ambient is audible but shares nothing with this chord -- mirrors the
-      // chord-vs-chord "no shared notes -> noise tick" rule rather than
-      // inventing a third (silent) outcome the spec never describes.
-      return [{ type: 'noise' }];
-    }
+    // common-tones is no longer a point-collision trigger (revision round 2)
+    // -- see the file header comment. Falls through to default.
     case 'launcher': {
       const angle = ctx.rng() * Math.PI * 2;
       const speed = 220 + ctx.rng() * 90;
       return [
         { type: 'launch', id: chord.id, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed },
-        { type: 'strum', notes, root, timbre: ctx.timbre }, // audible confirmation of the hit
+        { type: 'strum', notes, root, timbre: ctx.timbre, chordId: chord.id }, // audible confirmation of the hit
       ];
     }
     case 'transposer': {
@@ -673,7 +1286,21 @@ function resolveChordObject(chord, obj, ctx) {
       const transposedNotes = notes.map(n => n + delta);
       return [
         { type: 'setTransposeOffset', id: chord.id, transposeOffset: newOffset },
-        { type: 'strum', notes: transposedNotes, root: transposedNotes[0], timbre: ctx.timbre }, // confirms the new pitch
+        { type: 'strum', notes: transposedNotes, root: transposedNotes[0], timbre: ctx.timbre, chordId: chord.id }, // confirms the new pitch
+      ];
+    }
+    case 'blackhole': {
+      // A firm shove directly AWAY from the hole (not toward -- collision
+      // means it got too close despite the pull, so it bounces off hard)
+      // plus a distinct percussive noise instead of a melodic strum, so a
+      // black-hole bounce reads as a physical event, not another chime.
+      const dx = chord.x - obj.x, dy = chord.y - obj.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const speed = 260 + Math.min(140, d);
+      const nx = dx / d, ny = dy / d;
+      return [
+        { type: 'launch', id: chord.id, vx: nx * speed, vy: ny * speed },
+        { type: 'noise' },
       ];
     }
     default:
@@ -695,7 +1322,8 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /* ============================================================================
-   SECTION: ACTION APPLIER (tested against eco-src/test-integration.js)
+   SECTION: ACTION APPLIER (tested against eco-src/test-integration.js +
+   eco-src/test-integration2.js)
    ============================================================================ */
 /* ============================================================================
    ECOSYSTEM — ACTION APPLIER (Layer 2 glue)
@@ -705,21 +1333,37 @@ if (typeof module !== 'undefined' && module.exports) {
    methods in response to a collision -- physics.js and director.js never
    call each other or audio code directly, exactly per the "sections talk
    through small, explicit function calls" requirement.
+
+   Revision round 2: 'eat' now supports an optional onEatStart hook so the
+   eaten body can shrink into the eater's center over a short animation
+   instead of vanishing instantly (backward compatible -- without the hook,
+   behavior is identical to before). 'strum'/'startAmbient' now look up the
+   originating chord (via action.chordId / action.sourceChordId) to pass its
+   per-chord pitchVarianceCents through to AudioPort as an extra tuning
+   offset, for the "some chords sound a bit higher/lower" feature.
    ============================================================================ */
 function applyActions(actions, env) {
-  // env: { world, physics: {findBody, removeBody}, audioPort, onDeath?, onAmbientStart? }
+  // env: { world, physics: {findBody, removeBody}, audioPort, onDeath?, onAmbientStart?, onEatStart? }
   actions.forEach(action => {
     switch (action.type) {
-      case 'strum':
-        env.audioPort.strum(action.notes, action.root, action.timbre);
+      case 'strum': {
+        const srcChord = action.chordId ? env.physics.findBody(env.world, action.chordId) : null;
+        const extraCents = srcChord ? (srcChord.pitchVarianceCents || 0) : 0;
+        const quiet = srcChord ? (srcChord.colorful === false) : false;
+        env.audioPort.strum(action.notes, action.root, action.timbre, extraCents, quiet);
         break;
+      }
       case 'noise':
         env.audioPort.noiseTick();
         break;
-      case 'startAmbient':
-        env.audioPort.startAmbient(action.notes, action.root, action.timbre);
+      case 'startAmbient': {
+        const srcChord = action.sourceChordId ? env.physics.findBody(env.world, action.sourceChordId) : null;
+        const extraCents = srcChord ? (srcChord.pitchVarianceCents || 0) : 0;
+        const quiet = srcChord ? (srcChord.colorful === false) : false;
+        env.audioPort.startAmbient(action.notes, action.root, action.timbre, extraCents, quiet);
         if (env.onAmbientStart) env.onAmbientStart(action);
         break;
+      }
       case 'launch': {
         const body = env.physics.findBody(env.world, action.id);
         if (body) { body.vx = action.vx; body.vy = action.vy; body.resting = false; }
@@ -733,8 +1377,17 @@ function applyActions(actions, env) {
       case 'eat': {
         const eaten = env.physics.findBody(env.world, action.eatenId);
         if (eaten) {
-          env.physics.removeBody(env.world, action.eatenId);
-          if (env.onDeath) env.onDeath({ reason: 'eaten', id: action.eatenId, eaterId: action.eaterId });
+          // When an onEatStart hook is supplied, it OWNS the removal timing
+          // (revision round 2: the eaten chord shrinks into the eater's
+          // center over a short animation instead of vanishing instantly) --
+          // callers that don't supply it keep getting the original
+          // immediate-remove-and-onDeath behavior unchanged.
+          if (env.onEatStart) {
+            env.onEatStart({ eaterId: action.eaterId, eatenId: action.eatenId });
+          } else {
+            env.physics.removeBody(env.world, action.eatenId);
+            if (env.onDeath) env.onDeath({ reason: 'eaten', id: action.eatenId, eaterId: action.eaterId });
+          }
         }
         break;
       }
@@ -749,11 +1402,20 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /* ============================================================================
-   SECTION: REAL AUDIO DRIVER (new — Web Audio, not unit-testable under Node;
-   ported faithfully from 31edo-harmonydex_121.html's scheduleChordAudio /
-   schedulePad so the timbres sound the same. The single-ambient-voice RULE
-   itself lives in AudioPort above and is already tested against a mock; this
-   file only supplies the actual oscillators that rule turns on and off.)
+   SECTION: REAL AUDIO DRIVER (Web Audio, not unit-testable under Node; ported
+   faithfully from 31edo-harmonydex_121.html's scheduleChordAudio/schedulePad
+   so the timbres sound the same. The single-ambient-voice RULE itself lives
+   in AudioPort above and is already tested against a mock; this file only
+   supplies the actual oscillators that rule turns on and off.
+
+   Revision round 2 additions: a master bus (getMasterBus) running every
+   voice through a DynamicsCompressor limiter, with graceful degradation
+   straight to ctx.destination if createDynamicsCompressor isn't available;
+   a breathing-gain LFO chain in realStartSustain so a long-held pad-hold
+   ambient periodically dips and returns instead of droning flat; extraCents
+   threaded through every play* function for per-chord pitch micro-variation;
+   playArpeggio for the landing-arpeggio feature; playBlip for the
+   zone-border-proximity tick; startRain/stopRain for the rain-weather bed. )
    ============================================================================ */
 let audioCtx = null;
 function getAudioCtx(){
@@ -761,11 +1423,49 @@ function getAudioCtx(){
   if(audioCtx.state==='suspended') audioCtx.resume();
   return audioCtx;
 }
+let masterBus = null;
+function getMasterBus(ctx){
+  if(masterBus) return masterBus;
+  try{
+    const comp = ctx.createDynamicsCompressor();
+    if(comp.threshold) comp.threshold.setValueAtTime(-16, ctx.currentTime);
+    if(comp.knee) comp.knee.setValueAtTime(24, ctx.currentTime);
+    if(comp.ratio) comp.ratio.setValueAtTime(10, ctx.currentTime);
+    if(comp.attack) comp.attack.setValueAtTime(0.004, ctx.currentTime);
+    if(comp.release) comp.release.setValueAtTime(0.25, ctx.currentTime);
+    comp.connect(ctx.destination);
+    masterBus = comp;
+  }catch(e){
+    masterBus = ctx.destination; // graceful degradation if the browser lacks DynamicsCompressorNode
+  }
+  return masterBus;
+}
 const STRUM_GAP = 0.055; // seconds between successive notes, low to high — matches the main app
-function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents){
+// Revision round 3: 'quiet' (a chord that's gone gray from not eating a food
+// particle in time) plays extremely softer with a much shorter release than
+// the normal envelope, per spec -- still audible, just a faint quick tick.
+// 'saw' is a brand new timbre (used only when landing on the inverse-color
+// platform) with its own hard-capped short decay/release regardless of dur.
+function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet){
   const freq = freqForRaw(raw, generalPitchCents);
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.0001, startTime);
+  const master = getMasterBus(ctx);
+  if(timbre==='saw'){
+    const osc = ctx.createOscillator();
+    osc.type='sawtooth'; osc.frequency.value=freq;
+    const filter = ctx.createBiquadFilter();
+    filter.type='lowpass';
+    filter.frequency.setValueAtTime(freq*6, startTime);
+    const sawDur = quiet ? Math.min(dur,0.13) : Math.min(dur,0.22);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(280,freq*1.3), startTime+sawDur*0.7);
+    gain.gain.exponentialRampToValueAtTime(quiet?0.02:0.25, startTime+0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+sawDur);
+    osc.connect(filter).connect(gain).connect(master);
+    osc.start(startTime); osc.stop(startTime+sawDur+0.05);
+    return;
+  }
+  const effDur = quiet ? Math.max(0.1, dur*0.14) : dur;
   if(timbre==='guitar'){
     const real = new Float32Array([0,1,0.55,0.33,0.22,0.14,0.09,0.05]);
     const imag = new Float32Array(real.length);
@@ -775,27 +1475,27 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents){
     const filter = ctx.createBiquadFilter();
     filter.type='lowpass';
     filter.frequency.setValueAtTime(freq*8, startTime);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(200,freq*1.8), startTime+dur*0.85);
-    gain.gain.exponentialRampToValueAtTime(0.26, startTime+0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+dur);
-    osc.connect(filter).connect(gain).connect(ctx.destination);
-    osc.start(startTime); osc.stop(startTime+dur+0.05);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(200,freq*1.8), startTime+effDur*0.85);
+    gain.gain.exponentialRampToValueAtTime(quiet?0.025:0.26, startTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+effDur);
+    osc.connect(filter).connect(gain).connect(master);
+    osc.start(startTime); osc.stop(startTime+effDur+0.05);
   } else {
     const osc = ctx.createOscillator();
     osc.type='sine'; osc.frequency.value=freq;
-    gain.gain.exponentialRampToValueAtTime(0.2, startTime+0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+dur);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(startTime); osc.stop(startTime+dur+0.05);
+    gain.gain.exponentialRampToValueAtTime(quiet?0.02:0.2, startTime+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+effDur);
+    osc.connect(gain).connect(master);
+    osc.start(startTime); osc.stop(startTime+effDur+0.05);
   }
 }
-function realPlayOneShot(notes, root, timbre, style, settings){
+function realPlayOneShot(notes, root, timbre, style, extraCents, settings, quiet){
   const ctx = getAudioCtx(); if(!ctx || !notes.length) return;
   const dur = timbre==='guitar' ? 2.2 : 1.5;
   const ordered = notes.slice().sort((a,b)=>a-b);
   ordered.forEach((raw,idx)=>{
     const t = ctx.currentTime + (style==='strum' ? idx*STRUM_GAP : 0);
-    scheduleNote(ctx, raw, timbre, t, dur, settings.generalPitch);
+    scheduleNote(ctx, raw, timbre, t, dur, (settings.generalPitch||0)+(extraCents||0), quiet);
   });
 }
 function realPlayNoise(){
@@ -809,46 +1509,137 @@ function realPlayNoise(){
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.3, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
-  src.connect(filter).connect(gain).connect(ctx.destination);
+  src.connect(filter).connect(gain).connect(getMasterBus(ctx));
   src.start();
 }
-function realStartSustain(notes, root, timbre, settings){
+function realPlayArpeggio(notes, root, timbre, totalDurSec, extraCents, settings, quiet){
+  const ctx = getAudioCtx(); if(!ctx || !notes.length) return;
+  const ordered = notes.slice(); // already low-to-high, octave 3->5, by construction (arpeggioRawNotesOctave3to5)
+  const n = ordered.length;
+  const gap = totalDurSec/n;
+  const noteDur = Math.max(0.22, gap*1.5);
+  ordered.forEach((raw,idx)=>{
+    const t = ctx.currentTime + idx*gap;
+    scheduleNote(ctx, raw, timbre, t, noteDur, (settings.generalPitch||0)+(extraCents||0), quiet);
+  });
+}
+function realPlayBlip(notes, root, extraCents, settings, quiet){
+  const ctx = getAudioCtx(); if(!ctx || !notes.length) return;
+  const t0 = ctx.currentTime;
+  const master = getMasterBus(ctx);
+  notes.forEach(raw=>{
+    const freq = freqForRaw(raw, (settings.generalPitch||0)+(extraCents||0));
+    const osc = ctx.createOscillator(); osc.type='triangle'; osc.frequency.value=freq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(quiet?0.03:0.24, t0+0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+(quiet?0.06:0.11)); // very fast release, per spec (even faster when quiet/gray)
+    osc.connect(gain).connect(master);
+    osc.start(t0); osc.stop(t0+(quiet?0.08:0.13));
+  });
+}
+function realStartSustain(notes, root, timbre, extraCents, settings, quiet){
   const ctx = getAudioCtx(); if(!ctx) return null;
   const startTime = ctx.currentTime;
+  const master = getMasterBus(ctx);
+  // breathing gain: a slow LFO dips the whole sustained chord's level and
+  // brings it back to normal periodically, so a long pad-hold reads as
+  // "alive" instead of a flat, eventually-annoying drone.
+  const breathGain = ctx.createGain();
+  breathGain.gain.value = quiet ? 0.22 : 0.8; // gray chords: extremely quieter overall, per spec
+  breathGain.connect(master);
+  const breathLfo = ctx.createOscillator(); breathLfo.type='sine';
+  breathLfo.frequency.value = 0.05 + Math.random()*0.03; // ~14-20s period
+  const breathDepth = ctx.createGain(); breathDepth.gain.value = 0.16;
+  breathLfo.connect(breathDepth).connect(breathGain.gain);
+  breathLfo.start(startTime);
   const nodes = notes.map((raw,i)=>{
-    const freq = freqForRaw(raw, settings.generalPitch);
+    const freq = freqForRaw(raw, (settings.generalPitch||0)+(extraCents||0));
     const osc = ctx.createOscillator(); osc.type='sine'; osc.frequency.value=freq;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.05, startTime+1.2); // slow attack, matches schedulePad
+    gain.gain.exponentialRampToValueAtTime(quiet?0.012:0.05, startTime+1.2); // slow attack, matches schedulePad
     const lfo = ctx.createOscillator(); lfo.type='sine'; lfo.frequency.value = 0.1+i*0.045;
     const lfoGain = ctx.createGain(); lfoGain.gain.value = freq*0.003;
     lfo.connect(lfoGain).connect(osc.frequency);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain).connect(breathGain);
     osc.start(startTime); lfo.start(startTime);
     return {osc,gain,lfo};
   });
-  return {nodes};
+  return {nodes, breathGain, breathLfo, quiet: !!quiet};
 }
 function realStopSustain(handle){
   if(!handle) return;
   const ctx = audioCtx; if(!ctx) return;
   const now = ctx.currentTime;
+  const rel = handle.quiet ? 0.09 : 0.35; // super-short release for a gray/quiet chord's sustain too, per spec
   handle.nodes.forEach(({osc,gain,lfo})=>{
     try{
       gain.gain.cancelScheduledValues(now);
       gain.gain.setValueAtTime(Math.max(gain.gain.value,0.0001), now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
-      osc.stop(now+0.4); lfo.stop(now+0.4);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now+rel);
+      osc.stop(now+rel+0.05); lfo.stop(now+rel+0.05);
+    }catch(e){ /* already stopped */ }
+  });
+  try{ if(handle.breathLfo) handle.breathLfo.stop(now+rel+0.05); }catch(e){ /* already stopped */ }
+}
+// Revision round 3: re-pitches an ALREADY-SOUNDING sustain in place (smooth
+// frequency ramp per voice) instead of stopping/restarting -- used when the
+// source chord's root changes (zone crossing / transposer hit) while its
+// pad-hold ambient is still playing, so the audible pitch actually follows
+// the visual change instead of drifting silently out of sync with it.
+function realRetuneSustain(handle, notes, extraCents, settings){
+  if(!handle || !handle.nodes) return;
+  const ctx = audioCtx; if(!ctx) return;
+  const now = ctx.currentTime;
+  handle.nodes.forEach((node,i)=>{
+    if(i>=notes.length) return; // fewer new notes than voices: leave any extra oscillator at its last pitch rather than guessing a mapping
+    const freq = freqForRaw(notes[i], (settings.generalPitch||0)+(extraCents||0));
+    try{
+      node.osc.frequency.cancelScheduledValues(now);
+      node.osc.frequency.setValueAtTime(node.osc.frequency.value, now);
+      node.osc.frequency.exponentialRampToValueAtTime(Math.max(20,freq), now+0.18);
     }catch(e){ /* already stopped */ }
   });
 }
+let rainHandle = null;
+function realStartRain(){
+  const ctx = getAudioCtx(); if(!ctx) return null;
+  const bufSec = 2;
+  const buffer = ctx.createBuffer(1, Math.max(1,Math.floor(ctx.sampleRate*bufSec)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i] = Math.random()*2-1;
+  const src = ctx.createBufferSource(); src.buffer = buffer; src.loop = true;
+  const filter = ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=1600;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.045, ctx.currentTime+2.5);
+  src.connect(filter).connect(gain).connect(getMasterBus(ctx));
+  src.start();
+  return {src, gain};
+}
+function realStopRain(handle){
+  if(!handle) return;
+  const ctx = audioCtx; if(!ctx) return;
+  const now = ctx.currentTime;
+  try{
+    handle.gain.gain.cancelScheduledValues(now);
+    handle.gain.gain.setValueAtTime(Math.max(handle.gain.gain.value,0.0001), now);
+    handle.gain.gain.exponentialRampToValueAtTime(0.0001, now+1.2);
+    handle.src.stop(now+1.3);
+  }catch(e){ /* already stopped */ }
+}
 function createRealDriver(getSettings){
   return {
-    playOneShot(notes, root, timbre, style){ if(getSettings().muted) return; realPlayOneShot(notes, root, timbre, style, getSettings()); },
+    playOneShot(notes, root, timbre, style, extraCents, quiet){ if(getSettings().muted) return; realPlayOneShot(notes, root, timbre, style, extraCents, getSettings(), quiet); },
     playNoise(){ if(getSettings().muted) return; realPlayNoise(); },
-    startSustain(notes, root, timbre){ if(getSettings().muted) return null; return realStartSustain(notes, root, timbre, getSettings()); },
+    playArpeggio(notes, root, timbre, totalDurSec, extraCents, quiet){ if(getSettings().muted) return; realPlayArpeggio(notes, root, timbre, totalDurSec, extraCents, getSettings(), quiet); },
+    playBlip(notes, root, extraCents, quiet){ if(getSettings().muted) return; realPlayBlip(notes, root, extraCents, getSettings(), quiet); },
+    startSustain(notes, root, timbre, extraCents, quiet){ if(getSettings().muted) return null; return realStartSustain(notes, root, timbre, extraCents, getSettings(), quiet); },
     stopSustain(handle){ realStopSustain(handle); },
+    retuneSustain(handle, notes, extraCents){ realRetuneSustain(handle, notes, extraCents, getSettings()); },
+    startRain(){ if(getSettings().muted) return null; if(!rainHandle) rainHandle = realStartRain(); return rainHandle; },
+    stopRain(){ if(rainHandle){ realStopRain(rainHandle); rainHandle=null; } },
   };
 }
 
@@ -886,9 +1677,24 @@ function saveWhitelist(wl){
   try{ localStorage.setItem('ecosystem:whitelist', JSON.stringify({ active: !!wl.active, signatures: wl.signatures||[] })); }
   catch(e){ /* ignore quota/availability errors */ }
 }
+// Revision round 3: max population (1-20), configurable from the new God
+// Settings panel. A separate namespaced key, same read-only-elsewhere
+// discipline as ecosystem:whitelist above.
+function loadMaxPopulation(){
+  try{
+    const raw = localStorage.getItem('ecosystem:maxPopulation');
+    const n = raw!=null ? parseInt(raw,10) : 20;
+    return (Number.isFinite(n) && n>=1 && n<=20) ? n : 20;
+  }catch(e){ return 20; }
+}
+function saveMaxPopulation(n){
+  try{ localStorage.setItem('ecosystem:maxPopulation', String(Math.max(1,Math.min(20,n|0)))); }
+  catch(e){ /* ignore quota/availability errors */ }
+}
 
 /* ============================================================================
-   SECTION: WORLD SETUP — platforms, the 5 interactive objects, per-shape hue.
+   SECTION: WORLD SETUP — platforms, the 6 interactive objects (5 original +
+   the new black hole), per-shape hue, and the nursery plant's stem geometry.
    ============================================================================ */
 function buildPlatforms(w,h){
   const defs = [
@@ -902,6 +1708,9 @@ function buildPlatforms(w,h){
   // Collision bounds stay a plain, flat-topped rect (physics.js's landing
   // check needs a simple surface); the Gaudi/trencadís wave-and-mosaic look
   // is layered on purely visually in drawPlatform(), never touching x/y/w/h.
+  // baseY is the platform's resting y before the new breathing-bob offset
+  // (updatePlatformBreathing) is applied each frame; glowUntil/glowColor
+  // drive the new landing-arpeggio glow.
   return defs.map((d,idx)=>{
     const x=d.xf*w, y=d.yf*h, ww=d.wf*w, hh=Math.max(10,d.hf*h);
     const cols = Math.max(5, Math.round(ww/15));
@@ -910,21 +1719,40 @@ function buildPlatforms(w,h){
       const s1 = Math.sin(idx*97.13+i*13.37), s2=Math.sin(idx*17.7+i*3.11);
       tiles.push({ fx:(i+0.5)/cols, hue:((Math.abs(s1)*360)%360), wob:Math.abs(s2) });
     }
-    return { x, y, w:ww, h:hh, tiles, wobSeed: idx*1.7 };
+    // Revision round 3: platform #3 (0-indexed) is marked inverse -- drawn
+    // with an inverted color scheme, and chords landing on it get the new
+    // sawtooth timbre with a very short decay/release instead of the normal
+    // landing arpeggio (see drawPlatform / updateLandingTriggers).
+    return { x, y, w:ww, h:hh, tiles, wobSeed: idx*1.7, baseY:y, glowUntil:0, glowColor:0, inverse: idx===3 };
   });
 }
 const OBJECT_DEFS = [
-  { objectType:'strum',       xf:0.12, color:'#ffcf5c', hue:46,  label:'STRUM' },
-  { objectType:'padhold',     xf:0.30, color:'#7fe0c8', hue:165, label:'PAD-HOLD' },
-  { objectType:'commontones', xf:0.50, color:'#c99bf0', hue:280, label:'COMMON TONES' },
-  { objectType:'launcher',    xf:0.68, color:'#ff8a65', hue:18,  label:'LAUNCHER' },
-  { objectType:'transposer',  xf:0.86, color:'#7aa8ff', hue:210, label:'TRANSPOSER' },
+  { objectType:'strum',       xf:0.10, color:'#ffcf5c', hue:46,  label:'STRUM',       skyXf:0.12, skyYf:0.14 },
+  { objectType:'padhold',     xf:0.26, color:'#7fe0c8', hue:165, label:'PAD-HOLD',     skyXf:0.28, skyYf:0.24 },
+  { objectType:'commontones', xf:0.42, color:'#c99bf0', hue:280, label:'COMMON TONES', skyXf:0.46, skyYf:0.10 },
+  { objectType:'launcher',    xf:0.58, color:'#ff8a65', hue:18,  label:'LAUNCHER',     skyXf:0.62, skyYf:0.20 },
+  { objectType:'transposer',  xf:0.74, color:'#7aa8ff', hue:210, label:'TRANSPOSER',   skyXf:0.78, skyYf:0.12 },
+  { objectType:'blackhole',   xf:0.90, color:'#b98cff', hue:265, label:'BLACK HOLE',   skyXf:0.90, skyYf:0.26 },
 ];
 function spawnObjects(world){
   OBJECT_DEFS.forEach((def,i)=>{
+    const isHole = def.objectType==='blackhole';
     addBody(world, {
+      // The black hole gets a smaller physical (collision) radius than the
+      // others -- its real PULL reaches much further (see updateBlackHolePull
+      // / blackHolePull's maxDist), but an actual bounce-triggering touch
+      // should stay rare, per spec, since chords are usually moving fast
+      // enough to swing past rather than sink all the way to the center.
       id:'obj_'+def.objectType, kind:'object', objectType:def.objectType, color:def.color, hue:def.hue, label:def.label,
-      x: def.xf*world.width, y: 30+i*8, radius: 24, gravity:true, locomotion:null,
+      x: def.xf*world.width, y: 30+i*8, radius: isHole?20:24,
+      // Revision round 3: the black hole now FLIES (physics.js's existing
+      // 'fly' locomotion -- random steering, capped speed) instead of
+      // falling and sitting still at a fixed spot, so its pull sweeps the
+      // whole world over time instead of only ever reaching nearby chords.
+      gravity: !isHole, locomotion: isHole ? 'fly' : null,
+      vx: isHole ? (Math.random()-0.5)*80 : 0, vy: isHole ? (Math.random()-0.5)*80 : 0,
+      commonTonesActive:false, nextTriggerAt:0, glowUntil:0,
+      skyXf:def.skyXf, skyYf:def.skyYf, // night-constellation target slot (see updateConstellations)
     });
   });
 }
@@ -935,27 +1763,80 @@ function hueForPc(pc){ return (mod31(pc)/N_STEPS)*360; }
 let ZONE_B_GAP = 18;
 function zoneRootFor(zone){ return zone==='B' ? ZONE_B_GAP : 0; }
 // The chord's actual currently-AUDIBLE root (zone + any transposer offset +
-// the night's lunar shift) -- used for both audio (see makeCollisionCtx) and,
-// now, the creature's head/limb colors, so a creature's appearance always
+// the night's lunar shift) -- used for both audio (see makeCollisionCtx) and
+// the creature's head/limb colors, so a creature's appearance always
 // matches what it actually sounds like right now.
 function liveRootRaw(b){ return zoneRootFor(b.zone) + (b.transposeOffset||0) + currentNightSteps(); }
 
+// Nursery: an Art Nouveau plant with a handful of fixed stem-tip attachment
+// points near the top of the world. Some newly-spawned chords appear
+// "hanging" from a tip (pinned there via physics.js's existing dragging:true
+// semantics, same mechanism as a user's manual drag) and detach into free
+// movement after a hold period (see shouldDetachFromNursery in FORCES).
+// Repositioned on every resize since its geometry is in absolute world coords.
+function setupNursery(w,h){
+  ECO.nursery = {
+    baseX: w*0.5, baseY: -8,
+    stems: [
+      { x:w*0.36, y:h*0.10 },
+      { x:w*0.46, y:h*0.05 },
+      { x:w*0.56, y:h*0.07 },
+      { x:w*0.66, y:h*0.12 },
+    ],
+  };
+}
+
+// Agar.io-style food particles (revision round 3): scattered pellets a chord
+// "eats" just by passing over it (a plain proximity check against every live
+// chord each frame -- see updateFoodParticles -- not a physics.js body,
+// since a pellet never needs to collide/bounce/be dragged). Each eaten
+// pellet respawns after a short delay at a fresh random spot so the
+// opportunity to stay colorful keeps recurring instead of the board slowly
+// depleting to nothing.
+const FOOD_PARTICLE_COUNT = 16;
+function setupFoodParticles(w,h){
+  const list = [];
+  for(let i=0;i<FOOD_PARTICLE_COUNT;i++){
+    list.push({ x: 20+Math.random()*Math.max(1,w-40), y: 20+Math.random()*Math.max(1,h*0.78), r:5, eatenUntil:0, phase:Math.random()*1000 });
+  }
+  ECO.foodParticles = list;
+}
+
 /* ============================================================================
-   SECTION: SPAWN / LIFECYCLE (new)
+   SECTION: SPAWN / LIFECYCLE
    Population trickles in (not all 20 at once), replacements spawn on death
    (eaten or, for "big" chords, expired after 1 minute), whitelist mode
    restricts the eligible pool without inventing any new localStorage key
    beyond ecosystem:whitelist.
+
+   Revision round 2 adds a large batch of new per-frame systems, all wired
+   into the fixed-timestep loop further down: black-hole pull, hunting,
+   summon events, tornado spawning/forces, anti-clump nudging, platform
+   breathing, the nursery, the eat-shrink animation, the landing arpeggio,
+   zone-border audio, the common-tones area effect, and quake-rhythm audio
+   quantization. Every one of these follows the same shape as the original
+   handful: a pure helper from FORCES/QUAKE RHYTHM/DIRECTOR decides WHAT
+   should happen; the update* function here is the only place that actually
+   mutates ECO state or live bodies.
    ============================================================================ */
 const ECO = {
   world:null, rng:null, audioPort:null,
-  species:[], nicknames:{}, whitelist:{active:false,signatures:[]},
-  targetCount:0, nextSpawnAt:0,
+  species:[], nicknames:{}, whitelist:{active:false,signatures:[]}, octaveEquivalence:false,
+  targetCount:0, nextSpawnAt:0, maxPopulation:20,
   isNight:false, dayNightStartMs:0, moonPhase:0,
   settings:{ generalPitch:0, muted:false, timbre:'guitar' },
   chordSeq:1, ambientVisual:null,
-  lastQuakeAt:0, quakeShakeUntil:0,
+  lastQuakeAt:0, quakeShakeUntil:0, quakeVisualShakeUntil:0, quakeTickUntil:0,
+  quakeGrid:null, quakeQueue:[], quakeAudioPrevElapsed:-1,
   mostCommonPair:null, zoneLabelRects:null,
+  huntNextCheckAt:0, summon:null, summonNextAt:0,
+  tornado:null, tornadoNextAt:0,
+  raining:false, rainUntil:0, rainNextAt:0, rainDrops:null, _rainAudioOn:false,
+  nursery:null, infoPanelOpenChordId:null,
+  // Revision round 3
+  recentBigEvents:[],               // timestamps of recent tornado/quake/rain starts, used to throttle hunting/summon into calmer stretches
+  foodParticles:null, foodGrayTimeoutMs:9000, foodBalanceCheckAt:0,
+  bursts:[],                        // shared transient visual effects: eat flashes, food-particle noms, water splashes
 };
 const DAY_NIGHT_MS = 15000;
 
@@ -977,12 +1858,21 @@ function pickSpeciesToSpawn(){
   const choices = notPresent.length ? notPresent : pool;
   return choices[Math.floor(ECO.rng()*choices.length)];
 }
+// Some newly-spawned chords appear hanging from the nursery plant instead of
+// dropping in from the top of the screen (feature: nursery plant). Also
+// assigns this chord's per-chord pitch micro-variation and initial
+// border/eat/hunt bookkeeping fields up front so nothing downstream ever has
+// to guard against them being undefined.
 function spawnChord(sp){
   const loc = ['crawl','fly','roll'][Math.floor(ECO.rng()*3)];
   const noteCount = sp.intervals.length;
   const radius = 15 + Math.min(noteCount,8)*2.4;
   const zone = ECO.rng()<0.5 ? 'A':'B';
-  const x = 30 + ECO.rng()*Math.max(1,(ECO.world.width-60));
+  const useNursery = ECO.nursery && ECO.nursery.stems.length && ECO.rng()<0.4;
+  const stemIdx = useNursery ? Math.floor(ECO.rng()*ECO.nursery.stems.length) : -1;
+  const stem = stemIdx>=0 ? ECO.nursery.stems[stemIdx] : null;
+  const x = stem ? stem.x : (30 + ECO.rng()*Math.max(1,(ECO.world.width-60)));
+  const y = stem ? stem.y+10 : 8;
   addBody(ECO.world, {
     id:'chord_'+(ECO.chordSeq++), kind:'chord', sig:sp.signature, intervals:sp.intervals.slice(),
     rawIntervals: (sp.rawIntervals||sp.intervals).slice(),
@@ -990,19 +1880,31 @@ function spawnChord(sp){
     nickname: ECO.nicknames[sp.signature]||'', num: sp.num, isBig: !!sp.isBig,
     transposeOffset:0, zone,
     bornAt: performance.now(), lifespanMs: sp.isBig ? 60000 : null,
-    x, y: 8, radius, gravity: loc!=='fly', locomotion: loc,
+    x, y, radius, gravity: loc!=='fly', locomotion: loc,
     facing: ECO.rng()<0.5?-1:1,
-    vx:(ECO.rng()-0.5)*40, vy:0,
+    vx: stem?0:(ECO.rng()-0.5)*40, vy:0,
+    pitchVarianceCents: pickPitchVarianceCents(ECO.rng),
+    dragging: !!stem, nurseryPinned: !!stem, nurseryStemIdx: stemIdx,
+    nurseryAttachedAt: stem ? performance.now() : null,
+    borderNear:false, borderSide: zone,
+    beingEaten:false, glowUntil:0, huntUntil:0, huntTargetId:null,
+    _wasResting:false,
+    colorful:true, lastAteAt: performance.now(), // revision round 3: agar.io food-particle state
+    eatPulseUntil:0,
   });
 }
 
-/* ---------- earthquake: every 30s, redistribute anything that's settled
-   into one clump (per user feedback) with a random shake, instead of
-   leaving population density to drift wherever gravity/wandering happens to
-   carry it. Chords get a real scatter; the 5 landmark objects get a gentler
-   nudge so they stay roughly where the player last learned to find them. ---------- */
+/* ---------- earthquake: redistributes anything that's settled into one
+   clump with a real scatter (per user feedback across both revision rounds).
+   Revision round 2: quake duration is now 3-20s (was a fixed 550ms) and,
+   for that whole window, every triggered sound gets quantized onto a random
+   polyrhythmic grid instead of playing immediately (see updateQuakeAudio) --
+   the screen-shake itself stays a short, sharp jolt (QUAKE_SHAKE_MS,
+   tracked separately via quakeVisualShakeUntil) regardless of how long the
+   underlying quake's audio window runs, so it reads as one jolt, not 20
+   seconds of camera-shake. ---------- */
 const QUAKE_INTERVAL_MS = 30000;
-const QUAKE_SHAKE_MS = 550;
+const QUAKE_SHAKE_MS = 550; // visual camera-jolt duration only
 function triggerEarthquake(nowMs){
   ECO.world.bodies.forEach(b=>{
     if(b.dragging) return;
@@ -1013,15 +1915,30 @@ function triggerEarthquake(nowMs){
     b.resting = false;
   });
   ECO.lastQuakeAt = nowMs;
-  ECO.quakeShakeUntil = nowMs + QUAKE_SHAKE_MS;
+  const durationMs = 4500 + ECO.rng()*17500; // 4.5-22s, per spec ("last longer")
+  ECO.quakeShakeUntil = nowMs + durationMs;
+  ECO.quakeVisualShakeUntil = nowMs + QUAKE_SHAKE_MS;
+  ECO.quakeGrid = createQuakeGrid(ECO.rng, durationMs);
+  ECO.quakeAudioPrevElapsed = -1; // seed at -1 so a legitimate onset at t=0 isn't missed
+  ECO.quakeQueue = [];
+  recordBigEvent(nowMs);
 }
 function updateEarthquake(nowMs){
   if(ECO.lastQuakeAt===0) ECO.lastQuakeAt = nowMs; // first quake 30s into the session, not immediately on load
-  if(nowMs - ECO.lastQuakeAt >= QUAKE_INTERVAL_MS) triggerEarthquake(nowMs);
+  if(!ECO.quakeGrid && nowMs - ECO.lastQuakeAt >= QUAKE_INTERVAL_MS) triggerEarthquake(nowMs);
 }
 function updateSpawning(nowMs){
   const pool = effectivePool();
-  ECO.targetCount = Math.min(20, pool.length);
+  // Revision round 3 fix: population target is now the user's own
+  // maxPopulation setting (1-20, God Settings), independent of how many
+  // DISTINCT species are in the pool -- previously it was min(20,
+  // pool.length), so whitelisting down to a single chord capped the whole
+  // population at 1 with no further growth. pickSpeciesToSpawn already
+  // prefers a species not currently on screen but happily reuses (spawns a
+  // duplicate of) one already present once every pool species is
+  // represented, which is exactly what's needed to keep filling a small
+  // pool up toward a larger target population.
+  ECO.targetCount = pool.length===0 ? 0 : ECO.maxPopulation;
   const currentChordCount = ECO.world.bodies.filter(b=>b.kind==='chord').length;
   if(currentChordCount < ECO.targetCount && nowMs >= ECO.nextSpawnAt){
     const sp = pickSpeciesToSpawn();
@@ -1067,7 +1984,14 @@ function updateDayNight(nowMs){
 }
 function currentNightSteps(){ return ECO.isNight ? ECO.moonPhase : 0; }
 
-/* ---------- collision -> director -> audio, wired to physics EVENTS ---------- */
+/* ---------- collision -> director -> audio, wired to physics EVENTS.
+   Revision round 2: skips bodies already mid-eat-animation; wires the
+   onEatStart hook so an eat starts the shrink animation instead of an
+   instant removal; makes any chord involved in a sounding collision glow
+   (feature: chord emits light); tracks the summon pair's remaining hit
+   count; and routes sound-producing actions through dispatchActions so
+   they can be redirected into the earthquake's quantized rhythm queue
+   while one is active. ---------- */
 function makeCollisionCtx(){
   return {
     zoneRootFor,
@@ -1077,26 +2001,531 @@ function makeCollisionCtx(){
     timbre: ECO.settings.timbre,
   };
 }
-function onAmbientStart(action){ ECO.ambientVisual = { objectId:action.objectId, sourceChordId:action.sourceChordId }; }
-function handleEvents(events){
+// Revision round 3: also remembers the source chord's live root at the
+// moment the ambient started, so updateAmbientRepitch can tell WHEN it
+// later changes (zone crossing / transposer hit) and retune the still-
+// sounding voice in place instead of leaving the audio stuck at its
+// original pitch while only the visuals move on.
+function onAmbientStart(action){
+  const b = action.sourceChordId ? findBody(ECO.world, action.sourceChordId) : null;
+  ECO.ambientVisual = { objectId:action.objectId, sourceChordId:action.sourceChordId, lastRoot: b ? liveRootRaw(b) : null };
+}
+function onEatStart(info){
+  const eaten = findBody(ECO.world, info.eatenId);
+  if(!eaten) return;
+  const eater = findBody(ECO.world, info.eaterId);
+  if(!eater){ removeBody(ECO.world, eaten.id); handleDeath({reason:'eaten', id:info.eatenId, eaterId:info.eaterId}); return; }
+  eaten.beingEaten = true;
+  eaten.eatenBy = info.eaterId;
+  eaten.eatStartedAt = performance.now();
+  eaten.eatScale = 1;
+  eaten.dragging = true; // freeze normal physics integration; updateEatingBodies drives its position manually
+  eaten.gravity = false;
+  eaten.nurseryPinned = false;
+  eaten.huntUntil = 0;
+  eaten.huntTargetId = null;
+  // Revision round 3: a much more obvious eat -- a bright expanding burst at
+  // the eaten chord's spot plus a quick "gulp" pulse on the eater, on top of
+  // the existing shrink-into-center animation (see updateEatingBodies /
+  // EAT_ANIM_MS below, now also lengthened for a more visible shrink).
+  spawnBurst('eat', eaten.x, eaten.y, hueForPc(liveRootRaw(eaten)));
+  eater.eatPulseUntil = performance.now()+280;
+}
+function runAction(action, nowMs){
+  applyActions([action], {
+    world: ECO.world, physics: { findBody, removeBody },
+    audioPort: ECO.audioPort, onDeath: handleDeath, onAmbientStart, onEatStart,
+  });
+  if(action.type==='strum' || action.type==='startAmbient'){
+    const id = action.chordId || action.sourceChordId;
+    const c = id ? findBody(ECO.world, id) : null;
+    if(c) c.glowUntil = nowMs+650;
+  }
+}
+function dispatchActions(actions, nowMs){
+  actions.forEach(action=>{
+    const queueable = action.type==='strum' || action.type==='noise' || action.type==='startAmbient';
+    if(ECO.quakeGrid && queueable){ ECO.quakeQueue.push(action); }
+    else { runAction(action, nowMs); }
+  });
+}
+function handleEvents(events, nowMs){
   events.forEach(ev=>{
     const a = findBody(ECO.world, ev.a), b = findBody(ECO.world, ev.b);
     if(!a || !b) return; // one side may already be gone (e.g. eaten by an earlier event this same frame)
+    if(a.beingEaten || b.beingEaten) return;
+    if(ECO.summon && ((ECO.summon.aId===a.id && ECO.summon.bId===b.id) || (ECO.summon.aId===b.id && ECO.summon.bId===a.id))){
+      ECO.summon.hitsLeft--;
+      if(ECO.summon.hitsLeft<=0) ECO.summon = null;
+    }
     const ctx = makeCollisionCtx();
     const actions = resolveCollision(a, b, ctx);
-    applyActions(actions, {
-      world: ECO.world, physics: { findBody, removeBody },
-      audioPort: ECO.audioPort, onDeath: handleDeath, onAmbientStart,
-    });
+    const sounded = actions.some(ac=>ac.type==='strum' || ac.type==='startAmbient');
+    if(sounded){
+      if(a.kind==='chord') a.glowUntil = nowMs+650;
+      if(b.kind==='chord') b.glowUntil = nowMs+650;
+    }
+    dispatchActions(actions, nowMs);
   });
+}
+
+/* ---------- quake-rhythm audio: while a quake's grid is active, queued
+   strum/noise/startAmbient actions are released one-per-crossed-onset
+   instead of immediately, so everything that sounds during an earthquake
+   locks onto the same random polyrhythm; topline crossings instead trigger
+   a random extra note an octave above a random live chord. ---------- */
+function updateQuakeAudio(nowMs){
+  if(!ECO.quakeGrid) return;
+  if(nowMs >= ECO.quakeShakeUntil){
+    // quake ends: flush anything still queued immediately so nothing is
+    // silently dropped, then clear the quantization state.
+    ECO.quakeQueue.forEach(a=>runAction(a, nowMs));
+    ECO.quakeQueue = [];
+    ECO.quakeGrid = null;
+    return;
+  }
+  const elapsed = nowMs - ECO.lastQuakeAt;
+  const crossed = onsetsInWindow(ECO.quakeGrid, ECO.quakeAudioPrevElapsed, elapsed);
+  crossed.forEach(onset=>{
+    // Revision round 3: every crossed grid onset -- topline, queued, or
+    // silent -- also gives a tiny visual camera micro-tick (see render()),
+    // so the polyrhythm actually reads as a felt/seen pulse for the quake's
+    // WHOLE (now longer) duration, not just an inaudible-unless-you-listen-
+    // closely audio pattern underneath a single 550ms jolt at the very start.
+    ECO.quakeTickUntil = nowMs + 90;
+    if(onset.voice==='topline'){
+      const chords = ECO.world.bodies.filter(b=>b.kind==='chord' && !b.beingEaten);
+      if(chords.length){
+        const c = chords[Math.floor(ECO.rng()*chords.length)];
+        const notes = computeChordRawNotes(c, makeCollisionCtx());
+        const pick = notes[Math.floor(ECO.rng()*notes.length)] + 31; // an octave up, per spec
+        ECO.audioPort.strum([pick], pick, ECO.settings.timbre, c.pitchVarianceCents||0, c.colorful===false);
+        c.glowUntil = nowMs+650;
+      }
+    } else if(ECO.quakeQueue.length){
+      runAction(ECO.quakeQueue.shift(), nowMs);
+    }
+    // an A/B onset with nothing queued is simply a silent grid tick --
+    // expected, since not every onset need produce sound absent an actual
+    // collision this quake.
+  });
+  ECO.quakeAudioPrevElapsed = elapsed;
+}
+
+/* ---------- black hole: a continuous magnet whose pull sharpens at close
+   range (see blackHolePull in FORCES); the actual bounce-on-touch is
+   handled by director.js's 'blackhole' case once physics reports a real
+   collision -- this function only ever nudges velocity, never teleports. ---------- */
+/* ---------- Revision round 3: a lightweight "how busy has it been lately"
+   throttle -- tornado/quake/rain starts each record a timestamp; when 2+ are
+   still within the last 45s, the more optional flourish events (hunting,
+   summon) skip their roll rather than piling a 4th/5th thing on top, which
+   is what creates genuinely QUIET stretches instead of every system running
+   on its own independent clock with no awareness of what else is active. ---------- */
+function recordBigEvent(nowMs){
+  ECO.recentBigEvents = (ECO.recentBigEvents||[]).filter(t=>nowMs-t<45000);
+  ECO.recentBigEvents.push(nowMs);
+}
+function busyRecently(nowMs){
+  ECO.recentBigEvents = (ECO.recentBigEvents||[]).filter(t=>nowMs-t<45000);
+  return ECO.recentBigEvents.length>=2;
+}
+
+function updateBlackHolePull(dt){
+  const hole = findBody(ECO.world,'obj_blackhole');
+  if(!hole) return;
+  ECO.world.bodies.forEach(b=>{
+    if(b.kind!=='chord' || b.dragging || b.beingEaten) return;
+    const pull = blackHolePull(b.x,b.y,hole.x,hole.y,BLACKHOLE_PULL_CFG);
+    b.vx += pull.fx*dt; b.vy += pull.fy*dt;
+  });
+}
+
+/* ---------- hunting: big chords occasionally steer toward and eat the
+   nearest smaller chord they'd actually be a strict pitch-class superset
+   of. Steering only ever adjusts velocity; the eat itself still only
+   happens through the normal collision -> director -> onEatStart path. ---------- */
+const HUNT_CHECK_INTERVAL_MS = 6000;
+const HUNT_CHANCE = 0.5;
+const HUNT_DURATION_MS = 4000;
+function updateHunting(nowMs, dt){
+  if(nowMs >= (ECO.huntNextCheckAt||0)){
+    ECO.huntNextCheckAt = nowMs + HUNT_CHECK_INTERVAL_MS;
+    const bigChords = ECO.world.bodies.filter(b=>b.kind==='chord' && b.isBig && !b.beingEaten && !b.huntUntil);
+    bigChords.forEach(hunter=>{
+      if(ECO.rng() < HUNT_CHANCE && !busyRecently(nowMs)){
+        const candidates = ECO.world.bodies.filter(c=>c.kind==='chord' && !c.beingEaten);
+        const target = pickHuntTarget(hunter, candidates);
+        if(target){ hunter.huntTargetId = target.id; hunter.huntUntil = nowMs + HUNT_DURATION_MS; }
+      }
+    });
+  }
+  ECO.world.bodies.forEach(hunter=>{
+    if(hunter.kind!=='chord' || !hunter.huntUntil) return;
+    if(hunter.beingEaten || nowMs > hunter.huntUntil){ hunter.huntUntil=0; hunter.huntTargetId=null; return; }
+    const target = findBody(ECO.world, hunter.huntTargetId);
+    if(!target || target.beingEaten){ hunter.huntUntil=0; hunter.huntTargetId=null; return; }
+    const steer = huntSteer(hunter.x, hunter.y, target.x, target.y, {});
+    hunter.vx += steer.fx*dt; hunter.vy += steer.fy*dt;
+  });
+}
+
+/* ---------- summon: occasionally two random chords get pulled toward each
+   other until they've collided 1-3 times, then release. ---------- */
+const SUMMON_CHECK_INTERVAL_MS = 9000;
+const SUMMON_CHANCE = 0.4;
+function updateSummon(nowMs, dt){
+  if(!ECO.summon && nowMs >= (ECO.summonNextAt||0)){
+    ECO.summonNextAt = nowMs + SUMMON_CHECK_INTERVAL_MS;
+    if(ECO.rng() < SUMMON_CHANCE && !busyRecently(nowMs)){
+      const chordBodies = ECO.world.bodies.filter(b=>b.kind==='chord' && !b.dragging && !b.beingEaten);
+      const pair = pickSummonPair(chordBodies, ECO.rng);
+      if(pair){ ECO.summon = { aId:pair[0].id, bId:pair[1].id, hitsLeft: 1+Math.floor(ECO.rng()*3) }; }
+    }
+  }
+  if(ECO.summon){
+    const a = findBody(ECO.world, ECO.summon.aId), b = findBody(ECO.world, ECO.summon.bId);
+    if(!a || !b || a.beingEaten || b.beingEaten){ ECO.summon=null; return; }
+    const pullA = summonPull(a.x,a.y,b.x,b.y,{});
+    const pullB = summonPull(b.x,b.y,a.x,a.y,{});
+    a.vx += pullA.fx*dt; a.vy += pullA.fy*dt;
+    b.vx += pullB.fx*dt; b.vy += pullB.fy*dt;
+  }
+}
+
+/* ---------- tornado: an occasional 10-30s right-to-left funnel that flings
+   nearby chords/objects into turbulent motion. ---------- */
+const TORNADO_MIN_GAP_MS = 20000, TORNADO_MAX_GAP_MS = 45000;
+function scheduleNextTornado(nowMs){ ECO.tornadoNextAt = nowMs + TORNADO_MIN_GAP_MS + ECO.rng()*(TORNADO_MAX_GAP_MS-TORNADO_MIN_GAP_MS); }
+function updateTornadoSpawn(nowMs){
+  if(!ECO.tornado && nowMs >= (ECO.tornadoNextAt||0)){
+    const durationMs = 10000 + ECO.rng()*20000; // 10-30s, per spec
+    ECO.tornado = createTornado(1.05, ECO.world.width, ECO.world.height, nowMs, durationMs, ECO.rng);
+    recordBigEvent(nowMs);
+  }
+  if(ECO.tornado && nowMs >= ECO.tornado.diesAt){
+    ECO.tornado = null;
+    scheduleNextTornado(nowMs);
+  }
+}
+function applyTornadoForces(nowMs, dt){
+  if(!ECO.tornado) return;
+  const pos = tornadoPositionAt(ECO.tornado, nowMs);
+  ECO.world.bodies.forEach(b=>{
+    if(b.dragging || b.beingEaten) return;
+    const f = tornadoForceOn(b.x,b.y,pos.x,pos.y,ECO.tornado.radius,{});
+    if(f.fx || f.fy){ b.vx += f.fx*dt; b.vy += f.fy*dt; b.resting=false; }
+  });
+}
+
+/* ---------- anti-clump: a gentle continuous nudge for any 3+ body pile-up
+   (chords or objects), independent of the earthquake cadence. ---------- */
+function updateAntiClump(dt){
+  const resting = ECO.world.bodies.filter(b=>b.resting && !b.dragging && !b.beingEaten);
+  if(resting.length<3) return;
+  const nudges = computeAntiClumpNudges(resting, {});
+  nudges.forEach(n=>{
+    const b = findBody(ECO.world, n.id);
+    if(b){ b.vx += n.fx*dt; b.vy += n.fy*dt; b.resting=false; }
+  });
+}
+
+/* ---------- breathing platforms: a slow vertical bob applied to both the
+   collision surface and the render position (same p.y), so nothing resting
+   on a platform clips or floats. ---------- */
+function updatePlatformBreathing(nowMs){
+  ECO.world.platforms.forEach(p=>{
+    p.y = p.baseY + platformBreatheOffset(nowMs, p.wobSeed, 5, 4200);
+  });
+}
+
+/* ---------- nursery: pinned chords sway gently at their stem tip and
+   detach into free movement after their hold period elapses. Grabbing a
+   still-hanging chord (see onPointerDown) clears nurseryPinned immediately
+   so the user's drag always wins over the plant's own positioning. ---------- */
+function updateNursery(nowMs){
+  if(!ECO.nursery) return;
+  ECO.world.bodies.forEach(b=>{
+    if(b.kind!=='chord' || !b.nurseryPinned) return;
+    const stem = ECO.nursery.stems[b.nurseryStemIdx] || ECO.nursery.stems[0];
+    const sway = Math.sin(nowMs*0.0011 + b.bornAt*0.001)*4;
+    const bob = Math.abs(Math.sin(nowMs*0.0007 + b.bornAt*0.0005))*3;
+    b.x = stem.x + sway;
+    b.y = stem.y + 10 + bob;
+    if(shouldDetachFromNursery(b.nurseryAttachedAt, nowMs, 10000)){
+      b.nurseryPinned = false;
+      b.dragging = false;
+      b.vx = (ECO.rng()-0.5)*50;
+      b.vy = 10+ECO.rng()*30;
+      b.resting = false;
+    }
+  });
+}
+
+/* ---------- eat animation: instead of vanishing instantly, an eaten chord
+   shrinks (eatScale -> 0) while its position eases toward the eater's
+   (live, re-sampled every frame) center, over EAT_ANIM_MS. ---------- */
+const EAT_ANIM_MS = 650; // revision round 3: lengthened a bit for a more visible shrink, on top of the new burst+pulse effects
+function updateEatingBodies(nowMs){
+  ECO.world.bodies.slice().forEach(b=>{
+    if(b.kind!=='chord' || !b.beingEaten) return;
+    const eater = findBody(ECO.world, b.eatenBy);
+    if(!eater){ removeBody(ECO.world, b.id); handleDeath({reason:'eaten', id:b.id, eaterId:b.eatenBy}); return; }
+    const frac = Math.min(1, (nowMs-b.eatStartedAt)/EAT_ANIM_MS);
+    const pull = Math.min(1, frac*0.35+0.12);
+    b.x += (eater.x-b.x)*pull;
+    b.y += (eater.y-b.y)*pull;
+    b.eatScale = Math.max(0.02, 1-frac);
+    if(frac>=1){
+      removeBody(ECO.world, b.id);
+      handleDeath({reason:'eaten', id:b.id, eaterId:b.eatenBy});
+    }
+  });
+}
+
+/* ---------- landing arpeggio: the instant a chord's resting flag rises
+   (was airborne, now settled), arpeggiate all its notes low (octave 3) to
+   high (octave 5) over 2 seconds and glow whichever platform it landed on. ---------- */
+function landingArpeggioNotes(b){
+  const root = liveRootRaw(b);
+  return arpeggioRawNotesOctave3to5(b.intervals).map(n=>n+root);
+}
+function findPlatformUnder(b){
+  let best=null;
+  ECO.world.platforms.forEach(p=>{
+    const withinX = b.x+b.radius>p.x && b.x-b.radius<p.x+p.w;
+    if(withinX && Math.abs((b.y+b.radius)-p.y)<6) best=p;
+  });
+  return best;
+}
+function updateLandingTriggers(nowMs){
+  ECO.world.bodies.forEach(b=>{
+    if(b.kind!=='chord' || b.beingEaten) return;
+    const wasResting = b._wasResting;
+    if(!wasResting && b.resting){
+      const quiet = b.colorful===false;
+      const plat = findPlatformUnder(b);
+      if(plat && plat.inverse){
+        // Revision round 3: the inverse-color platform plays landings with a
+        // brand new sawtooth timbre and a very short decay/release instead
+        // of the normal low-to-high arpeggio (see scheduleNote's 'saw' branch).
+        const root = liveRootRaw(b);
+        const notes = b.intervals.map(iv=>iv+root);
+        ECO.audioPort.arpeggio(notes, notes[0], 'saw', 0.7, b.pitchVarianceCents||0, quiet);
+      } else {
+        const notes = landingArpeggioNotes(b);
+        ECO.audioPort.arpeggio(notes, notes[0], ECO.settings.timbre, 2, b.pitchVarianceCents||0, quiet);
+      }
+      b.glowUntil = nowMs+900;
+      if(plat){
+        plat.glowColor = plat.inverse ? (hueForPc(liveRootRaw(b))+180)%360 : hueForPc(liveRootRaw(b));
+        plat.glowUntil = nowMs+2200;
+      } else if(b.y+b.radius >= ECO.world.height-ECO.world.cfg.floorThickness-2){
+        // Landed with nothing underneath, right at floor level: that's the
+        // shallow water strip at the bottom of the world (revision round 3)
+        // -- a splash instead of a platform glow.
+        spawnBurst('splash', b.x, ECO.world.height-ECO.world.cfg.floorThickness, 195);
+      }
+    }
+    b._wasResting = b.resting;
+  });
+}
+
+/* ---------- zone-border audio: a fast-release blip on approach, a
+   root-transposed strum the instant a chord actually crosses. Both are
+   edge-triggered against per-body borderNear/borderSide fields. ---------- */
+const BORDER_NEAR_THRESHOLD = 46;
+function updateBorderAudio(nowMs){
+  const mid = ECO.world.width/2;
+  const ctx = makeCollisionCtx();
+  ECO.world.bodies.forEach(b=>{
+    if(b.kind!=='chord' || b.beingEaten || b.dragging) return;
+    const quiet = b.colorful===false;
+    const nowNear = borderProximityState(b.x, mid, BORDER_NEAR_THRESHOLD);
+    if(nowNear && !b.borderNear){
+      const notes = computeChordRawNotes(b, ctx);
+      ECO.audioPort.blip(notes, notes[0], b.pitchVarianceCents||0, quiet);
+      b.glowUntil = nowMs+300;
+    }
+    b.borderNear = nowNear;
+    const newSide = b.x<mid ? 'A':'B';
+    if(didCrossBorder(b.borderSide, newSide)){
+      // updateZones() already ran earlier this same substep, so b.zone
+      // already reflects newSide -- computeChordRawNotes naturally picks up
+      // the zone it just arrived in.
+      const notes = computeChordRawNotes(b, ctx);
+      ECO.audioPort.strum(notes, notes[0], ECO.settings.timbre, b.pitchVarianceCents||0, quiet);
+      b.glowUntil = nowMs+650;
+    }
+    b.borderSide = newSide;
+  });
+}
+
+/* ---------- common-tones area: redesigned (revision round 2) from a
+   point-collision trigger into a continuous area effect -- while 2+ chords
+   sit within COMMONTONES_RADIUS of the object, it periodically sounds
+   whatever pitch classes are common to ALL of them and the area glows. ---------- */
+const COMMONTONES_RADIUS = 130;
+const COMMONTONES_INTERVAL_MS = 4500;
+function updateCommonTonesArea(nowMs){
+  const obj = findBody(ECO.world, 'obj_commontones');
+  if(!obj) return;
+  const liveChords = ECO.world.bodies.filter(b=>b.kind==='chord' && !b.beingEaten);
+  const inRange = chordsWithinRadius(obj.x, obj.y, COMMONTONES_RADIUS, liveChords);
+  obj.commonTonesActive = inRange.length>=2;
+  if(!obj.commonTonesActive) return;
+  if(nowMs < (obj.nextTriggerAt||0)) return;
+  const ctx = makeCollisionCtx();
+  const rawNotesPerChord = inRange.map(c=>computeChordRawNotes(c, ctx));
+  const sharedPcs = sharedPitchClassesAcross(rawNotesPerChord);
+  obj.nextTriggerAt = nowMs + COMMONTONES_INTERVAL_MS;
+  if(sharedPcs.length===0) return;
+  const firstNotes = rawNotesPerChord[0];
+  const notes = sharedPcs.map(pc=>{
+    const match = firstNotes.find(n=>mod31(n)===pc);
+    return match!=null ? match : pc;
+  });
+  ECO.audioPort.strum(notes, notes[0], ECO.settings.timbre, inRange[0].pitchVarianceCents||0, inRange[0].colorful===false);
+  obj.glowUntil = nowMs+900;
+  inRange.forEach(c=>{ c.glowUntil = nowMs+650; });
+}
+
+/* ---------- rain weather: an occasional soft shower with a white-noise
+   ambient bed; audio start/stop is idempotent and re-checked every frame so
+   it self-heals regardless of when mute gets toggled mid-rain. ---------- */
+const RAIN_MIN_GAP_MS = 40000, RAIN_MAX_GAP_MS = 90000;
+const RAIN_MIN_DUR_MS = 15000, RAIN_MAX_DUR_MS = 35000;
+function scheduleNextRain(nowMs){ ECO.rainNextAt = nowMs + RAIN_MIN_GAP_MS + ECO.rng()*(RAIN_MAX_GAP_MS-RAIN_MIN_GAP_MS); }
+function makeRainDrops(){
+  const n=90, drops=[];
+  for(let i=0;i<n;i++) drops.push({ fx:Math.random(), speed:260+Math.random()*180, len:10+Math.random()*14, phase:Math.random()*100000 });
+  return drops;
+}
+function updateWeather(nowMs){
+  if(!ECO.raining && nowMs >= (ECO.rainNextAt||0)){
+    ECO.raining = true;
+    ECO.rainUntil = nowMs + RAIN_MIN_DUR_MS + ECO.rng()*(RAIN_MAX_DUR_MS-RAIN_MIN_DUR_MS);
+    if(!ECO.rainDrops) ECO.rainDrops = makeRainDrops();
+    recordBigEvent(nowMs);
+  }
+  if(ECO.raining && nowMs >= ECO.rainUntil){
+    ECO.raining = false;
+    scheduleNextRain(nowMs);
+  }
+  // Edge-triggered: only call start/stop on an actual state change (rain
+  // begins/ends, OR mute gets toggled mid-rain) instead of every single
+  // frame -- the driver-level stop is idempotent either way, but spamming
+  // it 60x/sec is wasteful and makes call-order assumptions elsewhere noisy.
+  const shouldPlay = ECO.raining && !ECO.settings.muted;
+  if(shouldPlay !== ECO._rainAudioOn){
+    if(shouldPlay) ECO.audioPort.startRain(); else ECO.audioPort.stopRain();
+    ECO._rainAudioOn = shouldPlay;
+  }
+}
+
+/* ============================================================================
+   Revision round 3 additions to the per-frame update layer.
+   ============================================================================ */
+function spawnBurst(kind, x, y, hue){
+  ECO.bursts.push({ kind, x, y, hue: hue!=null?hue:190, startedAt: performance.now() });
+}
+function updateBursts(nowMs){
+  if(!ECO.bursts.length) return;
+  ECO.bursts = ECO.bursts.filter(bu=> nowMs - bu.startedAt < 520);
+}
+
+/* ---------- Agar.io-style food particles: a chord "eats" a pellet just by
+   overlapping it (plain proximity, not a physics.js collision -- pellets
+   never need to bounce/be dragged). The timeout before an un-fed chord
+   turns gray ADAPTS every few seconds toward whatever value keeps the live
+   population's gray fraction near 50/50 (see nextFoodGrayTimeout, FORCES),
+   so the split holds regardless of world size, particle count or how many
+   chords happen to be alive right now. ---------- */
+function updateFoodParticles(nowMs){
+  if(!ECO.foodParticles) return;
+  const liveChords = ECO.world.bodies.filter(b=>b.kind==='chord' && !b.beingEaten);
+  ECO.foodParticles.forEach(fp=>{
+    if(nowMs < fp.eatenUntil) return; // currently hidden, waiting to respawn
+    for(let i=0;i<liveChords.length;i++){
+      const c = liveChords[i];
+      const d = Math.hypot(c.x-fp.x, c.y-fp.y);
+      if(d <= c.radius + fp.r){
+        fp.eatenUntil = nowMs + 3000 + ECO.rng()*4000;
+        fp.x = 20 + ECO.rng()*Math.max(1, ECO.world.width-40);
+        fp.y = 20 + ECO.rng()*Math.max(1, ECO.world.height*0.78);
+        c.lastAteAt = nowMs;
+        c.colorful = true;
+        spawnBurst('nom', c.x, c.y, hueForPc(liveRootRaw(c)));
+        break;
+      }
+    }
+  });
+  liveChords.forEach(c=>{
+    if(nowMs - c.lastAteAt > ECO.foodGrayTimeoutMs) c.colorful = false;
+  });
+  if(nowMs >= (ECO.foodBalanceCheckAt||0)){
+    ECO.foodBalanceCheckAt = nowMs + 5000;
+    if(liveChords.length){
+      const grayCount = liveChords.filter(c=>c.colorful===false).length;
+      ECO.foodGrayTimeoutMs = nextFoodGrayTimeout(ECO.foodGrayTimeoutMs, grayCount/liveChords.length, {});
+    }
+  }
+}
+
+/* ---------- Night constellation mode: at night the 6 interactive objects
+   ease up into fixed sky slots and hold there -- still real, collidable
+   physics bodies (see drawConstellationLines/drawStarGlyph in RENDERING) so
+   flying chords can still reach and trigger them up there. By day, gravity
+   is simply restored and normal falling/resting physics takes back over. ---------- */
+function updateConstellations(nowMs, dt){
+  ECO.world.bodies.forEach(obj=>{
+    if(obj.kind!=='object' || obj.dragging) return;
+    if(ECO.isNight){
+      obj.gravity = false;
+      const targetX = (obj.skyXf!=null?obj.skyXf:0.5)*ECO.world.width;
+      const targetY = (obj.skyYf!=null?obj.skyYf:0.15)*ECO.world.height;
+      const d = dist(obj.x,obj.y,targetX,targetY);
+      if(d>4){
+        const pull = summonPull(obj.x,obj.y,targetX,targetY,{strength:Math.min(420,70+d*2.2)});
+        obj.vx += pull.fx*dt; obj.vy += pull.fy*dt;
+      }
+      obj.vx *= 0.9; obj.vy *= 0.9; // eases into place instead of orbiting/overshooting
+      obj.resting = false;
+    } else if(!obj.gravity){
+      obj.gravity = true; // released back to normal day physics; falls and settles like any gravity body
+    }
+  });
+}
+
+/* ---------- Live re-pitch: if the chord currently providing the sustained
+   pad-hold ambient has its root change (zone crossing / transposer hit)
+   while still sounding, retune the live voice in place instead of leaving
+   the audio stuck at its original pitch. ---------- */
+function updateAmbientRepitch(){
+  if(!ECO.ambientVisual || !ECO.ambientVisual.sourceChordId) return;
+  const b = findBody(ECO.world, ECO.ambientVisual.sourceChordId);
+  if(!b || b.kind!=='chord') return;
+  const root = liveRootRaw(b);
+  if(ECO.ambientVisual.lastRoot==null){ ECO.ambientVisual.lastRoot = root; return; }
+  if(root !== ECO.ambientVisual.lastRoot){
+    const notes = b.intervals.map(iv=>iv+root);
+    ECO.audioPort.retuneAmbient(notes, root, b.pitchVarianceCents||0);
+    ECO.ambientVisual.lastRoot = root;
+  }
 }
 
 /* ============================================================================
    SECTION: RENDERING (Layer 3 — last, and only after physics+audio were
-   solid). Canvas 2D. Bioluminescent-creature style per the chosen direction:
-   glowing wobble-blobs colored by each chord's own pitch-class signature,
-   size/tendrils from note count, soft-glow sun by day / phase-shaded moon by
-   night, dashed zone divider labeled with each zone's actual root.
+   solid). Canvas 2D. Bioluminescent-creature style: glowing wobble-blobs
+   colored by each chord's own pitch-class signature, size/tendrils from
+   note count, soft-glow sun by day / phase-shaded moon by night, dashed
+   zone divider labeled with each zone's actual root.
+
+   Revision round 2 additions: a curved sun/moon arc + brightness overlay
+   (celestialArcPosition/dayNightBrightness), a black-hole vortex, a
+   common-tones area glow, per-chord light-emission glow + eat-shrink scale,
+   breathing-platform glow-on-landing, a tornado funnel, rain streaks, and
+   the nursery plant.
    ============================================================================ */
 let canvasEl, ctx2d;
 function setupCanvas(){
@@ -1116,20 +2545,29 @@ function hsl(h,s,l,a){ return 'hsla('+h+','+s+'%,'+l+'%,'+(a==null?1:a)+')'; }
 
 function drawBackground(w,h){
   const g = ctx2d.createLinearGradient(0,0,0,h);
-  if(ECO.isNight){ g.addColorStop(0,'#070a12'); g.addColorStop(1,'#0c1119'); }
-  else { g.addColorStop(0,'#0a1420'); g.addColorStop(1,'#070a0d'); }
+  // Revision round 3: pushed further apart (was #070a12/#0c1119 night vs
+  // #0a1420/#070a0d day) so the base sky itself reads as more distinctly
+  // day vs night before the brightness overlay is even applied.
+  if(ECO.isNight){ g.addColorStop(0,'#04050a'); g.addColorStop(1,'#080b13'); }
+  else { g.addColorStop(0,'#0d1c2c'); g.addColorStop(1,'#05070a'); }
   ctx2d.fillStyle=g; ctx2d.fillRect(0,0,w,h);
   // Each zone washed in the color of ITS root's pitch class (same hue
   // convention as the rest of the app), strongest at the outer edge and
   // fading toward the center divider -- keeps the dark bioluminescent mood
   // while still making the two zones read as distinct "keys" at a glance.
+  // Revision round 3: stronger alpha + a fixed lightness asymmetry (zone A
+  // cooler/darker, zone B warmer/brighter) independent of the actual hues,
+  // so the two zones stay visually distinct even when their pitch-class
+  // hues happen to land close together -- without pushing the wash so hard
+  // it swallows the contrast of a chord that shares its zone's hue (chords
+  // render at much higher opacity on top of this).
   const mid=w/2;
   const hueA = hueForPc(0), hueB = hueForPc(ZONE_B_GAP);
   const gA = ctx2d.createLinearGradient(0,0,mid,0);
-  gA.addColorStop(0, hsl(hueA,70,50,0.17)); gA.addColorStop(1, hsl(hueA,70,50,0.02));
+  gA.addColorStop(0, hsl(hueA,74,44,0.24)); gA.addColorStop(1, hsl(hueA,74,44,0.05));
   ctx2d.fillStyle=gA; ctx2d.fillRect(0,0,mid,h);
   const gB = ctx2d.createLinearGradient(w,0,mid,0);
-  gB.addColorStop(0, hsl(hueB,70,50,0.17)); gB.addColorStop(1, hsl(hueB,70,50,0.02));
+  gB.addColorStop(0, hsl(hueB,74,58,0.24)); gB.addColorStop(1, hsl(hueB,74,58,0.05));
   ctx2d.fillStyle=gB; ctx2d.fillRect(mid,0,w-mid,h);
 }
 function drawSun(x,y,nowMs){
@@ -1182,11 +2620,31 @@ function drawMoonPhase(cx,cy,r,phase31){
   ctx2d.restore();
   ctx2d.strokeStyle='rgba(220,230,255,0.35)'; ctx2d.lineWidth=1; ctx2d.beginPath(); ctx2d.arc(cx,cy,r,0,Math.PI*2); ctx2d.stroke();
 }
+// Revision round 2: position now follows celestialArcPosition (a real
+// rise-peak-set curve, not a near-flat line) instead of the old shallow
+// `66 - sin*26` wobble.
 function drawCelestial(w,h,nowMs){
   const frac = ECO.dayNightStartMs ? Math.min(1,(nowMs-ECO.dayNightStartMs)/DAY_NIGHT_MS) : 0;
-  const x = 60+frac*(w-120), y = 66-Math.sin(frac*Math.PI)*26;
-  if(ECO.isNight) drawMoonPhase(x,y,19,ECO.moonPhase);
-  else drawSun(x,y,nowMs);
+  const pos = celestialArcPosition(frac, w, h);
+  if(ECO.isNight) drawMoonPhase(pos.x,pos.y,19,ECO.moonPhase);
+  else drawSun(pos.x,pos.y,nowMs);
+}
+// Revision round 2: a full-canvas wash driven by dayNightBrightness, so the
+// whole scene visibly brightens toward solar noon and dims toward the
+// deepest part of the night, instead of an instant swap at the boundary.
+function applyBrightnessOverlay(w,h,nowMs){
+  const frac = ECO.dayNightStartMs ? Math.min(1,(nowMs-ECO.dayNightStartMs)/DAY_NIGHT_MS) : 0;
+  const b = dayNightBrightness(frac, ECO.isNight);
+  const darkness = Math.max(0, 1-b);
+  if(darkness>0.01){
+    ctx2d.fillStyle = 'rgba(0,4,10,'+(darkness*0.62).toFixed(3)+')';
+    ctx2d.fillRect(0,0,w,h);
+  }
+  if(b>0.85){
+    const extra = (b-0.85)/0.15;
+    ctx2d.fillStyle = 'rgba(255,244,214,'+(extra*0.10).toFixed(3)+')';
+    ctx2d.fillRect(0,0,w,h);
+  }
 }
 function drawZoneDivider(w,h){
   const mid=w/2;
@@ -1208,10 +2666,11 @@ function drawZoneDivider(w,h){
   };
   ctx2d.restore();
 }
-function drawPlatform(p){
+function drawPlatform(p, nowMs){
   // Undulating Gaudi/Park Güell-bench top edge instead of a flat rectangle,
   // covered in small trencadís (broken-tile mosaic) patches. The actual
-  // collision surface underneath is still the flat p.y line.
+  // collision surface underneath is still the flat p.y line (now itself
+  // gently bobbing per-frame via updatePlatformBreathing).
   const waveAmp = Math.min(6, p.h*0.55);
   const segs = Math.max(6, Math.round(p.w/20));
   ctx2d.beginPath();
@@ -1225,7 +2684,12 @@ function drawPlatform(p){
   ctx2d.lineTo(p.x+p.w, p.y+p.h*1.4);
   ctx2d.closePath();
   const g = ctx2d.createLinearGradient(p.x,p.y-waveAmp,p.x,p.y+p.h*1.4);
-  g.addColorStop(0,'#3d3020'); g.addColorStop(1,'#171310');
+  // Revision round 3: platform.inverse gets a light base + hue-rotated,
+  // darker tiles instead of the usual dark base + bright tiles -- a real
+  // color inversion of the normal scheme, not just a different palette.
+  // Chords landing here also get a distinct sawtooth timbre (updateLandingTriggers).
+  if(p.inverse){ g.addColorStop(0,'#e7e0c4'); g.addColorStop(1,'#c2bb98'); }
+  else { g.addColorStop(0,'#3d3020'); g.addColorStop(1,'#171310'); }
   ctx2d.fillStyle=g; ctx2d.fill();
   ctx2d.save();
   ctx2d.clip();
@@ -1235,13 +2699,29 @@ function drawPlatform(p){
     ctx2d.save();
     ctx2d.translate(x,y);
     ctx2d.rotate(tl.wob*1.6);
-    ctx2d.fillStyle = hsl(tl.hue,70,58,0.85);
+    ctx2d.fillStyle = p.inverse ? hsl((tl.hue+180)%360,65,30,0.85) : hsl(tl.hue,70,58,0.85);
     ctx2d.fillRect(-4,-4,8,8);
-    ctx2d.strokeStyle='rgba(0,0,0,0.35)'; ctx2d.lineWidth=0.6; ctx2d.strokeRect(-4,-4,8,8);
+    ctx2d.strokeStyle = p.inverse ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'; ctx2d.lineWidth=0.6; ctx2d.strokeRect(-4,-4,8,8);
     ctx2d.restore();
   });
   ctx2d.restore();
-  ctx2d.strokeStyle='rgba(0,0,0,0.45)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
+  ctx2d.strokeStyle = p.inverse ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
+  // Landing glow (feature: platform lights up in the chord's color).
+  if(p.glowUntil && nowMs<p.glowUntil){
+    const remain = Math.max(0,(p.glowUntil-nowMs)/2200);
+    ctx2d.save();
+    ctx2d.shadowColor = hsl(p.glowColor,90,65,0.9); ctx2d.shadowBlur = 24*remain;
+    ctx2d.strokeStyle = hsl(p.glowColor,90,72,0.65*remain);
+    ctx2d.lineWidth=3;
+    ctx2d.stroke();
+    ctx2d.restore();
+  }
+  if(p.inverse){
+    ctx2d.save();
+    ctx2d.fillStyle='rgba(20,16,8,0.65)'; ctx2d.font="700 9px 'JetBrains Mono', monospace"; ctx2d.textAlign='center';
+    ctx2d.fillText('◆ inverse ◆', p.x+p.w/2, p.y-8);
+    ctx2d.restore();
+  }
 }
 /* ---------- interactive objects: art nouveau / Gaudi organic forms, not
    literal glyphs -- psychedelic rotating-hue gradients, sinuous curves.
@@ -1390,8 +2870,85 @@ function drawFrond(R,t,hue){ // transposer
     ctx2d.restore();
   }
 }
+// NEW (revision round 2): black hole -- a swirling accretion-disk vortex
+// with a dark event-horizon core, distinct from the other flora/mineral
+// objects so it reads as a physical hazard, not another plant.
+function drawVoid(R,t,hue){
+  for(let i=0;i<5;i++){
+    const a = t*0.0009 + i*(Math.PI*2/5);
+    ctx2d.save();
+    ctx2d.rotate(a);
+    const grad = ctx2d.createLinearGradient(-R*1.6,0,R*1.6,0);
+    grad.addColorStop(0, hsl((hue+i*30)%360,90,60,0));
+    grad.addColorStop(0.5, hsl((hue+i*30)%360,90,65,0.55));
+    grad.addColorStop(1, hsl((hue+i*30)%360,90,60,0));
+    ctx2d.strokeStyle = grad; ctx2d.lineWidth = 3.2;
+    ctx2d.beginPath(); ctx2d.ellipse(0,0,R*1.6,R*0.5,0,0,Math.PI*2); ctx2d.stroke();
+    ctx2d.restore();
+  }
+  const core = ctx2d.createRadialGradient(0,0,0,0,0,R*0.85);
+  core.addColorStop(0,'#050308'); core.addColorStop(0.7,'#150a24'); core.addColorStop(1, hsl(hue,80,30,0.9));
+  ctx2d.beginPath(); ctx2d.arc(0,0,R*0.85,0,Math.PI*2); ctx2d.fillStyle=core; ctx2d.fill();
+  ctx2d.strokeStyle = hsl(hue,95,70,0.7); ctx2d.lineWidth=1.4; ctx2d.stroke();
+}
+// Revision round 3: night-constellation star glyph, drawn beneath each
+// object once it's up in its sky slot (see updateConstellations), and the
+// faint connecting lines between all 6 objects, drawn once per frame before
+// any of them so the "constellation" reads as a backdrop, not on top.
+function drawStarGlyph(R, twinkle){
+  const spikes=4;
+  ctx2d.save();
+  ctx2d.globalAlpha = 0.5+0.5*twinkle;
+  ctx2d.fillStyle='rgba(255,255,255,0.9)';
+  ctx2d.beginPath();
+  for(let i=0;i<spikes*2;i++){
+    const ang = (i/(spikes*2))*Math.PI*2;
+    const r = (i%2===0) ? R*1.9 : R*0.5;
+    const x=Math.cos(ang)*r, y=Math.sin(ang)*r;
+    if(i===0) ctx2d.moveTo(x,y); else ctx2d.lineTo(x,y);
+  }
+  ctx2d.closePath(); ctx2d.fill();
+  ctx2d.restore();
+}
+function drawConstellationLines(nowMs){
+  if(!ECO.isNight) return;
+  const objs = ECO.world.bodies.filter(b=>b.kind==='object');
+  if(objs.length<2) return;
+  ctx2d.save();
+  ctx2d.strokeStyle='rgba(220,230,255,0.22)'; ctx2d.lineWidth=1;
+  ctx2d.setLineDash([2,5]);
+  for(let i=0;i<objs.length;i++){
+    const a=objs[i], b=objs[(i+1)%objs.length];
+    ctx2d.beginPath(); ctx2d.moveTo(a.x,a.y); ctx2d.lineTo(b.x,b.y); ctx2d.stroke();
+  }
+  ctx2d.setLineDash([]);
+  ctx2d.restore();
+}
 function drawObject(b,nowMs){
   const t = nowMs||0;
+  // Revision round 3: at night, a star glyph appears BENEATH each object as
+  // it eases up into its sky slot (updateConstellations) -- drawn first so
+  // it sits under the object's own Gaudi form, per spec.
+  if(ECO.isNight){
+    ctx2d.save();
+    ctx2d.translate(b.x,b.y);
+    drawStarGlyph(b.radius*1.05, 0.5+0.5*Math.sin(t*0.003+(b.hue||0)));
+    ctx2d.restore();
+  }
+  // Common-tones area glow (feature: the object's detection area lights up
+  // while 2+ chords are inside it), drawn UNDER everything else including
+  // the object's own body, in its own save/restore so it doesn't disturb
+  // the shadow/translate state the switch below relies on.
+  if(b.objectType==='commontones' && (b.commonTonesActive || (b.glowUntil && nowMs<b.glowUntil))){
+    ctx2d.save();
+    ctx2d.translate(b.x,b.y);
+    const pulse = 0.5+0.5*Math.sin(t*0.004);
+    const rg = ctx2d.createRadialGradient(0,0,b.radius*0.5,0,0,COMMONTONES_RADIUS);
+    rg.addColorStop(0, hsl(b.hue,90,70,0.22+0.12*pulse));
+    rg.addColorStop(1, hsl(b.hue,90,70,0));
+    ctx2d.beginPath(); ctx2d.arc(0,0,COMMONTONES_RADIUS,0,Math.PI*2); ctx2d.fillStyle=rg; ctx2d.fill();
+    ctx2d.restore();
+  }
   ctx2d.save();
   ctx2d.translate(b.x,b.y);
   ctx2d.shadowColor=b.color; ctx2d.shadowBlur = b.dragging?28:15;
@@ -1401,15 +2958,163 @@ function drawObject(b,nowMs){
     case 'commontones': drawCrystal(b.radius,t,b.hue); break;
     case 'launcher': drawSeedBurst(b.radius,t,b.hue); break;
     case 'transposer': drawFrond(b.radius,t,b.hue); break;
+    case 'blackhole': drawVoid(b.radius,t,b.hue); break;
     default: break;
   }
   ctx2d.shadowBlur=0;
-  drawMosaicRing(b.radius*1.2, b.hue);
+  if(b.objectType!=='blackhole') drawMosaicRing(b.radius*1.2, b.hue); // the void reads better without the trencadís ring breaking its silhouette
   ctx2d.restore();
   ctx2d.save();
   ctx2d.fillStyle=b.color; ctx2d.font="600 10px 'JetBrains Mono', monospace"; ctx2d.textAlign='center';
   ctx2d.fillText(b.label, b.x, b.y+b.radius+16);
   ctx2d.restore();
+}
+// Art Nouveau nursery plant: fixed curving stems rising from the top of the
+// world, each ending in an attachment point some newly-spawned chords hang
+// from for a while (see updateNursery). Always visible as scenery, even
+// with nothing currently attached.
+function drawNurseryPlant(nowMs){
+  if(!ECO.nursery) return;
+  const t=nowMs;
+  ctx2d.save();
+  ctx2d.strokeStyle = hsl(140,45,38,0.75); ctx2d.lineWidth=3; ctx2d.lineCap='round';
+  ECO.nursery.stems.forEach((s,i)=>{
+    const midX = (ECO.nursery.baseX+s.x)/2 + Math.sin(t*0.0006+i)*10;
+    const midY = (ECO.nursery.baseY+s.y)/2;
+    ctx2d.beginPath();
+    ctx2d.moveTo(ECO.nursery.baseX, ECO.nursery.baseY);
+    ctx2d.quadraticCurveTo(midX, midY, s.x, s.y);
+    ctx2d.stroke();
+    ctx2d.save();
+    ctx2d.translate(midX, midY);
+    ctx2d.rotate(Math.sin(t*0.0005+i)*0.2 + (i%2?0.6:-0.6));
+    ctx2d.beginPath();
+    ctx2d.moveTo(0,0);
+    ctx2d.quadraticCurveTo(10,-6,18,0);
+    ctx2d.quadraticCurveTo(10,6,0,0);
+    ctx2d.fillStyle = hsl(150,50,42,0.6);
+    ctx2d.fill();
+    ctx2d.restore();
+    ctx2d.beginPath(); ctx2d.arc(s.x, s.y, 4, 0, Math.PI*2);
+    ctx2d.fillStyle = hsl(150,55,55,0.5); ctx2d.fill();
+  });
+  ctx2d.restore();
+}
+// Tornado funnel: a stack of slightly-offset swirling rings positioned via
+// tornadoPositionAt (same formula the physics-force side uses), so the
+// visual always tracks exactly where the force is actually being applied.
+function drawTornado(nowMs){
+  if(!ECO.tornado) return;
+  const pos = tornadoPositionAt(ECO.tornado, nowMs);
+  const R = ECO.tornado.radius;
+  ctx2d.save();
+  ctx2d.translate(pos.x,pos.y);
+  for(let ring=0; ring<5; ring++){
+    const rr = R*(0.3+ring*0.18);
+    const rot = nowMs*0.004*(ring%2?1:-1) + ring;
+    ctx2d.save();
+    ctx2d.rotate(rot);
+    ctx2d.beginPath();
+    for(let i=0;i<=40;i++){
+      const a = (i/40)*Math.PI*2;
+      const rad = rr*(0.85+0.15*Math.sin(a*5+ring));
+      const x=Math.cos(a)*rad, y=Math.sin(a)*rad*0.55 - R*0.5 + ring*R*0.22;
+      if(i===0) ctx2d.moveTo(x,y); else ctx2d.lineTo(x,y);
+    }
+    ctx2d.strokeStyle = hsl((200+ring*30+nowMs*0.02)%360,80,65,0.5);
+    ctx2d.lineWidth=2.4;
+    ctx2d.stroke();
+    ctx2d.restore();
+  }
+  ctx2d.restore();
+}
+// Rain: purely a function of nowMs plus each drop's fixed random character
+// (fx/speed/len/phase) generated once when rain starts, so nothing here
+// needs its own simulated/stepped state.
+function drawRain(w,h,nowMs){
+  if(!ECO.raining || !ECO.rainDrops) return;
+  ctx2d.save();
+  ctx2d.strokeStyle='rgba(200,220,255,0.35)'; ctx2d.lineWidth=1.4; ctx2d.lineCap='round';
+  ECO.rainDrops.forEach(d=>{
+    const travel = ((nowMs+d.phase)*d.speed/1000) % (h+40);
+    const x = d.fx*w;
+    const y = travel-20;
+    ctx2d.beginPath(); ctx2d.moveTo(x,y); ctx2d.lineTo(x-3,y+d.len); ctx2d.stroke();
+  });
+  ctx2d.restore();
+}
+// Revision round 3: a shallow strip of water along the bottom edge, sized to
+// exactly match the physics floor's collision plane (world.cfg.floorThickness)
+// so a resting chord's bottom edge lands exactly at the water's surface --
+// it reads as floating ON the water with zero physics changes needed. Just a
+// gently animated top edge, no other motion, per spec ("sin animaciones fancys").
+function drawWater(w,h,nowMs){
+  const depth = ECO.world.cfg.floorThickness;
+  const topY = h - depth;
+  const segs = Math.max(10, Math.round(w/40));
+  ctx2d.save();
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, h);
+  for(let i=0;i<=segs;i++){
+    const fx = i/segs, x = fx*w;
+    const y = topY + Math.sin(fx*Math.PI*4 + nowMs*0.0009)*3 + Math.sin(fx*Math.PI*9 - nowMs*0.0013)*1.3;
+    ctx2d.lineTo(x,y);
+  }
+  ctx2d.lineTo(w,h); ctx2d.closePath();
+  const g = ctx2d.createLinearGradient(0,topY,0,h);
+  g.addColorStop(0,'rgba(120,190,235,0.4)'); g.addColorStop(1,'rgba(35,85,125,0.6)');
+  ctx2d.fillStyle=g; ctx2d.fill();
+  ctx2d.strokeStyle='rgba(200,230,255,0.4)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
+  ctx2d.restore();
+}
+// Agar.io-style food pellets: small pulsating dots, dimmed while "eaten" and
+// waiting to respawn (see updateFoodParticles).
+function drawFoodParticles(nowMs){
+  if(!ECO.foodParticles) return;
+  ctx2d.save();
+  ECO.foodParticles.forEach(fp=>{
+    if(nowMs < fp.eatenUntil) return;
+    const pulse = 0.6+0.4*Math.sin(nowMs*0.004+fp.phase);
+    const hue = (nowMs*0.01+fp.phase*40)%360;
+    ctx2d.beginPath(); ctx2d.arc(fp.x,fp.y,fp.r*pulse,0,Math.PI*2);
+    ctx2d.fillStyle = hsl(hue,80,65,0.85);
+    ctx2d.shadowColor = hsl(hue,90,70,0.8); ctx2d.shadowBlur=6;
+    ctx2d.fill();
+  });
+  ctx2d.restore();
+}
+// Shared transient burst effects: eat flashes, food-particle noms, water
+// splashes -- one small system instead of three near-duplicate ones.
+function drawBursts(nowMs){
+  if(!ECO.bursts.length) return;
+  ECO.bursts.forEach(bu=>{
+    const age = nowMs-bu.startedAt, frac = Math.min(1, age/520);
+    ctx2d.save();
+    ctx2d.translate(bu.x,bu.y);
+    if(bu.kind==='splash'){
+      const ringR = 6+frac*32;
+      ctx2d.strokeStyle = 'rgba(170,215,255,'+(0.55*(1-frac)).toFixed(3)+')';
+      ctx2d.lineWidth=2; ctx2d.beginPath(); ctx2d.ellipse(0,0,ringR,ringR*0.38,0,0,Math.PI*2); ctx2d.stroke();
+      for(let i=0;i<6;i++){
+        const a = (i/6)*Math.PI*2;
+        const dropR = 4+frac*18;
+        const dx = Math.cos(a)*dropR, dy = Math.sin(a)*dropR*0.4 - frac*18;
+        ctx2d.fillStyle='rgba(195,228,255,'+(0.7*(1-frac)).toFixed(3)+')';
+        ctx2d.beginPath(); ctx2d.arc(dx,dy,2.2*(1-frac*0.6),0,Math.PI*2); ctx2d.fill();
+      }
+    } else {
+      const big = bu.kind==='eat';
+      const ringR = 4+frac*(big?36:16);
+      ctx2d.strokeStyle = hsl(bu.hue,90,70,(1-frac)*0.85);
+      ctx2d.lineWidth = big?3:1.6;
+      ctx2d.beginPath(); ctx2d.arc(0,0,ringR,0,Math.PI*2); ctx2d.stroke();
+      if(frac<0.4){
+        ctx2d.fillStyle = hsl(bu.hue,95,88,(0.4-frac)*1.5);
+        ctx2d.beginPath(); ctx2d.arc(0,0,ringR*0.5,0,Math.PI*2); ctx2d.fill();
+      }
+    }
+    ctx2d.restore();
+  });
 }
 // Combines the original wobble-blob "head" (kept, at the user's request)
 // with the chord's REAL hex-map layout (from qrOffsets, same geometry the
@@ -1420,6 +3125,10 @@ function drawObject(b,nowMs){
 // distinct (not just a generic radial tendril count), and keeps a
 // creature's colors always matching what it currently sounds like (root
 // shifts with zone/transpose/night, and the head recolors live with it).
+//
+// Revision round 2: also renders a light-emission glow while glowUntil is
+// active (feature: a chord emits light when it sounds), and scales the
+// whole creature down toward zero while beingEaten (feature: eat animation).
 function drawChord(b,t){
   const root = liveRootRaw(b);
   const headHue = hueForPc(root);
@@ -1428,17 +3137,39 @@ function drawChord(b,t){
   const layout = computeChordLayout(raw, b.qrOffsets, targetSpan);
   const rootIdx = raw.indexOf(0);
   const safeRootIdx = rootIdx>=0 ? rootIdx : 0;
+  // Revision round 3: a chord that's gone gray (hasn't eaten a food particle
+  // in time -- see updateFoodParticles) renders desaturated instead of its
+  // normal hue-bright colors; sat() is the one knob every hsl() call below
+  // routes through, so the whole creature reads gray together.
+  const isGray = b.colorful===false;
+  const sat = s => isGray ? Math.min(s,10) : s;
 
   ctx2d.save();
   ctx2d.translate(b.x,b.y);
+  const eatScale = b.beingEaten ? Math.max(0.02,b.eatScale||1) : 1;
+  // Eat-pulse (revision round 3): a brief scale-up "gulp" on the EATER the
+  // instant it eats something, layered on top of the normal eatScale shrink
+  // (which applies to the EATEN body) -- makes the moment of eating read as
+  // an obvious, punchy event instead of just a slow fade.
+  const pulseK = (b.eatPulseUntil && t<b.eatPulseUntil) ? (b.eatPulseUntil-t)/280 : 0;
+  const totalScale = eatScale * (1+pulseK*0.22);
+  if(totalScale!==1) ctx2d.scale(totalScale,totalScale);
   if(b.locomotion==='roll') ctx2d.rotate(b.angle);
+
+  if(b.glowUntil && t<b.glowUntil){
+    const remain = Math.max(0,(b.glowUntil-t)/900);
+    const gg = ctx2d.createRadialGradient(0,0,b.radius*0.6,0,0,b.radius*2.6);
+    gg.addColorStop(0, hsl(headHue,sat(95),75,0.4*remain));
+    gg.addColorStop(1, hsl(headHue,sat(95),75,0));
+    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius*2.6,0,Math.PI*2); ctx2d.fillStyle=gg; ctx2d.fill();
+  }
 
   // limbs: connecting curves first (underneath), then small hex nodes, each
   // note colored by its own live pitch class (root + that raw interval).
   layout.forEach((pt,i)=>{
     if(i===safeRootIdx) return;
     const noteHue = hueForPc(root + raw[i]);
-    ctx2d.strokeStyle = hsl(noteHue,75,62,0.5); ctx2d.lineWidth=1.6;
+    ctx2d.strokeStyle = hsl(noteHue,sat(75),62,0.5); ctx2d.lineWidth=1.6;
     ctx2d.beginPath();
     ctx2d.moveTo(0,0);
     ctx2d.quadraticCurveTo(pt.x*0.5+Math.sin(t*0.003+i)*3, pt.y*0.5+Math.cos(t*0.003+i)*3, pt.x, pt.y);
@@ -1450,7 +3181,7 @@ function drawChord(b,t){
     const hexR = Math.max(3.5, b.radius*0.24);
     ctx2d.save();
     ctx2d.translate(pt.x,pt.y);
-    ctx2d.shadowColor = hsl(noteHue,90,60,0.85); ctx2d.shadowBlur = 8;
+    ctx2d.shadowColor = hsl(noteHue,sat(90),60,0.85); ctx2d.shadowBlur = 8;
     ctx2d.beginPath();
     for(let k=0;k<6;k++){
       const ang = Math.PI/180*(60*k);
@@ -1458,7 +3189,7 @@ function drawChord(b,t){
       if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
     }
     ctx2d.closePath();
-    ctx2d.fillStyle = hsl(noteHue,85,60,0.92); ctx2d.fill();
+    ctx2d.fillStyle = hsl(noteHue,sat(85),60,0.92); ctx2d.fill();
     ctx2d.shadowBlur = 0;
     ctx2d.strokeStyle='rgba(255,255,255,0.4)'; ctx2d.lineWidth=1; ctx2d.stroke();
     ctx2d.restore();
@@ -1467,11 +3198,11 @@ function drawChord(b,t){
   // head: the original wobble-blob, at the root, colored by the root's live pitch class
   const wobble = 3+Math.min(b.radius*0.18,6);
   const points = 10;
-  ctx2d.shadowColor = hsl(headHue,85,60,0.9); ctx2d.shadowBlur = b.dragging? 30 : 18;
+  ctx2d.shadowColor = hsl(headHue,sat(85),60,0.9); ctx2d.shadowBlur = b.dragging? 30 : 18;
   const grad = ctx2d.createRadialGradient(0,-b.radius*0.2,b.radius*0.15,0,0,b.radius*1.15);
-  grad.addColorStop(0, hsl(headHue,90,80,0.95));
-  grad.addColorStop(0.55, hsl(headHue,85,58,0.85));
-  grad.addColorStop(1, hsl(headHue,80,40,0.12));
+  grad.addColorStop(0, hsl(headHue,sat(90),80,0.95));
+  grad.addColorStop(0.55, hsl(headHue,sat(85),58,0.85));
+  grad.addColorStop(1, hsl(headHue,sat(80),40,0.12));
   ctx2d.beginPath();
   for(let i=0;i<=points;i++){
     const a=(i/points)*Math.PI*2;
@@ -1486,7 +3217,7 @@ function drawChord(b,t){
   ctx2d.beginPath(); ctx2d.arc(-ex,ey,er,0,Math.PI*2); ctx2d.fill();
   ctx2d.beginPath(); ctx2d.arc(ex,ey,er,0,Math.PI*2); ctx2d.fill();
   if(b.isBig){
-    ctx2d.strokeStyle = hsl(headHue,90,85,0.55); ctx2d.lineWidth=1.5; ctx2d.setLineDash([3,4]);
+    ctx2d.strokeStyle = hsl(headHue,sat(90),85,0.55); ctx2d.lineWidth=1.5; ctx2d.setLineDash([3,4]);
     ctx2d.beginPath(); ctx2d.arc(0,0,b.radius+6,0,Math.PI*2); ctx2d.stroke(); ctx2d.setLineDash([]);
   }
   ctx2d.restore();
@@ -1495,18 +3226,41 @@ function render(nowMs){
   if(!ctx2d) return;
   const w=ECO.world.width, h=ECO.world.height;
   ctx2d.save();
-  const shakeLeft = ECO.quakeShakeUntil - nowMs;
+  const jitter = () => (ECO.rng ? ECO.rng() : Math.random()) - 0.5;
+  let shakeX=0, shakeY=0;
+  const shakeLeft = ECO.quakeVisualShakeUntil - nowMs;
   if(shakeLeft>0){
-    const k = shakeLeft/QUAKE_SHAKE_MS; // 1 -> 0, eases the jitter out
-    const jitter = () => (ECO.rng ? ECO.rng() : Math.random()) - 0.5;
-    ctx2d.translate(jitter()*14*k, jitter()*14*k);
+    const k = shakeLeft/QUAKE_SHAKE_MS; // 1 -> 0, eases the initial jolt out
+    shakeX += jitter()*14*k; shakeY += jitter()*14*k;
   }
+  // Revision round 3: a low sustained tremor for the quake's WHOLE (now
+  // longer) duration, plus a slightly bigger micro-tick on every crossed
+  // polyrhythm onset (see updateQuakeAudio) -- makes the earthquake read as
+  // actually lasting and having a felt rhythm, not just one instant 550ms
+  // jolt at the very start of a much longer, silently-running audio window.
+  if(ECO.quakeShakeUntil > nowMs){
+    const totalLeft = Math.max(0, ECO.quakeShakeUntil-nowMs);
+    const totalSpan = Math.max(1, ECO.quakeShakeUntil-ECO.lastQuakeAt);
+    const tremorK = totalLeft/totalSpan;
+    shakeX += jitter()*3*tremorK; shakeY += jitter()*3*tremorK;
+  }
+  if(ECO.quakeTickUntil > nowMs){ shakeX += jitter()*7; shakeY += jitter()*7; }
+  if(shakeX||shakeY) ctx2d.translate(shakeX,shakeY);
   drawBackground(w,h);
   drawCelestial(w,h,nowMs);
   drawZoneDivider(w,h);
-  ECO.world.platforms.forEach(drawPlatform);
+  drawWater(w,h,nowMs);
+  drawNurseryPlant(nowMs);
+  ECO.world.platforms.forEach(p=>drawPlatform(p,nowMs));
+  drawFoodParticles(nowMs);
+  drawConstellationLines(nowMs);
   ECO.world.bodies.forEach(b=>{ if(b.kind==='object') drawObject(b,nowMs); });
   ECO.world.bodies.forEach(b=>{ if(b.kind==='chord') drawChord(b,nowMs); });
+  drawBursts(nowMs);
+  drawTornado(nowMs);
+  drawRain(w,h,nowMs);
+  applyBrightnessOverlay(w,h,nowMs);
+  drawSelectionRect();
   ctx2d.restore();
 }
 
@@ -1515,8 +3269,20 @@ function render(nowMs){
    Dragging sets body.dragging=true (physics.js then treats it as kinematic,
    still eligible for collisions) and tracks a running velocity so releasing
    the drag flings the body onward instead of just dropping it dead.
+
+   Revision round 2: distinguishes a genuine click (barely moved, held
+   briefly) on a chord from a drag -- a click opens the compact info panel
+   instead of flinging the chord. Grabbing a still-hanging nursery chord
+   immediately frees it from the plant (clears nurseryPinned) so the user's
+   drag always wins over the plant's own positioning.
    ============================================================================ */
-const pointerState = { draggingId:null, lastX:0, lastY:0, lastT:0, vx:0, vy:0 };
+// Revision round 3: added ctrlDown/selRect/multiIds -- Ctrl+tap (minimal
+// movement) on a chord now opens the info panel; Ctrl+press-and-drag draws
+// an area-select rectangle and moves everything caught inside it together,
+// disambiguated by the SAME movement/time threshold used everywhere else in
+// this file for click-vs-drag (moved<6px, held<400ms), just additionally
+// gated on whether Ctrl was held at press time.
+const pointerState = { draggingId:null, lastX:0, lastY:0, lastT:0, vx:0, vy:0, downX:0, downY:0, downT:0, ctrlDown:false, selRect:null, multiIds:null };
 function eventXY(e){
   const rect = canvasEl.getBoundingClientRect();
   const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
@@ -1532,20 +3298,70 @@ function hitTest(x,y){
   return best;
 }
 function clampSpeed(v){ return Math.max(-500,Math.min(500,v)); }
+function normRectEco(x0,y0,x1,y1){ return { x:Math.min(x0,x1), y:Math.min(y0,y1), w:Math.abs(x1-x0), h:Math.abs(y1-y0) }; }
+function bodiesInRectEco(rect){ return ECO.world.bodies.filter(b=> b.x>=rect.x && b.x<=rect.x+rect.w && b.y>=rect.y && b.y<=rect.y+rect.h); }
+function drawSelectionRect(){
+  if(!pointerState.selRect || !pointerState.multiIds || !pointerState.multiIds.length) return;
+  const r = normRectEco(pointerState.selRect.x0,pointerState.selRect.y0,pointerState.lastX,pointerState.lastY);
+  ctx2d.save();
+  ctx2d.strokeStyle='rgba(214,172,44,0.85)'; ctx2d.lineWidth=1.5; ctx2d.setLineDash([5,4]);
+  ctx2d.strokeRect(r.x,r.y,r.w,r.h);
+  ctx2d.fillStyle='rgba(214,172,44,0.08)'; ctx2d.fillRect(r.x,r.y,r.w,r.h);
+  ctx2d.setLineDash([]);
+  ctx2d.restore();
+}
 function onPointerDown(e){
   const p = eventXY(e);
+  pointerState.ctrlDown = !!e.ctrlKey;
+  pointerState.downX=p.x; pointerState.downY=p.y; pointerState.downT=performance.now();
+  pointerState.lastX=p.x; pointerState.lastY=p.y; pointerState.lastT=performance.now();
+  pointerState.vx=0; pointerState.vy=0;
+  if(pointerState.ctrlDown){
+    // Could resolve into either a Ctrl+tap (open info panel) or a Ctrl+drag
+    // (area multi-select) once movement/hold crosses the click-vs-drag
+    // threshold -- judged in onPointerMove/onPointerUp below, so a literal
+    // single-body drag is deliberately NOT started here.
+    pointerState.selRect = { x0:p.x, y0:p.y };
+    pointerState.multiIds = null;
+    pointerState.draggingId = null;
+    e.preventDefault();
+    return;
+  }
   const hit = hitTest(p.x,p.y);
   if(hit){
     hit.dragging = true;
+    hit.nurseryPinned = false; // grabbing a hanging chord immediately frees it from the plant
     pointerState.draggingId = hit.id;
-    pointerState.lastX=p.x; pointerState.lastY=p.y; pointerState.lastT=performance.now();
-    pointerState.vx=0; pointerState.vy=0;
     canvasEl.classList.add('dragging');
     e.preventDefault();
   }
 }
 function onPointerMove(e){
   const p = eventXY(e);
+  if(pointerState.selRect){
+    const moved = Math.hypot(p.x-pointerState.downX, p.y-pointerState.downY);
+    if(moved>=6){
+      // crossed into "drag" territory: everything currently inside the rect
+      // moves together, same fling-on-release semantics as a single drag.
+      const rect = normRectEco(pointerState.selRect.x0,pointerState.selRect.y0,p.x,p.y);
+      const ids = bodiesInRectEco(rect).map(b=>b.id);
+      pointerState.multiIds = ids;
+      const dx = p.x-pointerState.lastX, dy = p.y-pointerState.lastY;
+      const dt = Math.max(1, performance.now()-pointerState.lastT)/1000;
+      ids.forEach(id=>{
+        const b = findBody(ECO.world,id);
+        if(!b) return;
+        b.dragging = true; b.nurseryPinned = false;
+        b.x = Math.max(b.radius, Math.min(ECO.world.width-b.radius, b.x+dx));
+        b.y = Math.max(b.radius, Math.min(ECO.world.height-b.radius, b.y+dy));
+      });
+      pointerState.vx = dx/dt; pointerState.vy = dy/dt;
+      canvasEl.classList.add('dragging');
+    }
+    pointerState.lastX=p.x; pointerState.lastY=p.y; pointerState.lastT=performance.now();
+    e.preventDefault();
+    return;
+  }
   if(pointerState.draggingId){
     const b = findBody(ECO.world, pointerState.draggingId);
     const now = performance.now();
@@ -1562,6 +3378,25 @@ function onPointerMove(e){
   }
 }
 function onPointerUp(){
+  if(pointerState.selRect){
+    const moved = Math.hypot(pointerState.lastX-pointerState.downX, pointerState.lastY-pointerState.downY);
+    const held = performance.now()-pointerState.downT;
+    if(pointerState.multiIds && pointerState.multiIds.length){
+      pointerState.multiIds.forEach(id=>{
+        const b = findBody(ECO.world,id);
+        if(b){ b.dragging=false; b.vx=clampSpeed(pointerState.vx); b.vy=clampSpeed(pointerState.vy); }
+      });
+    } else if(moved<6 && held<400){
+      // a genuine Ctrl+tap, not a drag: open the info panel for whatever
+      // chord (if any) sits right under the pointer.
+      const hit = hitTest(pointerState.downX, pointerState.downY);
+      if(hit && hit.kind==='chord') openInfoPanel(hit);
+    }
+    pointerState.selRect = null;
+    pointerState.multiIds = null;
+    canvasEl.classList.remove('dragging');
+    return;
+  }
   if(pointerState.draggingId){
     const b = findBody(ECO.world, pointerState.draggingId);
     if(b){ b.dragging=false; b.vx=clampSpeed(pointerState.vx); b.vy=clampSpeed(pointerState.vy); }
@@ -1574,26 +3409,35 @@ function mostCommonPairTooltipText(){
   if(!ECO.mostCommonPair) return "Zone B doesn't have a strong repeated pair yet in your collection — it's using a fallback root for now.";
   const p = ECO.mostCommonPair;
   const spA = ECO.species.find(s=>s.signature===p.sigA), spB = ECO.species.find(s=>s.signature===p.sigB);
-  const numA = spA ? '#'+spA.num : '?', numB = spB ? '#'+spB.num : '?';
+  const numA = spA ? chordTagHtml(spA.num) : '?', numB = spB ? chordTagHtml(spB.num) : '?';
   return 'Your most common pair: '+numA+' → '+numB+' (+'+p.gap+'), appears ×'+p.count;
 }
+// Revision round 3: every chord number/nickname anywhere in the UI now
+// renders through this one helper -- bold, distinctive color, per spec.
+function chordTagHtml(num, nickname){
+  const nickPart = nickname ? ' <span class="chord-tag">"'+escapeHtmlEco(nickname)+'"</span>' : '';
+  return '<span class="chord-tag">#'+num+'</span>'+nickPart;
+}
+// Revision round 3: the hover tooltip now says "ctrl+click for +info" (the
+// gesture changed) and renders through innerHTML so the chord number/
+// nickname get the shared bold/colored chord-tag treatment.
 function updateHoverTip(p){
   const tip = document.getElementById('tip');
   if(ECO.zoneLabelRects && (pointInRect(p.x,p.y,ECO.zoneLabelRects.A) || pointInRect(p.x,p.y,ECO.zoneLabelRects.B))){
-    tip.textContent = mostCommonPairTooltipText();
+    tip.innerHTML = mostCommonPairTooltipText();
     tip.style.left = p.x+'px'; tip.style.top = p.y+'px';
     tip.style.display = 'block';
     return;
   }
   const hit = hitTest(p.x,p.y);
   if(!hit){ tip.style.display='none'; return; }
-  let text;
+  let html;
   if(hit.kind==='chord'){
-    text = (hit.nickname ? '"'+hit.nickname+'" ' : '') + '#'+hit.num+'  '+hit.intervals.join('.')+(hit.isBig?'  ⏳1min':'');
+    html = chordTagHtml(hit.num, hit.nickname) + '  ' + escapeHtmlEco(hit.intervals.join('.')) + (hit.isBig?'  ⏳1min':'') + (hit.colorful===false?'  <span class="muted">·gray</span>':'') + '  ·  ctrl+click for +info';
   } else {
-    text = hit.label;
+    html = escapeHtmlEco(hit.label);
   }
-  tip.textContent = text;
+  tip.innerHTML = html;
   tip.style.left = p.x+'px'; tip.style.top = p.y+'px';
   tip.style.display = 'block';
 }
@@ -1610,20 +3454,83 @@ function onResize(){
   if(!ECO.world) return;
   ECO.world.width = window.innerWidth; ECO.world.height = window.innerHeight;
   ECO.world.platforms = buildPlatforms(ECO.world.width, ECO.world.height);
+  setupNursery(ECO.world.width, ECO.world.height);
   setupCanvasSize();
 }
 
 /* ============================================================================
-   SECTION: UI — whitelist panel, mute, close, HUD readout.
+   SECTION: UI — whitelist panel, mute, close, HUD readout, and (new this
+   revision round) the compact closeable chord info panel opened by clicking
+   a chord -- a simplified version of the main app's Shapes-tab detail card
+   (nickname/number, step ladder, a small hex-map preview, occurrence count,
+   contained shapes, and a scrollable occurrence list), not fullscreen, with
+   its own close button that returns to Ecosystem.
    ============================================================================ */
 function escapeHtmlEco(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function chordMiniSvg(rawIntervals, qrOffsets, size){
+  const span = size*0.36;
+  const layout = computeChordLayout(rawIntervals, qrOffsets, span);
+  const rootIdx = rawIntervals.indexOf(0);
+  const safeRootIdx = rootIdx>=0?rootIdx:0;
+  const cx=size/2, cy=size/2;
+  let lines='', nodes='';
+  layout.forEach((pt,i)=>{
+    if(i===safeRootIdx) return;
+    const hue = hueForPc(rawIntervals[i]);
+    lines += '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+pt.x)+'" y2="'+(cy+pt.y)+'" stroke="'+hsl(hue,70,60,0.55)+'" stroke-width="1.4"/>';
+  });
+  layout.forEach((pt,i)=>{
+    const hue = i===safeRootIdx ? hueForPc(0) : hueForPc(rawIntervals[i]);
+    const r = i===safeRootIdx ? 7:5;
+    nodes += '<circle cx="'+(cx+pt.x)+'" cy="'+(cy+pt.y)+'" r="'+r+'" fill="'+hsl(hue,80,60,0.95)+'" stroke="rgba(255,255,255,.4)" stroke-width="1"/>';
+  });
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+lines+nodes+'</svg>';
+}
+function renderInfoPanelHtml(sp){
+  const steps = sp.intervals.join(' . ');
+  const raw = sp.rawIntervals||sp.intervals;
+  // Revision round 3: primary visual is now the REAL hex-grid minimap,
+  // matching 31edo-harmonydex_121.html's own Shapes-tab card exactly (see
+  // chordHexConfigEco/buildHexMapSvgEco) -- not the circle-based layout,
+  // which is now shown small next to the panel title instead (openInfoPanel).
+  const hexCfg = chordHexConfigEco(raw, sp.qrOffsets, new Set(sp.intervals), ECO.octaveEquivalence);
+  const hexSvg = buildHexMapSvgEco(hexCfg, 15);
+  const contains = findSpeciesContains(sp, ECO.species);
+  const progNames = Array.from(new Set(sp.occurrences.map(o=>o.progName)));
+  const occRows = sp.occurrences.slice(0,10).map(o=>'<div class="occ">'+escapeHtmlEco(o.progName)+' — chord '+(o.idx+1)+(o.label?' "'+escapeHtmlEco(o.label)+'"':'')+'</div>').join('');
+  const moreCount = Math.max(0, sp.occurrences.length-10);
+  return ''+
+    '<div id="infoPanelSvgWrap">'+hexSvg+'</div>'+
+    '<div class="row"><span class="muted">steps:</span> '+escapeHtmlEco(steps)+'</div>'+
+    '<div class="row"><span class="muted">seen</span> '+sp.count+' time'+(sp.count===1?'':'s')+' across '+progNames.length+' progression'+(progNames.length===1?'':'s')+(sp.isBig?'  <span class="tag">big · 60s lifespan</span>':'')+'</div>'+
+    (contains.length ? '<div class="row"><span class="muted">contains:</span> '+contains.map(c=>'<span class="tag">'+chordTagHtml(c.num)+'</span>').join('')+'</div>' : '')+
+    '<div class="row"><span class="muted">occurrences:</span></div>'+occRows+
+    (moreCount>0 ? '<div class="occ muted">+'+moreCount+' more…</div>' : '');
+}
+function openInfoPanel(body){
+  const sp = ECO.species.find(s=>s.signature===body.sig);
+  if(!sp) return;
+  ECO.infoPanelOpenChordId = body.id;
+  const nick = ECO.nicknames[sp.signature];
+  document.getElementById('infoPanelTitle').innerHTML = chordTagHtml(sp.num, nick);
+  // Revision round 3: the well-liked circle-based mini drawing stays too --
+  // just small, next to the title, per spec.
+  const raw = sp.rawIntervals||sp.intervals;
+  document.getElementById('infoPanelTitleIcon').innerHTML = chordMiniSvg(raw, sp.qrOffsets, 34);
+  document.getElementById('infoPanelBody').innerHTML = renderInfoPanelHtml(sp);
+  document.getElementById('infoPanel').classList.remove('hidden');
+}
+function closeInfoPanel(){
+  document.getElementById('infoPanel').classList.add('hidden');
+  ECO.infoPanelOpenChordId = null;
+}
 function renderWhitelistPanel(){
   const list = document.getElementById('whitelistList');
   if(ECO.species.length===0){ list.innerHTML = '<div class="empty-note">No cataloged shapes in your collection yet.</div>'; return; }
   list.innerHTML = ECO.species.map(sp=>{
     const checked = ECO.whitelist.signatures.indexOf(sp.signature)!==-1 ? 'checked' : '';
     const nick = ECO.nicknames[sp.signature];
-    return '<label><input type="checkbox" data-sig="'+escapeHtmlEco(sp.signature)+'" '+checked+'> #'+sp.num+(nick?' "'+escapeHtmlEco(nick)+'"':'')+' <span style="color:var(--muted)">('+sp.intervals.length+'n'+(sp.isBig?', big':'')+')</span></label>';
+    return '<label><input type="checkbox" data-sig="'+escapeHtmlEco(sp.signature)+'" '+checked+'> '+chordTagHtml(sp.num, nick)+' <span class="muted">('+sp.intervals.length+'n'+(sp.isBig?', big':'')+')</span></label>';
   }).join('');
   list.querySelectorAll('input[type=checkbox]').forEach(cb=>{
     cb.addEventListener('change', ()=>{
@@ -1635,14 +3542,20 @@ function renderWhitelistPanel(){
     });
   });
 }
+// Revision round 3: renamed for the new eye-icon "god settings" button
+// (whitelist now lives inside it as a submenu); also syncs the new max
+// population slider.
 function syncWhitelistUI(){
-  document.getElementById('whitelistToggleBtn').classList.toggle('active', ECO.whitelist.active);
+  document.getElementById('godSettingsToggleBtn').classList.toggle('active', ECO.whitelist.active);
   const activeCb = document.getElementById('wlActiveCheckbox');
   if(activeCb) activeCb.checked = ECO.whitelist.active;
+  const slider = document.getElementById('maxPopSlider'), val = document.getElementById('maxPopVal');
+  if(slider) slider.value = ECO.maxPopulation;
+  if(val) val.textContent = ECO.maxPopulation;
 }
 function wireUI(){
-  document.getElementById('whitelistToggleBtn').addEventListener('click', ()=>{
-    const panel = document.getElementById('whitelistPanel');
+  document.getElementById('godSettingsToggleBtn').addEventListener('click', ()=>{
+    const panel = document.getElementById('godSettingsPanel');
     const opening = panel.classList.contains('hidden');
     panel.classList.toggle('hidden');
     if(opening) renderWhitelistPanel();
@@ -1653,6 +3566,11 @@ function wireUI(){
     syncWhitelistUI();
     if(ECO.whitelist.active) applyWhitelistFilterNow();
   });
+  document.getElementById('maxPopSlider').addEventListener('input', (e)=>{
+    ECO.maxPopulation = Math.max(1, Math.min(20, parseInt(e.target.value,10)||20));
+    document.getElementById('maxPopVal').textContent = ECO.maxPopulation;
+    saveMaxPopulation(ECO.maxPopulation);
+  });
   document.getElementById('muteBtn').addEventListener('click', ()=>{
     ECO.settings.muted = !ECO.settings.muted;
     const btn = document.getElementById('muteBtn');
@@ -1661,6 +3579,8 @@ function wireUI(){
     if(ECO.settings.muted) ECO.audioPort.stopAmbient();
   });
   document.getElementById('closeBtn').addEventListener('click', ()=>{ window.close(); });
+  document.getElementById('infoPanelClose').addEventListener('click', closeInfoPanel);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeInfoPanel(); });
 }
 function updateHudText(nowMs){
   const el = document.getElementById('dayNightReadout');
@@ -1670,12 +3590,97 @@ function updateHudText(nowMs){
 }
 
 /* ============================================================================
+   SECTION: START-SCREEN FRACTAL BACKGROUND (revision round 3)
+   A looping fractal animation behind the "your ecosystem" title -- a slowly
+   rotating double-helix (DNA-reminiscent) whose ring radii and rung spacing
+   follow harmonic-series proportions (1/n falloff, same "overtone series"
+   character as the app's own 31-ED2 tuning), with small self-similar
+   forked spurs at each rung (the actual "fractal" part). Runs on its own
+   rAF loop independent of the main game loop -- starts immediately on page
+   load and stops for good the instant the user clicks to begin (see
+   __fractalStopped in the startHandler below), so it never costs anything
+   once real gameplay is running.
+   ============================================================================ */
+let __fractalStopped = false;
+function drawFractalSpur(fctx, x, y, len, angle, depth){
+  if(depth<=0 || len<1.2) return;
+  const x2 = x+Math.cos(angle)*len, y2 = y+Math.sin(angle)*len;
+  fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x2,y2);
+  fctx.strokeStyle='rgba(200,230,255,0.3)'; fctx.lineWidth=Math.max(0.4,depth*0.5);
+  fctx.stroke();
+  drawFractalSpur(fctx, x2, y2, len*0.62, angle-0.5, depth-1);
+  drawFractalSpur(fctx, x2, y2, len*0.62, angle+0.5, depth-1);
+}
+function setupStartFractal(){
+  const canvas = document.getElementById('startFractalCanvas');
+  if(!canvas || !canvas.getContext) return;
+  const fctx = canvas.getContext('2d');
+  function size(){
+    const dpr = window.devicePixelRatio||1;
+    canvas.width = Math.max(1,Math.floor(window.innerWidth*dpr));
+    canvas.height = Math.max(1,Math.floor(window.innerHeight*dpr));
+    canvas.style.width = window.innerWidth+'px'; canvas.style.height = window.innerHeight+'px';
+    fctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  size();
+  window.addEventListener('resize', size);
+  function drawFrame(t){
+    if(__fractalStopped) return;
+    const w = window.innerWidth, h = window.innerHeight;
+    fctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h*0.42;
+    const rungs = 24;
+    const helixR = Math.min(w,h)*0.24;
+    const spanY = h*0.85;
+    for(let s=0;s<2;s++){
+      fctx.beginPath();
+      for(let i=0;i<=rungs;i++){
+        const frac = i/rungs;
+        const y = cy - spanY/2 + frac*spanY;
+        const harmonic = 1/(1+(i%7)); // harmonic-series-flavored radius wobble
+        const ang = frac*Math.PI*5 + t*0.00022 + s*Math.PI;
+        const x = cx + Math.cos(ang)*helixR*(0.7+0.3*harmonic);
+        if(i===0) fctx.moveTo(x,y); else fctx.lineTo(x,y);
+      }
+      fctx.strokeStyle = 'hsla('+((t*0.02+s*160)%360)+',75%,65%,0.5)';
+      fctx.lineWidth = 2;
+      fctx.stroke();
+    }
+    for(let i=0;i<=rungs;i+=2){
+      const frac = i/rungs;
+      const y = cy - spanY/2 + frac*spanY;
+      const ang0 = frac*Math.PI*5 + t*0.00022;
+      const r = helixR*(0.7+0.3*(1/(1+(i%7))));
+      const x0 = cx+Math.cos(ang0)*r, x1 = cx+Math.cos(ang0+Math.PI)*r;
+      fctx.beginPath(); fctx.moveTo(x0,y); fctx.lineTo(x1,y);
+      fctx.strokeStyle = 'hsla('+((t*0.02+frac*200)%360)+',70%,60%,0.25)';
+      fctx.lineWidth=1;
+      fctx.stroke();
+      drawFractalSpur(fctx, x0, y, 9*(1/(1+(i%5))), ang0, 2);
+      drawFractalSpur(fctx, x1, y, 9*(1/(1+(i%5))), ang0+Math.PI, 2);
+    }
+    requestAnimationFrame(drawFrame);
+  }
+  requestAnimationFrame(drawFrame);
+}
+setupStartFractal();
+
+/* ============================================================================
    SECTION: MAIN LOOP / BOOTSTRAP
    Fixed-timestep physics (accumulator pattern) decoupled from the render
    framerate, so behavior doesn't change between fast and slow machines.
    Nothing runs until the start overlay is clicked -- that click is also
    what's allowed to create/resume the AudioContext under browser autoplay
    rules.
+
+   Revision round 2 wires in every new per-frame system: continuous forces
+   (black hole, hunting, summon, tornado, anti-clump) run inside the fixed
+   substep loop alongside physics itself; edge-triggered audio/visual systems
+   (landing, border, common-tones, quake-rhythm) run right after each
+   substep's collision events are handled; frame-rate-granularity systems
+   (day/night, spawning, earthquake scheduling, tornado/rain scheduling,
+   platform breathing, nursery) run once per animation frame, matching the
+   granularity the original code already used for their counterparts.
    ============================================================================ */
 const FIXED_DT = 1/60;
 let __lastT = null, __acc = 0;
@@ -1692,8 +3697,10 @@ function boot(){
   annotateBigSpecies(ECO.species); // computed over the FULL collection, independent of whitelist
   ZONE_B_GAP = computeZoneBGap(data.progressions, data.octaveEquivalence);
   ECO.mostCommonPair = computeMostCommonChordPair(data.progressions, data.octaveEquivalence); // for the zone-title tooltip
+  ECO.octaveEquivalence = data.octaveEquivalence; // revision round 3: needed for the hex minimap's octave-echo highlight
 
   ECO.whitelist = loadWhitelist();
+  ECO.maxPopulation = loadMaxPopulation(); // revision round 3
 
   const seed = ((Date.now() ^ Math.floor(performance.now()*1000)) >>> 0) || 1;
   ECO.rng = makeRng(seed);
@@ -1702,9 +3709,30 @@ function boot(){
   ECO.dayNightStartMs = 0;
   ECO.lastQuakeAt = 0;
   ECO.quakeShakeUntil = 0;
+  ECO.quakeVisualShakeUntil = 0;
+  ECO.quakeTickUntil = 0;
+  ECO.quakeGrid = null;
+  ECO.quakeQueue = [];
+  ECO.quakeAudioPrevElapsed = -1;
+  ECO.huntNextCheckAt = performance.now()+4000;
+  ECO.summon = null;
+  ECO.summonNextAt = performance.now()+6000;
+  ECO.tornado = null;
+  ECO.raining = false;
+  ECO.rainDrops = null;
+  ECO._rainAudioOn = false;
+  ECO.infoPanelOpenChordId = null;
+  ECO.recentBigEvents = [];
+  ECO.foodGrayTimeoutMs = 9000;
+  ECO.foodBalanceCheckAt = 0;
+  ECO.bursts = [];
 
   ECO.world = createWorld({ width: window.innerWidth, height: window.innerHeight, platforms: buildPlatforms(window.innerWidth, window.innerHeight) });
   spawnObjects(ECO.world);
+  setupNursery(window.innerWidth, window.innerHeight);
+  setupFoodParticles(window.innerWidth, window.innerHeight);
+  scheduleNextTornado(performance.now());
+  scheduleNextRain(performance.now());
 
   const driver = createRealDriver(()=>ECO.settings);
   ECO.audioPort = createAudioPort(driver);
@@ -1727,12 +3755,30 @@ function loop(t){
   updateDayNight(t);
   updateSpawning(t);
   updateEarthquake(t);
+  updateTornadoSpawn(t);
+  updateWeather(t);
+  updatePlatformBreathing(t);
+  updateNursery(t);
+  updateFoodParticles(t);
+  updateBursts(t);
 
   while(__acc >= FIXED_DT){
+    updateBlackHolePull(FIXED_DT);
+    updateHunting(t, FIXED_DT);
+    updateSummon(t, FIXED_DT);
+    applyTornadoForces(t, FIXED_DT);
+    updateAntiClump(FIXED_DT);
+    updateConstellations(t, FIXED_DT);
     const events = stepWorld(ECO.world, FIXED_DT, ECO.rng);
-    handleEvents(events);
+    handleEvents(events, t);
     updateZones();
     updateLifecycle(t);
+    updateEatingBodies(t);
+    updateLandingTriggers(t);
+    updateBorderAudio(t);
+    updateCommonTonesArea(t);
+    updateQuakeAudio(t);
+    updateAmbientRepitch();
     __acc -= FIXED_DT;
   }
 
@@ -1743,9 +3789,11 @@ function loop(t){
 
 document.getElementById('startOverlay').addEventListener('click', function startHandler(){
   document.getElementById('startOverlay').classList.add('hidden');
+  __fractalStopped = true; // stop the start-screen background loop once real gameplay begins
   getAudioCtx();
   boot();
 }, { once:true });
 </script>
 </body>
 </html>
+
