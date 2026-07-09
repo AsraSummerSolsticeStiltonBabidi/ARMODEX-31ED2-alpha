@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ecosystem — 31ED2 Armodex</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Fascinate&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Fascinate&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=UnifrakturMaguntia&family=Creepster&family=Monoton&family=Bungee+Shade&family=Faster+One&family=Butcherman&family=Rubik+Wet+Paint&family=Bangers&family=Frijole&family=Pirata+One&family=Press+Start+2P&family=Rubik+Glitch&family=Sixtyfour&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#05070a; --panel:#0d1218cc; --panel-solid:#0d1218; --border:#26313d;
@@ -29,10 +29,32 @@
   #startOverlay h1{
     position:relative;z-index:1;
     font-family:'Fascinate',cursive;font-weight:400;text-transform:lowercase;
-    font-size:clamp(34px,8vw,78px);margin:0;letter-spacing:.02em;line-height:1.1;
+    font-size:clamp(34px,8vw,78px);margin:0;letter-spacing:.05em;line-height:1.3;
     color:#bff4e6;text-shadow:0 0 18px rgba(127,224,200,.55),0 0 44px rgba(127,224,200,.25);
     animation:ecoHue 4s linear infinite, ecoPupil 2.2s ease-in-out infinite;
   }
+  /* Revision round 8: "cada caracter es super distinto y proviene de una font
+     distinta super extrambotica" -- each letter of the title gets its own
+     wildly different eccentric display font (blackletter/horror-drip/neon/
+     glitch/pixel/comic/pirate/etc, see the extra @font-face families pulled
+     in above) plus a small static rotation/baseline/size jitter, so the
+     whole title reads like a ransom note instead of one uniform typeface.
+     The parent h1's own ecoHue/ecoPupil animation is untouched and still
+     plays across the whole composited title, letters included. */
+  #startOverlay h1 span{display:inline-block;}
+  .ft1{font-family:'UnifrakturMaguntia',cursive;transform:rotate(-7deg) translateY(2px);font-size:1.05em;}
+  .ft2{font-family:'Creepster',cursive;transform:rotate(5deg) translateY(-3px);font-size:0.95em;}
+  .ft3{font-family:'Monoton',cursive;transform:rotate(-4deg) translateY(1px);font-size:0.85em;}
+  .ft4{font-family:'Bungee Shade',cursive;transform:rotate(8deg) translateY(-2px);font-size:0.9em;}
+  .ft5{font-family:'Faster One',cursive;transform:rotate(-6deg) translateY(3px);font-size:1.1em;}
+  .ft6{font-family:'Butcherman',cursive;transform:rotate(4deg) translateY(-4px);font-size:1em;}
+  .ft7{font-family:'Rubik Wet Paint',cursive;transform:rotate(-9deg) translateY(2px);font-size:0.95em;}
+  .ft8{font-family:'Bangers',cursive;transform:rotate(6deg) translateY(-1px);font-size:1.1em;}
+  .ft9{font-family:'Frijole',cursive;transform:rotate(-5deg) translateY(3px);font-size:0.9em;}
+  .ft10{font-family:'Pirata One',cursive;transform:rotate(7deg) translateY(-2px);font-size:1.05em;}
+  .ft11{font-family:'Press Start 2P',cursive;transform:rotate(-3deg) translateY(1px);font-size:0.75em;}
+  .ft12{font-family:'Rubik Glitch',cursive;transform:rotate(5deg) translateY(-3px);font-size:0.95em;}
+  .ft13{font-family:'Sixtyfour',monospace;transform:rotate(-6deg) translateY(2px);font-size:0.85em;}
   #startOverlay p{position:relative;z-index:1;max-width:580px;color:var(--muted);font-size:14.5px;line-height:1.55;margin:0;}
   #startOverlay .go{
     position:relative;z-index:1;
@@ -204,7 +226,7 @@
   </div>
   <div id="startOverlay">
     <canvas id="startFractalCanvas"></canvas>
-    <h1>your ecosystem</h1>
+    <h1><span class="ft1">y</span><span class="ft2">o</span><span class="ft3">u</span><span class="ft4">r</span> <span class="ft5">e</span><span class="ft6">c</span><span class="ft7">o</span><span class="ft8">s</span><span class="ft9">y</span><span class="ft10">s</span><span class="ft11">t</span><span class="ft12">e</span><span class="ft13">m</span></h1>
     <p>Chords from your Armodex collection, wandering a living physics sandbox. Ctrl+click a chord for details, or Ctrl+drag to select several at once. Shift+click/drag grabs everything in a small area around your cursor and moves it together. Collide chords into the glowing objects — including a flying black hole, a nectar flower, and a Gaudí sphere — to strum, sustain, launch, transpose, and more. A day of morning/midday/afternoon and a lunar night cycle the whole tuning reference. See the ❓ Help button in-game for the full rundown.</p>
     <div class="go">click / tap to begin</div>
   </div>
@@ -1317,6 +1339,24 @@ function createAudioPort(driver) {
     waterTap() {
       if (driver.playWaterTap) driver.playWaterTap();
     },
+    // Revision round 7: the Gaudi fish's bite -- a long 1-2s release with a
+    // mid-release random pitchbend (see realPlayFishEat).
+    fishEat(rawNotes, root, timbre, extraCents, quiet) {
+      if (!rawNotes || rawNotes.length === 0) return;
+      if (driver.playFishEat) driver.playFishEat(rawNotes.slice(), root, timbre || 'guitar', extraCents || 0, !!quiet);
+    },
+    // Revision round 7: celestial-midpoint random effects (see
+    // updateCelestialMidpointEvent) -- reverb/silence are whole-mix sends the
+    // driver owns; the bend reaches directly into whichever ambient sustain
+    // is CURRENTLY playing (if any -- a quiet no-op otherwise, since this is
+    // a rare decorative event, not a core mechanic), which only this closure
+    // has a handle to, so it's implemented here rather than delegated whole.
+    celestialBend(rawStepShift, rampSec, holdSec) {
+      if (!ambient || !driver.bendSustainVoices) return;
+      driver.bendSustainVoices(ambient.handle, rawStepShift, rampSec, holdSec);
+    },
+    celestialReverb() { if (driver.playCelestialReverb) driver.playCelestialReverb(); },
+    celestialSilence() { if (driver.playCelestialSilence) driver.playCelestialSilence(); },
     arpeggio(rawNotes, root, timbre, totalDurSec, extraCents, quiet) {
       if (!rawNotes || rawNotes.length === 0) return;
       driver.playArpeggio(rawNotes.slice(), root, timbre || 'guitar', totalDurSec || 2, extraCents || 0, !!quiet);
@@ -1358,6 +1398,10 @@ function createMockDriver() {
     playOneShot(notes, root, timbre, style, extraCents, quiet) { calls.push({ type: 'oneshot', notes, root, timbre, style, extraCents, quiet }); },
     playNoise() { calls.push({ type: 'noise' }); },
     playWaterTap() { calls.push({ type: 'waterTap' }); },
+    playFishEat(notes, root, timbre, extraCents, quiet) { calls.push({ type: 'fishEat', notes, root, timbre, extraCents, quiet }); },
+    bendSustainVoices(handle, rawStepShift, rampSec, holdSec) { calls.push({ type: 'bendSustainVoices', handle, rawStepShift, rampSec, holdSec }); },
+    playCelestialReverb() { calls.push({ type: 'celestialReverb' }); },
+    playCelestialSilence() { calls.push({ type: 'celestialSilence' }); },
     playArpeggio(notes, root, timbre, totalDurSec, extraCents, quiet) { calls.push({ type: 'arpeggio', notes, root, timbre, totalDurSec, extraCents, quiet }); },
     playBlip(notes, root, extraCents, quiet) { calls.push({ type: 'blip', notes, root, extraCents, quiet }); },
     startSustain(notes, root, timbre, extraCents, quiet) {
@@ -1707,18 +1751,52 @@ const STRUM_GAP = 0.055; // seconds between successive notes, low to high — ma
 // the normal envelope, per spec -- still audible, just a faint quick tick.
 // 'saw' is a brand new timbre (used only when landing on the inverse-color
 // platform) with its own hard-capped short decay/release regardless of dur.
+// Revision round 8: short synthesized noise-click transient layered onto the
+// onset of notes that get swapped to the new triangle voice while the sky
+// kaleidoscope fractal is active (see kaleidoActive inside scheduleNote).
+function addNoiseClick(ctx, master, startTime){
+  const clickDur = 0.045;
+  const buffer = ctx.createBuffer(1, Math.max(1,Math.floor(ctx.sampleRate*clickDur)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
+  const src = ctx.createBufferSource(); src.buffer = buffer;
+  const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2600;
+  const clickGain = ctx.createGain();
+  clickGain.gain.setValueAtTime(0.24, startTime);
+  clickGain.gain.exponentialRampToValueAtTime(0.0001, startTime+clickDur);
+  src.connect(hp).connect(clickGain).connect(master);
+  src.start(startTime); src.stop(startTime+clickDur+0.01);
+}
+const KALEIDO_RELEASE_MUL = 1.35; // revision round 8: "augmente un poco el release de todo" while the sky kaleidoscope is showing
+const KALEIDO_TRIANGLE_CHANCE = 0.4; // "algunas shapes suenen en timbre triangle y con un click de noise al inicio"
 function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet){
   const freq = freqForRaw(raw, generalPitchCents);
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.0001, startTime);
   const master = getMasterBus(ctx);
+  // Revision round 8 kaleidoscope audio effects: scheduleNote is
+  // Web-Audio/browser-only (not part of any tested module.exports block), so
+  // it reads the ECO global directly here rather than threading a new
+  // settings parameter through every one of its many call sites. While the
+  // sky kaleidoscope fractal is up, every note's release is stretched a
+  // little (the saw/square hard-caps below get their ceiling stretched too,
+  // so the "little bit longer" is still felt without losing their
+  // percussive character), and each note gets one roll of a chance to swap
+  // to a brand-new triangle-wave voice plus a noise-click transient at onset.
+  const kaleidoActive = (typeof ECO!=='undefined') && !!ECO.kaleidoscopeUntil && performance.now() < ECO.kaleidoscopeUntil;
+  const releaseMul = kaleidoActive ? KALEIDO_RELEASE_MUL : 1;
+  dur = dur*releaseMul;
+  if(kaleidoActive && Math.random() < KALEIDO_TRIANGLE_CHANCE){
+    timbre = 'triangle';
+    addNoiseClick(ctx, master, startTime);
+  }
   if(timbre==='saw'){
     const osc = ctx.createOscillator();
     osc.type='sawtooth'; osc.frequency.value=freq;
     const filter = ctx.createBiquadFilter();
     filter.type='lowpass';
     filter.frequency.setValueAtTime(freq*6, startTime);
-    const sawDur = quiet ? Math.min(dur,0.13) : Math.min(dur,0.22);
+    const sawDur = quiet ? Math.min(dur,0.13*releaseMul) : Math.min(dur,0.22*releaseMul);
     filter.frequency.exponentialRampToValueAtTime(Math.max(280,freq*1.3), startTime+sawDur*0.7);
     gain.gain.exponentialRampToValueAtTime(quiet?0.02:0.25, startTime+0.006);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime+sawDur);
@@ -1732,11 +1810,24 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet
   if(timbre==='square'){
     const osc = ctx.createOscillator();
     osc.type='square'; osc.frequency.value=freq;
-    const sqDur = quiet ? Math.min(dur,0.16) : Math.min(dur,0.26);
+    const sqDur = quiet ? Math.min(dur,0.16*releaseMul) : Math.min(dur,0.26*releaseMul);
     gain.gain.exponentialRampToValueAtTime(quiet?0.018:0.2, startTime+0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime+sqDur);
     osc.connect(gain).connect(master);
     osc.start(startTime); osc.stop(startTime+sqDur+0.05);
+    return;
+  }
+  // Revision round 8: new triangle-wave voice, reached only via the
+  // kaleidoActive note-swap roll above -- softer/rounder than sine, paired
+  // with addNoiseClick's transient for a plucked-but-airy character.
+  if(timbre==='triangle'){
+    const osc = ctx.createOscillator();
+    osc.type='triangle'; osc.frequency.value=freq;
+    const triDur = quiet ? Math.max(0.08, dur*0.14) : dur;
+    gain.gain.exponentialRampToValueAtTime(quiet?0.022:0.22, startTime+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+triDur);
+    osc.connect(gain).connect(master);
+    osc.start(startTime); osc.stop(startTime+triDur+0.05);
     return;
   }
   const effDur = quiet ? Math.max(0.1, dur*0.14) : dur;
@@ -1832,6 +1923,47 @@ function realPlayBlip(notes, root, extraCents, settings, quiet){
     osc.start(t0); osc.stop(t0+(quiet?0.08:0.13));
   });
 }
+// Revision round 7: the Gaudi fish's bite (see updateFish). "que cuando esto
+// pase suene el acorde con un release bastante largo (1-2s) y a mitad de ese
+// lapso de tiempo haga un pitchbend de velocidad y intervalo random" -- every
+// note of the eaten chord rings with a long 1-2s release, and at the exact
+// midpoint of that release a pitchbend of random speed (the ramp's own
+// duration) and random interval (in raw 31-EDO steps, this piece's native
+// pitch unit, so it stays in the same tuning language as everything else)
+// kicks in.
+function realPlayFishEat(notes, root, timbre, extraCents, settings, quiet){
+  const ctx = getAudioCtx(); if(!ctx || !notes.length) return;
+  const master = getMasterBus(ctx);
+  const releaseSec = 1 + Math.random(); // 1-2s, per spec
+  const t0 = ctx.currentTime;
+  const bendAt = t0 + releaseSec*0.5; // midpoint of the release window
+  const bendRampSec = 0.08 + Math.random()*0.5; // random "velocidad"
+  const bendSteps = (Math.random()<0.5?-1:1) * (3+Math.floor(Math.random()*20)); // random "intervalo"
+  const useGuitar = timbre==='guitar';
+  let guitarWave = null;
+  if(useGuitar){
+    const real = new Float32Array([0,1,0.55,0.33,0.22,0.14,0.09,0.05]);
+    const imag = new Float32Array(real.length);
+    guitarWave = ctx.createPeriodicWave(real, imag, {disableNormalization:false});
+  }
+  notes.forEach(raw=>{
+    const freq = freqForRaw(raw, (settings.generalPitch||0)+(extraCents||0));
+    const osc = ctx.createOscillator();
+    if(useGuitar) osc.setPeriodicWave(guitarWave); else osc.type='sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    const gain = ctx.createGain();
+    const peak = quiet ? 0.03 : (useGuitar?0.24:0.2);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0+0.015);
+    gain.gain.setValueAtTime(peak, bendAt); // hold through to the mid-release bend point
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+releaseSec);
+    osc.connect(gain).connect(master);
+    const bentFreq = freq*Math.pow(2, bendSteps/31);
+    osc.frequency.setValueAtTime(freq, bendAt);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,bentFreq), bendAt+bendRampSec);
+    osc.start(t0); osc.stop(t0+releaseSec+0.15);
+  });
+}
 function realStartSustain(notes, root, timbre, extraCents, settings, quiet){
   const ctx = getAudioCtx(); if(!ctx) return null;
   const startTime = ctx.currentTime;
@@ -1924,6 +2056,77 @@ function realRetuneSustain(handle, notes, extraCents, settings){
     }catch(e){ /* already stopped */ }
   });
 }
+// Revision round 7: celestial-midpoint random effects (see
+// updateCelestialMidpointEvent). bendSustainVoices retunes whichever
+// ambient sustain is CURRENTLY playing (if any) by rawStepShift raw 31-EDO
+// steps -- a quick ramp up, a hold, then a ramp back to its original pitch --
+// reused for both the "brief pitchbend" effect (small shift, short hold) and
+// the "2-octave-down transposition" effect (shift=-62, i.e. -2*31 steps,
+// longer hold), just with different parameters.
+function realBendSustainVoices(handle, rawStepShift, rampSec, holdSec){
+  if(!handle || !handle.nodes) return;
+  const ctx = audioCtx; if(!ctx) return;
+  const now = ctx.currentTime;
+  handle.nodes.forEach(({osc})=>{
+    try{
+      const base = osc.frequency.value;
+      const bent = base*Math.pow(2, rawStepShift/31);
+      osc.frequency.cancelScheduledValues(now);
+      osc.frequency.setValueAtTime(base, now);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20,bent), now+rampSec);
+      osc.frequency.setValueAtTime(Math.max(20,bent), now+rampSec+holdSec);
+      osc.frequency.exponentialRampToValueAtTime(base, now+rampSec+holdSec+rampSec);
+    }catch(e){ /* already stopped */ }
+  });
+}
+// "reverb de catedral" -- a big synthesized impulse response fed through a
+// temporary PARALLEL wet send (masterBus stays connected to destination
+// exactly as before; this only ADDS a second, self-removing branch), so nothing
+// about the existing always-on compressor routing has to be disturbed or
+// restored by hand.
+function realPlayCelestialReverb(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const master = getMasterBus(ctx);
+  const now = ctx.currentTime;
+  const dur = 3.2;
+  let impulse;
+  try{ impulse = ctx.createBuffer(2, Math.max(1,Math.floor(ctx.sampleRate*dur)), ctx.sampleRate); }
+  catch(e){ return; }
+  for(let ch=0; ch<impulse.numberOfChannels; ch++){
+    const data = impulse.getChannelData(ch);
+    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2.2);
+  }
+  const convolver = ctx.createConvolver();
+  try{ convolver.buffer = impulse; }catch(e){ return; }
+  const wetGain = ctx.createGain();
+  wetGain.gain.setValueAtTime(0.0001, now);
+  wetGain.gain.exponentialRampToValueAtTime(0.5, now+0.4);
+  wetGain.gain.setValueAtTime(0.5, now+dur*0.6);
+  wetGain.gain.exponentialRampToValueAtTime(0.0001, now+dur+1.4);
+  master.connect(convolver); convolver.connect(wetGain); wetGain.connect(ctx.destination);
+  setTimeout(()=>{ try{ master.disconnect(convolver); }catch(e){ /* already gone */ } }, (dur+1.6)*1000);
+}
+// "un silencio con fade out brusco" -- reroutes the master bus through a
+// temporary mute gain (fast ramp down, brief hush, ease back in) instead of
+// touching the DynamicsCompressor directly (it has no .gain param to ramp).
+// Fully reversible: the direct master->destination link this replaces is put
+// back exactly as it was once the mute gain is done with it.
+function realPlayCelestialSilence(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const master = getMasterBus(ctx);
+  const now = ctx.currentTime;
+  const muteGain = ctx.createGain();
+  try{ master.disconnect(ctx.destination); }catch(e){ /* wasn't connected yet */ }
+  master.connect(muteGain); muteGain.connect(ctx.destination);
+  muteGain.gain.setValueAtTime(1, now);
+  muteGain.gain.linearRampToValueAtTime(0.0001, now+0.12); // "brusco" -- fast
+  muteGain.gain.setValueAtTime(0.0001, now+1.6);
+  muteGain.gain.linearRampToValueAtTime(1, now+2.0);
+  setTimeout(()=>{
+    try{ master.disconnect(muteGain); }catch(e){ /* already gone */ }
+    try{ master.connect(ctx.destination); }catch(e){ /* already connected */ }
+  }, 2150);
+}
 let rainHandle = null;
 function realStartRain(){
   const ctx = getAudioCtx(); if(!ctx) return null;
@@ -1956,6 +2159,10 @@ function createRealDriver(getSettings){
     playOneShot(notes, root, timbre, style, extraCents, quiet){ if(getSettings().muted) return; realPlayOneShot(notes, root, timbre, style, extraCents, getSettings(), quiet); },
     playNoise(){ if(getSettings().muted) return; realPlayNoise(); },
     playWaterTap(){ if(getSettings().muted) return; realPlayWaterTap(); },
+    playFishEat(notes, root, timbre, extraCents, quiet){ if(getSettings().muted) return; realPlayFishEat(notes, root, timbre, extraCents, getSettings(), quiet); },
+    bendSustainVoices(handle, rawStepShift, rampSec, holdSec){ if(getSettings().muted) return; realBendSustainVoices(handle, rawStepShift, rampSec, holdSec); },
+    playCelestialReverb(){ if(getSettings().muted) return; realPlayCelestialReverb(); },
+    playCelestialSilence(){ if(getSettings().muted) return; realPlayCelestialSilence(); },
     playArpeggio(notes, root, timbre, totalDurSec, extraCents, quiet){ if(getSettings().muted) return; realPlayArpeggio(notes, root, timbre, totalDurSec, extraCents, getSettings(), quiet); },
     playBlip(notes, root, extraCents, quiet){ if(getSettings().muted) return; realPlayBlip(notes, root, extraCents, getSettings(), quiet); },
     startSustain(notes, root, timbre, extraCents, quiet){ if(getSettings().muted) return null; return realStartSustain(notes, root, timbre, extraCents, getSettings(), quiet); },
@@ -2184,6 +2391,24 @@ function setupNursery(w,h){
   };
 }
 
+// Revision round 8: "una pequeña isla a bajo a la derecha de todo y que de
+// ahi nazca un arbol" -- a small fixed island scenery piece at the
+// bottom-right, same non-physics-body "scenery" pattern as setupNursery
+// above (repositioned on resize, touch-detected via a plain per-frame
+// proximity check rather than a real physics collision -- see
+// updateTreePerformance). canopyX/canopyY/canopyR is the actual "touch"
+// hitbox (the tree's leafy top, where a passing chord makes contact).
+function setupIslandTree(w,h){
+  const baseX = w*0.9, baseY = h-14;
+  ECO.islandTree = {
+    baseX, baseY,
+    islandRX: 62, islandRY: 22,
+    trunkBaseY: baseY-14, trunkTopY: baseY-92,
+    canopyX: baseX+6, canopyY: baseY-118,
+    canopyR: 40,
+  };
+}
+
 // Agar.io-style food particles (revision round 3): scattered pellets a chord
 // "eats" just by passing over it (a plain proximity check against every live
 // chord each frame -- see updateFoodParticles -- not a physics.js body,
@@ -2243,6 +2468,17 @@ const ECO = {
   sizeTiers:null,                   // computeSizeTiers(species), at boot -- adaptive small/medium/large cutoffs
   commonTonesGateOn:true, commonTonesGateUntil:0, // intermittent on/off gate for the common-tones object
   bgStars:null,                     // fixed twinkling starfield (night only), generated once at boot
+  // Revision round 7
+  fish:null, fishNextAt:0,          // Gaudi fish event: rises, eats a floating chord, submerges (see updateFishSpawn/updateFish)
+  celestialFracPrev:null,           // last-seen currentCelestialFrac, for edge-detecting the arc-midpoint crossing
+  kaleidoscopeUntil:0, kaleidoscopeSeed:0, kaleidoscopeHue:0, // psychedelic sky fractal shown with a celestial-midpoint effect
+  // Revision round 8
+  progressions:[],                  // the user's saved Armodex progressions, retained at boot (data.progressions was previously discarded after computing aggregates) -- feeds the island tree performance
+  islandTree:null,                  // { baseX,baseY, canopyX,canopyY, canopyR, ... } fixed bottom-right scenery, see setupIslandTree
+  treePerformance:{active:false, cooldownUntil:0}, // see updateTreePerformance -- world-freezing random-progression performance
+  recentNoteTimestamps:[],          // rolling log of note-trigger times, see wireActivityTracking -- feeds the activity-spike kaleidoscope retrigger
+  kaleidoscopeNextEligibleAt:0,     // 180s hard cooldown for the activity-spike kaleidoscope retrigger (NOT scaled by EVENT_PACE_MUL, per spec)
+  activityHotSince:0,                // see updateActivitySpikeFractal -- 0 when not currently in a "hot" streak, else the timestamp the streak started
 };
 
 function effectivePool(){
@@ -2308,7 +2544,7 @@ function spawnChord(sp){
     dissonantGrayUntil:0,                       // brief 1s gray flash after a no-shared-notes collision
     dying:false, dyingStartedAt:0, dyingScale:1, // gray-for-10s death: turns black, sinks into the water
     stillTimer:0, lastStillCheckAt:0, lastStillPos:null, forcedMoveUntil:0, // stuck>10s -> forced move toward center
-    nextHopAt: now + 2600 + ECO.rng()*4200,      // periodic small hop, so grounded chords can unstick/reach platforms
+    nextHopAt: now + (2600 + ECO.rng()*4200)*EVENT_PACE_MUL,      // periodic small hop, so grounded chords can unstick/reach platforms
     flowerAbsorbAt:0, flowerHolderId:null,       // nectar-flower hold-then-absorb timer
     creatureStyle: sp.creatureStyle||0, eyeStyle: sp.eyeStyle||0, eyeCount: sp.eyeCount||4, // per-signature visual variant
     _nearHex:null,                               // root-hexagon proximity edge-trigger bookkeeping (updateRootHexagons)
@@ -2324,8 +2560,18 @@ function spawnChord(sp){
    tracked separately via quakeVisualShakeUntil) regardless of how long the
    underlying quake's audio window runs, so it reads as one jolt, not 20
    seconds of camera-shake. ---------- */
-const QUAKE_INTERVAL_MS = 30000;
-const QUAKE_SHAKE_MS = 550; // visual camera-jolt duration only
+// Revision round 8: "que la velocidad general a la que pasan TODOS LOS
+// eventos sea un 10% mas lenta" -- a single global multiplier applied to
+// every periodic/random-interval event-timing constant in the file (quake,
+// hunt, summon, tornado, fish, common-tones, rain, day/night phases, the
+// spawn/hop/gate timers, and the gray-death/eat-animation durations), so the
+// whole simulation's pace slows down uniformly by exactly 10% without
+// touching each individual system's own logic. The brand-new round-8
+// kaleidoscope cooldown (an explicit "180 segundos" spec) is deliberately
+// NOT further scaled by this -- it stays literally 180s.
+const EVENT_PACE_MUL = 1.1;
+const QUAKE_INTERVAL_MS = 30000 * EVENT_PACE_MUL;
+const QUAKE_SHAKE_MS = 550 * EVENT_PACE_MUL; // visual camera-jolt duration only
 function triggerEarthquake(nowMs){
   ECO.world.bodies.forEach(b=>{
     if(b.dragging) return;
@@ -2364,7 +2610,7 @@ function updateSpawning(nowMs){
   if(currentChordCount < ECO.targetCount && nowMs >= ECO.nextSpawnAt){
     const sp = pickSpeciesToSpawn();
     if(sp) spawnChord(sp);
-    ECO.nextSpawnAt = nowMs + 1400 + ECO.rng()*1600; // trickle in, not all at once
+    ECO.nextSpawnAt = nowMs + (1400 + ECO.rng()*1600)*EVENT_PACE_MUL; // trickle in, not all at once
   }
 }
 function handleDeath(info){
@@ -2410,7 +2656,7 @@ function updateZones(){
 const PHASE_BASE_MS = { morning:7000, midday:8000, afternoon:7000, night:15000 };
 const PHASE_ORDER = ['morning','midday','afternoon','night'];
 function currentPhaseDurationMs(phase){
-  return (PHASE_BASE_MS[phase]||8000) / Math.max(0.3, ECO.cycleSpeedMul||1);
+  return (PHASE_BASE_MS[phase]||8000) * EVENT_PACE_MUL / Math.max(0.3, ECO.cycleSpeedMul||1);
 }
 function pickDayPhaseRoot(){ return weightedRandomRoot(ECO.rootIntervalUsage, ECO.rng, 0); }
 function enterDayPhase(phase, nowMs){
@@ -2474,8 +2720,105 @@ function dayPhaseBrightness(phase, frac){
 function updateCommonTonesGate(nowMs){
   if(nowMs >= (ECO.commonTonesGateUntil||0)){
     ECO.commonTonesGateOn = !ECO.commonTonesGateOn;
-    ECO.commonTonesGateUntil = nowMs + (ECO.commonTonesGateOn ? (3000+ECO.rng()*4000) : (2000+ECO.rng()*5000));
+    ECO.commonTonesGateUntil = nowMs + (ECO.commonTonesGateOn ? (3000+ECO.rng()*4000) : (2000+ECO.rng()*5000))*EVENT_PACE_MUL;
   }
+}
+// Revision round 7: "que cuando la luna o el sol estan en el punto medio de
+// su ciclo pueda aparecer un efecto random" -- edge-detects
+// currentCelestialFrac crossing exactly 0.5, the arc's zenith (the highest
+// point of the rise-peak-set curve celestialArcPosition draws -- verified
+// against its own formula: y is smallest, i.e. the body is highest on
+// screen, exactly at frac=0.5). currentCelestialFrac spans the WHOLE current
+// day or WHOLE current night as one continuous arc, so this fires once
+// somewhere in the middle of each day and once in the middle of each night,
+// covering "la luna O el sol" either way. "Pueda aparecer" (CAN appear, not
+// guaranteed) -- only about half of all crossings actually trigger one of
+// the 4 effects.
+// Revision round 8: "que los fractales... no aparezcan cuando aparecen
+// ahora, si no cuando hay picos prolongados de un nivel de actividad
+// inusual" -- the kaleidoscope VISUAL is no longer set here; it moved to
+// updateActivitySpikeFractal below (an unrelated trigger, sustained note
+// activity rather than the celestial arc's midpoint). This event keeps its
+// 4 audio-only effects exactly as before, just without the kaleidoscope
+// accompanying them anymore.
+function updateCelestialMidpointEvent(nowMs){
+  const frac = currentCelestialFrac(nowMs);
+  const crossed = frac>=0.5 && ECO.celestialFracPrev!=null && ECO.celestialFracPrev<0.5;
+  ECO.celestialFracPrev = frac;
+  if(!crossed || ECO.rng()>=0.5) return;
+  const kinds = ['pitchbend','reverb','silence','transpose'];
+  const kind = kinds[Math.floor(ECO.rng()*kinds.length)];
+  if(kind==='pitchbend'){
+    const steps = (ECO.rng()<0.5?-1:1)*(2+Math.floor(ECO.rng()*10)); // brief + random interval
+    ECO.audioPort.celestialBend(steps, 0.12+ECO.rng()*0.18, 0.25); // random "velocidad" (ramp duration)
+  } else if(kind==='reverb'){
+    ECO.audioPort.celestialReverb();
+  } else if(kind==='silence'){
+    ECO.audioPort.celestialSilence();
+  } else { // transpose: 2 octaves down = 62 raw 31-EDO steps (31 steps/octave)
+    ECO.audioPort.celestialBend(-62, 0.5, 2.2);
+  }
+}
+
+// Revision round 8: "setealo para que no pase mas de una vez cada 180
+// segundos" -- this exact cooldown is a literal 180s, deliberately NOT
+// scaled by EVENT_PACE_MUL (see that constant's own comment).
+const KALEIDOSCOPE_COOLDOWN_MS = 180000;
+const ACTIVITY_WINDOW_MS = 4000;      // rolling window notes are counted over
+const ACTIVITY_HOT_THRESHOLD = 16;    // notes within ACTIVITY_WINDOW_MS to count as "un nivel de actividad inusual"
+const ACTIVITY_SUSTAIN_MS = 1500;     // must stay continuously hot this long -- "picos PROLONGADOS", not a single instant spike
+// Called by every ECO.audioPort note-triggering method after boot() wraps
+// them (see wireActivityTracking) -- pure bookkeeping, no audio/visual side
+// effects itself, so it's safe to call unconditionally from that wrapper.
+function recordNoteActivity(nowMs, count){
+  for(let i=0;i<count;i++) ECO.recentNoteTimestamps.push(nowMs);
+}
+// Revision round 8: "que los fractales animados que aparecen en el cielo...
+// aparezcan... cuando hay picos prolongados de un nivel de actividad inusual
+// (muchas notas en poco tiempo)" -- replaces the celestial-midpoint trigger
+// above as the kaleidoscope's sole source (that event keeps its 4 audio
+// effects, just decoupled from the visual now). Counts note-trigger
+// timestamps logged into ECO.recentNoteTimestamps within a rolling window;
+// "prolongados" is honored by requiring the hot state to hold continuously
+// for ACTIVITY_SUSTAIN_MS (not just one instantaneous busy frame) before it
+// actually fires, on top of the hard 180s cooldown.
+function updateActivitySpikeFractal(nowMs){
+  const arr = ECO.recentNoteTimestamps;
+  const cutoff = nowMs - ACTIVITY_WINDOW_MS;
+  let firstLive = 0;
+  while(firstLive<arr.length && arr[firstLive] < cutoff) firstLive++;
+  if(firstLive>0) arr.splice(0, firstLive);
+
+  const hot = arr.length >= ACTIVITY_HOT_THRESHOLD;
+  if(hot){
+    if(!ECO.activityHotSince) ECO.activityHotSince = nowMs;
+  } else {
+    ECO.activityHotSince = 0;
+  }
+
+  if(nowMs < (ECO.kaleidoscopeNextEligibleAt||0)) return;
+  if(ECO.activityHotSince && (nowMs-ECO.activityHotSince) >= ACTIVITY_SUSTAIN_MS){
+    ECO.kaleidoscopeUntil = nowMs + 3400;
+    ECO.kaleidoscopeSeed = ECO.rng();
+    ECO.kaleidoscopeHue = ECO.rng()*360;
+    ECO.kaleidoscopeNextEligibleAt = nowMs + KALEIDOSCOPE_COOLDOWN_MS;
+    ECO.activityHotSince = 0; // require a fresh sustained spike before this can fire again
+  }
+}
+// Wraps the note-triggering AudioPort methods to log activity, AFTER the
+// port is created in boot() -- deliberately not inside createAudioPort/
+// createMockDriver themselves (see those functions' own module.exports
+// comment), so those stay pure and headlessly testable with zero knowledge
+// of the global ECO object or this ecosystem-only feature.
+function wireActivityTracking(port){
+  ['strum','arpeggio','blip','fishEat'].forEach(name=>{
+    const orig = port[name];
+    if(typeof orig!=='function') return;
+    port[name] = function(rawNotes, ...rest){
+      recordNoteActivity(performance.now(), Array.isArray(rawNotes) ? Math.max(1,rawNotes.length) : 1);
+      return orig.call(port, rawNotes, ...rest);
+    };
+  });
 }
 
 /* ---------- collision -> director -> audio, wired to physics EVENTS.
@@ -2660,9 +3003,9 @@ function updateBlackHolePull(dt){
    nearest smaller chord they'd actually be a strict pitch-class superset
    of. Steering only ever adjusts velocity; the eat itself still only
    happens through the normal collision -> director -> onEatStart path. ---------- */
-const HUNT_CHECK_INTERVAL_MS = 6000;
+const HUNT_CHECK_INTERVAL_MS = 6000 * EVENT_PACE_MUL;
 const HUNT_CHANCE = 0.5;
-const HUNT_DURATION_MS = 4000;
+const HUNT_DURATION_MS = 4000 * EVENT_PACE_MUL;
 function updateHunting(nowMs, dt){
   if(nowMs >= (ECO.huntNextCheckAt||0)){
     ECO.huntNextCheckAt = nowMs + HUNT_CHECK_INTERVAL_MS;
@@ -2687,7 +3030,7 @@ function updateHunting(nowMs, dt){
 
 /* ---------- summon: occasionally two random chords get pulled toward each
    other until they've collided 1-3 times, then release. ---------- */
-const SUMMON_CHECK_INTERVAL_MS = 9000;
+const SUMMON_CHECK_INTERVAL_MS = 9000 * EVENT_PACE_MUL;
 const SUMMON_CHANCE = 0.4;
 function updateSummon(nowMs, dt){
   if(!ECO.summon && nowMs >= (ECO.summonNextAt||0)){
@@ -2710,11 +3053,11 @@ function updateSummon(nowMs, dt){
 
 /* ---------- tornado: an occasional 10-30s right-to-left funnel that flings
    nearby chords/objects into turbulent motion. ---------- */
-const TORNADO_MIN_GAP_MS = 20000, TORNADO_MAX_GAP_MS = 45000;
+const TORNADO_MIN_GAP_MS = 20000 * EVENT_PACE_MUL, TORNADO_MAX_GAP_MS = 45000 * EVENT_PACE_MUL;
 function scheduleNextTornado(nowMs){ ECO.tornadoNextAt = nowMs + TORNADO_MIN_GAP_MS + ECO.rng()*(TORNADO_MAX_GAP_MS-TORNADO_MIN_GAP_MS); }
 function updateTornadoSpawn(nowMs){
   if(!ECO.tornado && nowMs >= (ECO.tornadoNextAt||0)){
-    const durationMs = 10000 + ECO.rng()*20000; // 10-30s, per spec
+    const durationMs = (10000 + ECO.rng()*20000) * EVENT_PACE_MUL; // 10-30s base, per spec, x10% round-8 pacing slowdown
     ECO.tornado = createTornado(1.05, ECO.world.width, ECO.world.height, nowMs, durationMs, ECO.rng);
     recordBigEvent(nowMs);
   }
@@ -2731,6 +3074,104 @@ function applyTornadoForces(nowMs, dt){
     const f = tornadoForceOn(b.x,b.y,pos.x,pos.y,ECO.tornado.radius,{});
     if(f.fx || f.fy){ b.vx += f.fx*dt; b.vy += f.fy*dt; b.resting=false; }
   });
+}
+
+/* ---------- Revision round 7: the Gaudi fish -- "que pueda aparecer un pez
+   gaudiniano de debajo del agua y comerse un acorde que esta flotando y
+   volver a las profundidades del mar fuera de la pantalla". Deliberately NOT
+   a physics body (no gravity/collision involvement at all -- it's a
+   scripted, choreographed one-off event, not a gameplay object): ECO.fish
+   holds a small plan (which chord, which edge it swims to/from) and its
+   live x/y/phase are derived every frame from a pure position function
+   (fishPathAt) driven purely by elapsed time, the same closed-form-curve
+   approach the tornado already uses for its own position. While the target
+   chord is being eaten, updateFish pulls it toward the fish's OWN live
+   position each frame (mirroring updateEatingBodies' generic eater-pull, but
+   sourced from the fish instead of a real world body -- see the eatenByFish
+   guard added to updateEatingBodies below so the two systems never fight
+   over the same chord). ---------- */
+const FISH_MIN_GAP_MS = 25000 * EVENT_PACE_MUL, FISH_MAX_GAP_MS = 55000 * EVENT_PACE_MUL;
+const FISH_TOTAL_MS = 4200 * EVENT_PACE_MUL;
+function scheduleNextFish(nowMs){ ECO.fishNextAt = nowMs + FISH_MIN_GAP_MS + ECO.rng()*(FISH_MAX_GAP_MS-FISH_MIN_GAP_MS); }
+function updateFishSpawn(nowMs){
+  if(ECO.fish || nowMs < (ECO.fishNextAt||0)) return;
+  const depth = ECO.world.cfg.floorThickness;
+  const waterY = ECO.world.height - depth;
+  // "un acorde que esta flotando" -- a live chord resting at/near the water surface (not mid-air, not already being handled elsewhere).
+  const candidates = ECO.world.bodies.filter(b=>b.kind==='chord' && !b.beingEaten && !b.dying && !b.dragging && b.y >= waterY - b.radius*2.5);
+  if(!candidates.length){ scheduleNextFish(nowMs); return; } // nothing to eat right now -- just try again next window
+  const target = candidates[Math.floor(ECO.rng()*candidates.length)];
+  ECO.fish = {
+    startedAt: nowMs, targetId: target.id,
+    targetX: target.x, targetY: Math.min(target.y, waterY-10),
+    fromLeft: ECO.rng()<0.5, worldW: ECO.world.width,
+    bitten:false, targetGone:false, phase:'approach', facing:1,
+    x:0, y:0,
+  };
+}
+function easeInOutFish(k){ k=Math.max(0,Math.min(1,k)); return k*k*(3-2*k); }
+// Pure: the fish's whole choreographed arc as a function of 0..1 progress --
+// rise from deep water at one screen edge up to the target chord (approach),
+// pause right at it (bite), then swim back down to deep water at the SAME
+// edge it came from (retreat), fully off-screen by frac=1.
+function fishPathAt(frac, fish, waterY){
+  const f = Math.max(0,Math.min(1,frac));
+  const edgeX = fish.fromLeft ? -60 : (fish.worldW+60);
+  const deepY = waterY+70;
+  let x,y,phase;
+  if(f<0.32){
+    const k = easeInOutFish(f/0.32);
+    x = edgeX + (fish.targetX-edgeX)*k; y = deepY + (fish.targetY-deepY)*k; phase='approach';
+  } else if(f<0.5){
+    x = fish.targetX; y = fish.targetY; phase='bite';
+  } else {
+    const k = easeInOutFish((f-0.5)/0.5);
+    x = fish.targetX + (edgeX-fish.targetX)*k; y = fish.targetY + (deepY-fish.targetY)*k; phase='retreat';
+  }
+  return {x,y,phase};
+}
+function updateFish(nowMs){
+  if(!ECO.fish) return;
+  const fish = ECO.fish;
+  const depth = ECO.world.cfg.floorThickness;
+  const waterY = ECO.world.height - depth;
+  const frac = (nowMs-fish.startedAt)/FISH_TOTAL_MS;
+  if(frac>=1){ ECO.fish=null; scheduleNextFish(nowMs); return; }
+  const pos = fishPathAt(frac, fish, waterY);
+  fish.x=pos.x; fish.y=pos.y; fish.phase=pos.phase; fish.facing = fish.fromLeft ? 1 : -1;
+  if(pos.phase==='bite' && !fish.bitten){
+    fish.bitten = true;
+    const target = findBody(ECO.world, fish.targetId);
+    if(target && !target.beingEaten && !target.dying){
+      const ctx = makeCollisionCtx();
+      const notes = computeChordRawNotes(target, ctx);
+      ECO.audioPort.fishEat(notes, notes[0], ECO.settings.timbre, target.pitchVarianceCents||0, target.colorful===false);
+      target.beingEaten = true;
+      target.eatenByFish = true; // see updateEatingBodies' matching guard
+      target.eatStartedAt = nowMs;
+      target.eatScale = 1;
+      target.dragging = true; target.gravity = false; target.nurseryPinned = false;
+      target.huntUntil = 0; target.huntTargetId = null;
+      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===target.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; }
+      spawnBurst('eat', target.x, target.y, hueForPc(liveRootRaw(target)));
+    } else {
+      fish.targetGone = true; // vanished (eaten/died) right before the bite landed -- fish still finishes its swim, just empty-mouthed
+    }
+  }
+  if(fish.bitten && !fish.targetGone){
+    const target = findBody(ECO.world, fish.targetId);
+    if(target && target.beingEaten && target.eatenByFish){
+      const eatFrac = Math.min(1,(nowMs-target.eatStartedAt)/EAT_ANIM_MS);
+      const pull = Math.min(1, eatFrac*0.5+0.2);
+      target.x += (fish.x-target.x)*pull;
+      target.y += (fish.y-target.y)*pull;
+      target.eatScale = Math.max(0.02,1-eatFrac);
+      if(eatFrac>=1){
+        removeBody(ECO.world, target.id);
+        handleDeath({reason:'eaten', id:target.id, eaterId:'fish'});
+      }
+    }
+  }
 }
 
 /* ---------- anti-clump: a gentle continuous nudge for any 3+ body pile-up
@@ -2830,7 +3271,7 @@ function updateNursery(nowMs){
     const bob = Math.abs(Math.sin(nowMs*0.0007 + b.bornAt*0.0005))*3;
     b.x = stem.x + sway;
     b.y = stem.y + 10 + bob;
-    if(shouldDetachFromNursery(b.nurseryAttachedAt, nowMs, 10000)){
+    if(shouldDetachFromNursery(b.nurseryAttachedAt, nowMs, 10000*EVENT_PACE_MUL)){
       b.nurseryPinned = false;
       b.dragging = false;
       b.vx = (ECO.rng()-0.5)*50;
@@ -2843,10 +3284,15 @@ function updateNursery(nowMs){
 /* ---------- eat animation: instead of vanishing instantly, an eaten chord
    shrinks (eatScale -> 0) while its position eases toward the eater's
    (live, re-sampled every frame) center, over EAT_ANIM_MS. ---------- */
-const EAT_ANIM_MS = 650; // revision round 3: lengthened a bit for a more visible shrink, on top of the new burst+pulse effects
+const EAT_ANIM_MS = 650 * EVENT_PACE_MUL; // revision round 3: lengthened a bit for a more visible shrink, on top of the new burst+pulse effects
 function updateEatingBodies(nowMs){
   ECO.world.bodies.slice().forEach(b=>{
-    if(b.kind!=='chord' || !b.beingEaten) return;
+    // Revision round 7: a chord being eaten by the Gaudi fish (eatenByFish)
+    // is fully owned by updateFish instead -- it pulls the chord toward the
+    // fish's own live position (not a fixed body findBody could locate), so
+    // this generic eater-pull must skip it entirely rather than treating a
+    // "no eater body found" as an instant kill.
+    if(b.kind!=='chord' || !b.beingEaten || b.eatenByFish) return;
     const eater = findBody(ECO.world, b.eatenBy);
     if(!eater){ removeBody(ECO.world, b.id); handleDeath({reason:'eaten', id:b.id, eaterId:b.eatenBy}); return; }
     const frac = Math.min(1, (nowMs-b.eatStartedAt)/EAT_ANIM_MS);
@@ -2949,7 +3395,7 @@ function updateBorderAudio(nowMs){
    sit within COMMONTONES_RADIUS of the object, it periodically sounds
    whatever pitch classes are common to ALL of them and the area glows. ---------- */
 const COMMONTONES_RADIUS = 130;
-const COMMONTONES_INTERVAL_MS = 4500;
+const COMMONTONES_INTERVAL_MS = 4500 * EVENT_PACE_MUL;
 function updateCommonTonesArea(nowMs){
   const obj = findBody(ECO.world, 'obj_commontones');
   if(!obj) return;
@@ -2976,11 +3422,85 @@ function updateCommonTonesArea(nowMs){
   inRange.forEach(c=>{ c.glowUntil = nowMs+650; });
 }
 
+/* ---------- Revision round 8: the island tree performance. "cuando un
+   acorde toca ese arbol el arbol se ilumina con el color de ese acorde,
+   todos los demas objetos de quedan parados, y suena una progresion
+   aleatoria del usuario durante 2 repeticiones, con unos settings de
+   interpretation con mas o menos lo mismo que index.html usa para
+   reproducir progressions pero aleatorios."
+   Same non-physics-body "scenery + plain proximity check" pattern as
+   updateCommonTonesArea/updateRootHexagons above -- the tree is fixed
+   scenery (see setupIslandTree), not a real physics body, so a touching
+   chord is detected with a direct distance check against its canopy hitbox.
+   Deliberately a single combined function (rather than splitting
+   trigger-detection and playback-advance into two separately-scheduled
+   functions) because BOTH need to run from loop(): trigger-detection during
+   the normal per-frame pass (world not yet frozen), and playback-advance
+   from the early-return frozen-world gate once a performance is active --
+   see the "kaleidoActive"-style gate near the top of loop(). ---------- */
+function updateTreePerformance(nowMs){
+  const tp = ECO.treePerformance;
+  if(!ECO.islandTree || !tp) return;
+  if(tp.active){ advanceTreePerformance(nowMs); return; }
+  if(nowMs < (tp.cooldownUntil||0)) return;
+  const tree = ECO.islandTree;
+  const bodies = ECO.world.bodies;
+  for(let i=0;i<bodies.length;i++){
+    const c = bodies[i];
+    if(c.kind!=='chord' || c.beingEaten || c.dying) continue;
+    const d = Math.hypot(c.x-tree.canopyX, c.y-tree.canopyY);
+    if(d <= c.radius + tree.canopyR){ startTreePerformance(c, nowMs); break; }
+  }
+}
+// Picks one random saved progression and randomized "interpretation
+// settings" (bpm, timbre) loosely mirroring 31edo-harmonydex_121.html's
+// playChordsAudio -- bpm clamped 20-300, 2 beats/chord, anchor = the
+// progression's own first chord root (so it plays in its own original key,
+// same as index.html does, rather than being forced into the touching
+// chord's key). If the user has no saved progressions yet, this is a silent
+// no-op -- the tree simply doesn't have anything of theirs to play.
+function startTreePerformance(chord, nowMs){
+  const list = ECO.progressions;
+  if(!list || !list.length) return;
+  const prog = list[Math.floor(ECO.rng()*list.length)];
+  if(!prog || !prog.chords || !prog.chords.length) return;
+  const bpm = Math.max(20, Math.min(300, 60 + ECO.rng()*120));
+  ECO.treePerformance = {
+    active:true, startedAt: nowMs, hue: hueForPc(liveRootRaw(chord)),
+    chords: prog.chords, anchor: prog.chords[0].root,
+    repeatsTotal: 2, repeatIdx: 0, chordIdx: 0,
+    secPerBeat: 60/bpm, beatsPerChord: 2,
+    timbre: ECO.rng()<0.5 ? 'guitar' : 'sine',
+    nextChordAt: nowMs, cooldownUntil: 0,
+  };
+}
+function advanceTreePerformance(nowMs){
+  const tp = ECO.treePerformance;
+  if(nowMs < tp.nextChordAt) return; // still holding on the current/last chord
+  if(tp.repeatIdx >= tp.repeatsTotal){ endTreePerformance(nowMs); return; }
+  const c = tp.chords[tp.chordIdx];
+  const rebaseRoot = c.root - tp.anchor;
+  const notes = (c.intervals||[]).map(iv=>rebaseRoot+iv);
+  ECO.audioPort.strum(notes, rebaseRoot, tp.timbre, 0, false);
+  // revision round 8 pacing: this new event's own rhythm gets the same
+  // uniform 10% slowdown as every other timed event in the file (see
+  // EVENT_PACE_MUL) -- applied here, once, at the point the logical
+  // beats/bpm math turns into real elapsed ms, so the bpm figure itself
+  // stays a clean, meaningful number.
+  tp.nextChordAt = nowMs + tp.beatsPerChord*tp.secPerBeat*1000*EVENT_PACE_MUL;
+  tp.chordIdx++;
+  if(tp.chordIdx >= tp.chords.length){ tp.chordIdx = 0; tp.repeatIdx++; }
+}
+function endTreePerformance(nowMs){
+  ECO.treePerformance.active = false;
+  ECO.treePerformance.cooldownUntil = nowMs + 4000*EVENT_PACE_MUL; // brief grace so a still-touching chord can't instantly re-trigger the moment the world resumes
+}
+
 /* ---------- rain weather: an occasional soft shower with a white-noise
    ambient bed; audio start/stop is idempotent and re-checked every frame so
    it self-heals regardless of when mute gets toggled mid-rain. ---------- */
-const RAIN_MIN_GAP_MS = 40000, RAIN_MAX_GAP_MS = 90000;
-const RAIN_MIN_DUR_MS = 15000, RAIN_MAX_DUR_MS = 35000;
+const RAIN_MIN_GAP_MS = 40000 * EVENT_PACE_MUL, RAIN_MAX_GAP_MS = 90000 * EVENT_PACE_MUL;
+const RAIN_MIN_DUR_MS = 15000 * EVENT_PACE_MUL, RAIN_MAX_DUR_MS = 35000 * EVENT_PACE_MUL;
 function scheduleNextRain(nowMs){ ECO.rainNextAt = nowMs + RAIN_MIN_GAP_MS + ECO.rng()*(RAIN_MAX_GAP_MS-RAIN_MIN_GAP_MS); }
 function makeRainDrops(){
   const n=90, drops=[];
@@ -3042,12 +3562,23 @@ function updateFoodParticles(nowMs){
       // chords, on top of the extra seek-force bonus in updateFoodSeeking.
       const pickupBonus = c.sizeTier===1 ? 10 : 0;
       if(d <= c.radius + fp.r + pickupBonus){
-        fp.eatenUntil = nowMs + 3000 + ECO.rng()*4000;
+        fp.eatenUntil = nowMs + (3000 + ECO.rng()*4000)*EVENT_PACE_MUL;
         fp.x = 20 + ECO.rng()*Math.max(1, ECO.world.width-40);
         fp.y = 20 + ECO.rng()*Math.max(1, ECO.world.height*0.78);
         c.lastAteAt = nowMs;
         c.colorful = true;
         c.wentGrayAt = 0; // revision round 4: touching a food particle clears the gray-death clock too
+        // Revision round 8 fix: "comer tiene que hacer que una shape gris
+        // recupere el color" -- colorful/wentGrayAt were already reset above,
+        // but a chord that had ALREADY crossed into the 10s-gray "dying"
+        // state (updateGrayDeaths) kept sinking/turning black and dying
+        // anyway, since nothing here ever cleared c.dying itself -- eating
+        // visually un-grayed it but couldn't actually save it. Eating now
+        // also rescues it: cancels dying and restores normal falling physics.
+        if(c.dying){
+          c.dying = false; c.dyingStartedAt = 0; c.dyingScale = 1;
+          c.dragging = false; c.gravity = true;
+        }
         spawnBurst('nom', c.x, c.y, hueForPc(liveRootRaw(c)));
         // Revision round 6: "que cuando comen una particula suene una nota
         // aleatoria del acorde" -- a quick blip of one random note from the
@@ -3067,7 +3598,7 @@ function updateFoodParticles(nowMs){
     }
   });
   if(nowMs >= (ECO.foodBalanceCheckAt||0)){
-    ECO.foodBalanceCheckAt = nowMs + 5000;
+    ECO.foodBalanceCheckAt = nowMs + 5000*EVENT_PACE_MUL;
     if(liveChords.length){
       const grayCount = liveChords.filter(c=>c.colorful===false).length;
       ECO.foodGrayTimeoutMs = nextFoodGrayTimeout(ECO.foodGrayTimeoutMs, grayCount/liveChords.length, {});
@@ -3104,10 +3635,22 @@ function updateConstellations(nowMs, dt){
    pad-hold ambient has its root change (zone crossing / transposer hit)
    while still sounding, retune the live voice in place instead of leaving
    the audio stuck at its original pitch. ---------- */
-function updateAmbientRepitch(){
+const AMBIENT_GLOW_HOLD_MS = 500; // revision round 8: re-applied every frame below, so this is really just a small rolling buffer, not a flash duration
+function updateAmbientRepitch(nowMs){
   if(!ECO.ambientVisual || !ECO.ambientVisual.sourceChordId) return;
   const b = findBody(ECO.world, ECO.ambientVisual.sourceChordId);
   if(!b || b.kind!=='chord') return;
+  // Revision round 8: "que no sea solo una iluminacion cuando se triggerea,
+  // si se queda sonando que se quede iluminado" -- this chord is the live
+  // pad-hold/ambient sustain source, i.e. genuinely still sounding, so keep
+  // re-extending its glowUntil every frame instead of letting the old
+  // fixed-duration flash (set once, back at the trigger moment) expire out
+  // from under it. glowUntil is also what updateWhatIsHappeningPanel treats
+  // as "currently sounding", so this keeps that panel correct too. When this
+  // chord stops being the ambient source (stopAmbient/ambientVisual=null),
+  // the re-extension simply stops and the last-held glowUntil finishes
+  // counting down on its own, giving a natural short fade-out tail.
+  b.glowUntil = Math.max(b.glowUntil||0, nowMs + AMBIENT_GLOW_HOLD_MS);
   const root = liveRootRaw(b);
   if(ECO.ambientVisual.lastRoot==null){ ECO.ambientVisual.lastRoot = root; return; }
   if(root !== ECO.ambientVisual.lastRoot){
@@ -3149,7 +3692,7 @@ function updateFoodSeeking(nowMs, dt){
 // reusing the same "dragging:true, position driven manually" pattern as the
 // eat-shrink animation (updateEatingBodies) but easing toward the water's
 // surface instead of toward an eater's center. ----------
-const GRAY_DEATH_MS = 10000, GRAY_DEATH_SINK_MS = 1400;
+const GRAY_DEATH_MS = 10000 * EVENT_PACE_MUL, GRAY_DEATH_SINK_MS = 1400 * EVENT_PACE_MUL;
 function updateGrayDeaths(nowMs){
   ECO.world.bodies.forEach(c=>{
     if(c.kind!=='chord' || c.beingEaten || c.dying) return;
@@ -3183,7 +3726,7 @@ function updateDyingBodies(nowMs){
 // separation in physics.js naturally shoves anything it barrels into out of
 // the way over the next few frames, which is what stands in for "pushing
 // whatever's around it if needed" without needing a physics-bypass. ----------
-const STILL_SAMPLE_MS = 1000, STILL_MOVE_THRESHOLD = 16, STILL_TRIGGER_MS = 10000;
+const STILL_SAMPLE_MS = 1000, STILL_MOVE_THRESHOLD = 16, STILL_TRIGGER_MS = 10000 * EVENT_PACE_MUL;
 function updateStillTracking(nowMs){
   ECO.world.bodies.forEach(c=>{
     if(c.kind!=='chord' || c.dragging || c.beingEaten || c.dying || c.nurseryPinned){ c.stillTimer=0; return; }
@@ -3214,7 +3757,7 @@ function updateHopping(nowMs){
     if(c.kind!=='chord' || c.dragging || c.beingEaten || c.dying || c.nurseryPinned) return;
     if(!c.resting || c.locomotion==='fly') return;
     if(nowMs < (c.nextHopAt||0)) return;
-    c.nextHopAt = nowMs + 2600 + ECO.rng()*4200;
+    c.nextHopAt = nowMs + (2600 + ECO.rng()*4200)*EVENT_PACE_MUL;
     if(ECO.rng() < 0.4){
       c.vy = -(190+ECO.rng()*130);
       c.vx += c.facing*(50+ECO.rng()*70);
@@ -3269,7 +3812,7 @@ function updateFlowerHold(nowMs){
       const notes = computeChordRawNotes(c, ctx);
       ECO.audioPort.strum(notes, notes[0], 'guitar', c.pitchVarianceCents||0, c.colorful===false);
       c.glowUntil = nowMs+400;
-      c._nextFlowerRestrumAt = nowMs + 2200 + ECO.rng()*900;
+      c._nextFlowerRestrumAt = nowMs + (2200 + ECO.rng()*900)*EVENT_PACE_MUL;
     }
   });
 }
@@ -3377,7 +3920,7 @@ function drawBackground(w,h,nowMs){
   ctx2d.fillStyle=gB; ctx2d.fillRect(mid,0,w-mid,h);
 }
 function drawSun(x,y,nowMs){
-  const R=30; // revision round 7: much bigger again (was 21 in round 5, 15 before that)
+  const R=36; // revision round 8: bigger again (was 30 in round 7, 21 in round 5, 15 before that)
   ctx2d.save();
   ctx2d.translate(x,y);
   // Revision round 4: a large, soft halo illuminating the surroundings --
@@ -3409,7 +3952,11 @@ function drawSun(x,y,nowMs){
   ctx2d.fillStyle=core; ctx2d.fill();
   ctx2d.strokeStyle='rgba(255,255,255,0.5)'; ctx2d.lineWidth=1; ctx2d.stroke();
   const root = ECO.dayPhaseRoot||0;
-  ctx2d.fillStyle='rgba(90,58,10,0.85)'; ctx2d.font="700 9px 'JetBrains Mono', monospace"; ctx2d.textAlign='center'; ctx2d.textBaseline='middle';
+  // Revision round 8: "el numerito que marca la root... tenga el color de esa
+  // root" -- a dark, saturated shade of the root's own pitch-class hue
+  // instead of a fixed brown, so it stays legible against the bright core
+  // while still visibly matching the root's hue everywhere else in the app.
+  ctx2d.fillStyle=hsl(hueForPc(root),65,22,0.9); ctx2d.font="700 9px 'JetBrains Mono', monospace"; ctx2d.textAlign='center'; ctx2d.textBaseline='middle';
   ctx2d.fillText((root>=0?'+':'')+root, 0, 0.5);
   ctx2d.textBaseline='alphabetic';
   ctx2d.restore();
@@ -3441,9 +3988,11 @@ function drawMoonPhase(cx,cy,r,phase31){
     bigHalo.addColorStop(0.35,'rgba(214,225,255,'+(0.12+illum*0.19).toFixed(3)+')');
     bigHalo.addColorStop(1,'rgba(210,222,255,0)');
     ctx2d.fillStyle=bigHalo; ctx2d.beginPath(); ctx2d.arc(cx,cy,haloR,0,Math.PI*2); ctx2d.fill();
-    ctx2d.strokeStyle = 'rgba(230,240,255,'+(0.3*illum).toFixed(3)+')';
-    ctx2d.lineWidth = r*0.2;
-    ctx2d.beginPath(); ctx2d.arc(cx,cy,r*(1.9+illum*1.6),0,Math.PI*2); ctx2d.stroke();
+    // Revision round 8: "que la luna no tenga un circulo alrededor suyo,
+    // simplemente el halo de luz" -- the old crisp secondary ring stroke
+    // (a hard-edged circle) is removed; the soft farHalo/bigHalo gradients
+    // above (which fade to fully transparent, not a hard edge) are the only
+    // halo now.
   }
   const outerGlow = ctx2d.createRadialGradient(cx,cy,r*0.7,cx,cy,r*2.6);
   outerGlow.addColorStop(0,'rgba(210,222,255,'+(0.3*Math.max(0.05,illum)).toFixed(3)+')'); outerGlow.addColorStop(1,'rgba(210,222,255,0)');
@@ -3454,8 +4003,10 @@ function drawMoonPhase(cx,cy,r,phase31){
   for(let k=0;k<6;k++){ const ang=Math.PI/180*(60*k-90); const px=cx+r*Math.cos(ang), py=cy+r*Math.sin(ang); if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py); }
   ctx2d.closePath(); ctx2d.clip();
   ctx2d.fillStyle = '#151c29'; ctx2d.fillRect(cx-r,cy-r,2*r,2*r);
+  // Revision round 8: "que la luna sea realmente blanca" -- pushed to a
+  // genuinely white gradient (was a faint blue-gray cast).
   const litGrad = ctx2d.createRadialGradient(cx-r*0.25,cy-r*0.25,0,cx,cy,r);
-  litGrad.addColorStop(0,'#fbfcff'); litGrad.addColorStop(1,'#d7e0f2');
+  litGrad.addColorStop(0,'#ffffff'); litGrad.addColorStop(1,'#eef2fb');
   ctx2d.fillStyle = litGrad;
   ctx2d.beginPath();
   ctx2d.arc(cx,cy,r, waxing? -Math.PI/2 : Math.PI/2, waxing? Math.PI/2 : Math.PI*1.5);
@@ -3469,14 +4020,25 @@ function drawMoonPhase(cx,cy,r,phase31){
     ctx2d.fillStyle='rgba(20,27,38,0.16)'; ctx2d.fill();
   });
   ctx2d.restore();
-  ctx2d.strokeStyle='rgba(220,230,255,0.35)'; ctx2d.lineWidth=1;
+  ctx2d.strokeStyle='rgba(255,255,255,0.5)'; ctx2d.lineWidth=1;
   ctx2d.beginPath();
   for(let k=0;k<6;k++){ const ang=Math.PI/180*(60*k-90); const px=cx+r*Math.cos(ang), py=cy+r*Math.sin(ang); if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py); }
   ctx2d.closePath(); ctx2d.stroke();
   // Revision round 4: moon phase number shown small inside, same treatment as the sun's root.
+  // Revision round 8 fix: "ahora la luna ya no muestra su root, arregla eso"
+  // -- phase31 IS the night's root shift (see currentNightSteps()), but it
+  // used to render as a bare 0-30 number with no sign, so it didn't visibly
+  // read as "a root" the way the sun's +N/-N readout does. Now formatted the
+  // same way (+ prefix) and colored by that root's own hue (item: "el
+  // numerito... tenga el color de esa root"), with a dark outline behind it
+  // so it stays legible whether it lands on the lit or shadowed side.
   ctx2d.save();
-  ctx2d.fillStyle='rgba(255,255,255,0.9)'; ctx2d.font="700 9px 'JetBrains Mono', monospace"; ctx2d.textAlign='center'; ctx2d.textBaseline='middle';
-  ctx2d.fillText(String(phase31), cx, cy+0.5);
+  ctx2d.font="700 9px 'JetBrains Mono', monospace"; ctx2d.textAlign='center'; ctx2d.textBaseline='middle';
+  const moonRootLabel = (phase31>=0?'+':'')+phase31;
+  ctx2d.strokeStyle='rgba(8,12,18,0.55)'; ctx2d.lineWidth=2.4;
+  ctx2d.strokeText(moonRootLabel, cx, cy+0.5);
+  ctx2d.fillStyle=hsl(hueForPc(phase31),75,58,0.95);
+  ctx2d.fillText(moonRootLabel, cx, cy+0.5);
   ctx2d.restore();
 }
 // Revision round 2: position now follows celestialArcPosition (a real
@@ -3488,7 +4050,7 @@ function drawMoonPhase(cx,cy,r,phase31){
 function drawCelestial(w,h,nowMs){
   const frac = currentCelestialFrac(nowMs);
   const pos = celestialArcPosition(frac, w, h);
-  if(ECO.isNight) drawMoonPhase(pos.x,pos.y,38,ECO.moonPhase); // revision round 7: much bigger again (was 27 in round 5, 19 before that)
+  if(ECO.isNight) drawMoonPhase(pos.x,pos.y,46,ECO.moonPhase); // revision round 8: bigger again (was 38 in round 7, 27 in round 5, 19 before that)
   else drawSun(pos.x,pos.y,nowMs);
 }
 // Revision round 2: a full-canvas wash driven by the brightness curve, so the
@@ -4173,6 +4735,125 @@ function drawNurseryPlant(nowMs){
   });
   ctx2d.restore();
 }
+// Revision round 8: the island tree (see setupIslandTree/updateTreePerformance)
+// -- a small fixed rocky mound at the bottom-right with a single tree always
+// growing from it. Reads as a plain green/earthy Art Nouveau tree normally;
+// a trencadís mosaic-fleck rim trim on the island echoes the platform/fish
+// mosaic motif for stylistic consistency with the rest of the world. While
+// ECO.treePerformance is active, the whole canopy relights with the touching
+// chord's hue (a soft pulsing glow behind it, same gradient-halo language as
+// a chord's own sound-light) for as long as the frozen-world progression plays.
+function drawIslandTree(nowMs){
+  const tr = ECO.islandTree;
+  if(!tr) return;
+  const tp = ECO.treePerformance;
+  const active = !!(tp && tp.active);
+  const hue = active ? tp.hue : 130;
+  ctx2d.save();
+
+  ctx2d.beginPath();
+  ctx2d.ellipse(tr.baseX, tr.baseY, tr.islandRX, tr.islandRY, 0, 0, Math.PI*2);
+  const ig = ctx2d.createRadialGradient(tr.baseX,tr.baseY-6,4, tr.baseX,tr.baseY,tr.islandRX);
+  ig.addColorStop(0, hsl(90,30,42,0.95));
+  ig.addColorStop(1, hsl(100,35,24,0.95));
+  ctx2d.fillStyle = ig; ctx2d.fill();
+  const rimN = 14;
+  for(let i=0;i<rimN;i++){
+    const a = (i/rimN)*Math.PI*2;
+    const px = tr.baseX + Math.cos(a)*tr.islandRX*0.94;
+    const py = tr.baseY + Math.sin(a)*tr.islandRY*0.94;
+    ctx2d.beginPath(); ctx2d.arc(px,py, 2.6, 0, Math.PI*2);
+    ctx2d.fillStyle = hsl((i*47)%360, 55, 60, 0.55);
+    ctx2d.fill();
+  }
+
+  ctx2d.strokeStyle = hsl(28,35,32,0.92); ctx2d.lineWidth=9; ctx2d.lineCap='round';
+  ctx2d.beginPath();
+  ctx2d.moveTo(tr.baseX, tr.trunkBaseY);
+  ctx2d.quadraticCurveTo(tr.baseX-16+Math.sin(nowMs*0.0004)*4, (tr.trunkBaseY+tr.trunkTopY)/2, tr.canopyX, tr.trunkTopY);
+  ctx2d.stroke();
+
+  if(active){
+    const pulse = 0.55+0.45*Math.sin(nowMs*0.006);
+    const gg = ctx2d.createRadialGradient(tr.canopyX,tr.canopyY,tr.canopyR*0.3, tr.canopyX,tr.canopyY,tr.canopyR*3.4);
+    gg.addColorStop(0, hsl(hue,90,72,0.55*pulse));
+    gg.addColorStop(1, hsl(hue,90,72,0));
+    ctx2d.beginPath(); ctx2d.arc(tr.canopyX,tr.canopyY,tr.canopyR*3.4,0,Math.PI*2);
+    ctx2d.fillStyle = gg; ctx2d.fill();
+  }
+
+  const leafHue = active ? hue : 128;
+  const leafCount = 6;
+  for(let i=0;i<leafCount;i++){
+    const a = (i/leafCount)*Math.PI*2 + Math.sin(nowMs*0.0003+i)*0.15;
+    const lx = tr.canopyX + Math.cos(a)*tr.canopyR*0.55;
+    const ly = tr.canopyY + Math.sin(a)*tr.canopyR*0.42;
+    ctx2d.beginPath();
+    ctx2d.arc(lx, ly, tr.canopyR*0.52, 0, Math.PI*2);
+    ctx2d.fillStyle = hsl(leafHue + i*6, active?85:45, active?62:36, active?0.88:0.85);
+    ctx2d.fill();
+  }
+  ctx2d.beginPath();
+  ctx2d.arc(tr.canopyX, tr.canopyY, tr.canopyR*0.62, 0, Math.PI*2);
+  ctx2d.fillStyle = hsl(leafHue, active?92:48, active?72:44, 0.95);
+  ctx2d.fill();
+
+  ctx2d.restore();
+}
+// Revision round 7: the Gaudi fish (see updateFish above) -- a trencadís-
+// mosaic body in the same psychedelicGradient language the mushroom/other
+// Gaudi shapes already use, facing whichever direction it's actually
+// travelling, mouth visibly opening right at the 'bite' phase.
+function drawFish(nowMs){
+  const fish = ECO.fish;
+  if(!fish) return;
+  const t = nowMs||0;
+  const facing = fish.facing||1;
+  const bob = Math.sin(t*0.006)*4;
+  const R = 34;
+  const wag = Math.sin(t*0.014)*0.35;
+  ctx2d.save();
+  ctx2d.translate(fish.x, fish.y+bob);
+  ctx2d.scale(facing,1);
+  // tail fin
+  ctx2d.save();
+  ctx2d.translate(-R*0.92,0); ctx2d.rotate(wag);
+  ctx2d.beginPath();
+  ctx2d.moveTo(0,0); ctx2d.quadraticCurveTo(-R*0.55,-R*0.5,-R*0.7,0); ctx2d.quadraticCurveTo(-R*0.55,R*0.5,0,0);
+  ctx2d.closePath();
+  ctx2d.fillStyle = psychedelicGradient(-R*0.3,0,R*0.55,190,t);
+  ctx2d.fill();
+  ctx2d.strokeStyle='rgba(255,255,255,0.35)'; ctx2d.lineWidth=1; ctx2d.stroke();
+  ctx2d.restore();
+  // body
+  ctx2d.beginPath();
+  ctx2d.ellipse(0,0,R,R*0.56,0,0,Math.PI*2);
+  ctx2d.fillStyle = psychedelicGradient(0,-R*0.2,R*1.3,205,t);
+  ctx2d.fill();
+  ctx2d.strokeStyle='rgba(255,255,255,0.45)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
+  // trencadís mosaic tile texture scattered across the body
+  for(let i=0;i<10;i++){
+    const a = (i/10)*Math.PI*2;
+    const mx = Math.cos(a)*R*0.62, my = Math.sin(a)*R*0.34;
+    ctx2d.beginPath(); ctx2d.arc(mx,my,3.4,0,Math.PI*2);
+    ctx2d.fillStyle = hsl((200+i*24+t*0.03)%360,80,62,0.55); ctx2d.fill();
+  }
+  // dorsal fin
+  ctx2d.beginPath();
+  ctx2d.moveTo(-R*0.1,-R*0.5); ctx2d.quadraticCurveTo(R*0.15,-R*0.98,R*0.4,-R*0.46); ctx2d.closePath();
+  ctx2d.fillStyle = hsl(280,70,55,0.85); ctx2d.fill();
+  // eye
+  ctx2d.beginPath(); ctx2d.arc(R*0.62,-R*0.08,R*0.1,0,Math.PI*2); ctx2d.fillStyle='#0a0f14'; ctx2d.fill();
+  ctx2d.beginPath(); ctx2d.arc(R*0.65,-R*0.11,R*0.035,0,Math.PI*2); ctx2d.fillStyle='rgba(255,255,255,0.85)'; ctx2d.fill();
+  // mouth -- opens wide right at the bite moment
+  const mouthOpen = fish.phase==='bite' ? 0.9 : 0.15;
+  ctx2d.beginPath();
+  ctx2d.moveTo(R*0.94,0);
+  ctx2d.quadraticCurveTo(R*1.1, R*(0.1+0.22*mouthOpen), R*0.78, R*(0.06+0.3*mouthOpen));
+  ctx2d.quadraticCurveTo(R*1.05,-R*0.02,R*0.94,0);
+  ctx2d.fillStyle='#5a1f22'; ctx2d.fill();
+  ctx2d.restore();
+}
 // Tornado funnel: a stack of slightly-offset swirling rings positioned via
 // tornadoPositionAt (same formula the physics-force side uses), so the
 // visual always tracks exactly where the force is actually being applied.
@@ -4201,6 +4882,30 @@ function drawTornado(nowMs){
   }
   ctx2d.restore();
 }
+// Revision round 7: "que aparezca una animacion fractal kaleidoscopio
+// gaudiniano psicodelico en el cielo" -- paired with updateCelestialMidpointEvent
+// (sun/moon at the exact zenith of its arc, a random effect fires). Reuses
+// the same recursive-branch technique the quake fractals below and the
+// fractal-bloom creature style already use, but arranged as N rotated copies
+// around a shared center for the actual "kaleidoscope" symmetry, with a
+// quick fade in/out over its short lifetime instead of an abrupt cut.
+function drawKaleidoscopeFractal(w,h,nowMs){
+  if(!(ECO.kaleidoscopeUntil>nowMs)) return;
+  const total = 3400, remain = ECO.kaleidoscopeUntil-nowMs;
+  const fadeK = remain>total-300 ? (total-remain)/300 : Math.min(1,remain/500);
+  const cx = w*0.5, cy = h*0.3;
+  const folds = 6;
+  ctx2d.save();
+  ctx2d.globalAlpha = Math.max(0,Math.min(1,fadeK))*0.75;
+  for(let i=0;i<folds;i++){
+    ctx2d.save();
+    ctx2d.translate(cx,cy); ctx2d.rotate((i/folds)*Math.PI*2 + nowMs*0.0006); ctx2d.translate(-cx,-cy);
+    const hue = (ECO.kaleidoscopeHue + i*(360/folds) + nowMs*0.05)%360;
+    drawFractalBloomBranch(cx,cy, 34+ECO.kaleidoscopeSeed*50, -Math.PI/2, 3, hue, s=>s);
+    ctx2d.restore();
+  }
+  ctx2d.restore();
+}
 // Revision round 6: "que cuando haya terremoto todo se llene de fractales
 // extremos" -- reuses the recursive-branch technique from the fractal-bloom
 // creature style (drawFractalBloomBranch, round 5), fired from several
@@ -4208,7 +4913,12 @@ function drawTornado(nowMs){
 // "extreme") than that small creature version, only while a quake is active.
 function drawQuakeFractals(w,h,nowMs){
   if(!(ECO.quakeShakeUntil>nowMs)) return;
-  const origins = 4, arms = 4, depth = 4;
+  // Revision round 7 perf: depth 4->3 (15->7 segments per arm, less than
+  // half the draw calls) -- still reads as an "extreme" fractal burst
+  // layered on top of an already-busy quake (shake+rough water+tremor), just
+  // lighter on frame cost during exactly the moment everything else on
+  // screen is also working hardest.
+  const origins = 4, arms = 4, depth = 3;
   ctx2d.save();
   ctx2d.globalAlpha = 0.55;
   for(let i=0;i<origins;i++){
@@ -4539,6 +5249,58 @@ function drawEyesStyle(style,R,sat,eyeCount){
       ctx2d.beginPath(); ctx2d.arc(x,ey,er*1.6,0,Math.PI*2); ctx2d.fillStyle=rg; ctx2d.fill();
       ctx2d.beginPath(); ctx2d.arc(x,ey,er*0.7,0,Math.PI*2); ctx2d.fillStyle='#f4fffb'; ctx2d.fill();
     });
+  } else if(style===7){ // Revision round 7: multi-eye -- 3-6 small eyes arranged in an arc across the face
+    const n = Math.max(3,Math.min(6,eyeCount||4));
+    const arc = Math.PI*0.66;
+    for(let i=0;i<n;i++){
+      const a = n===1 ? 0 : (-arc/2 + (i/(n-1))*arc);
+      const mx = Math.sin(a)*R*0.6, my = ey - Math.cos(a)*R*0.2;
+      const mr = Math.max(1.3,er*0.7);
+      ctx2d.beginPath(); ctx2d.arc(mx,my,mr,0,Math.PI*2); ctx2d.fillStyle='#08110d'; ctx2d.fill();
+      ctx2d.beginPath(); ctx2d.arc(mx-mr*0.3,my-mr*0.3,mr*0.32,0,Math.PI*2); ctx2d.fillStyle='rgba(255,255,255,0.85)'; ctx2d.fill();
+    }
+  } else if(style===8){ // Revision round 7: Egyptian eye (stylized Eye of Horus / Udjat)
+    const ew=R*0.5, eh=R*0.26;
+    ctx2d.save();
+    ctx2d.beginPath();
+    ctx2d.moveTo(-ew,ey);
+    ctx2d.quadraticCurveTo(-ew*0.3,ey-eh, ew*0.5,ey);
+    ctx2d.quadraticCurveTo(-ew*0.3,ey+eh, -ew,ey);
+    ctx2d.closePath();
+    ctx2d.fillStyle='#f7fbff'; ctx2d.fill();
+    ctx2d.strokeStyle='#08110d'; ctx2d.lineWidth=Math.max(1,R*0.045); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.arc(-ew*0.05,ey,eh*0.55,0,Math.PI*2); ctx2d.fillStyle='#08110d'; ctx2d.fill();
+    ctx2d.strokeStyle='#08110d'; ctx2d.lineWidth=Math.max(1.2,R*0.055); ctx2d.lineCap='round';
+    ctx2d.beginPath(); ctx2d.moveTo(-ew*1.05,ey-eh*1.5); ctx2d.quadraticCurveTo(0,ey-eh*2.3, ew*0.65,ey-eh*1.15); ctx2d.stroke();
+    ctx2d.lineWidth=Math.max(1,R*0.045);
+    ctx2d.beginPath(); ctx2d.moveTo(-ew*0.55,ey+eh*0.9); ctx2d.lineTo(-ew*0.75,ey+eh*2.4); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.arc(-ew*0.95,ey+eh*2.7,eh*0.5,0,Math.PI*1.5); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(ew*0.4,ey+eh*0.3); ctx2d.lineTo(ew*0.25,ey+eh*2.2); ctx2d.stroke();
+    ctx2d.restore();
+  } else if(style===9){ // Revision round 7: no eyes -- a heptagram (7-pointed star) instead
+    const spikes=7, outerR=R*0.34, innerR=R*0.15;
+    ctx2d.beginPath();
+    for(let i=0;i<spikes*2;i++){
+      const a=(i/(spikes*2))*Math.PI*2 - Math.PI/2;
+      const rr=(i%2===0)?outerR:innerR;
+      const px=Math.cos(a)*rr, py=ey+Math.sin(a)*rr;
+      if(i===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
+    }
+    ctx2d.closePath();
+    ctx2d.fillStyle='rgba(255,255,255,0.88)'; ctx2d.fill();
+    ctx2d.strokeStyle='rgba(8,17,13,0.55)'; ctx2d.lineWidth=1; ctx2d.stroke();
+  } else if(style===10){ // Revision round 7: no eyes -- a spiral instead
+    ctx2d.save();
+    ctx2d.strokeStyle='rgba(255,255,255,0.85)'; ctx2d.lineWidth=Math.max(1,R*0.05); ctx2d.lineCap='round';
+    ctx2d.beginPath();
+    const turns=2.2, steps=40;
+    for(let i=0;i<=steps;i++){
+      const f=i/steps, a=f*Math.PI*2*turns, rr=f*R*0.32;
+      const px=Math.cos(a)*rr, py=ey+Math.sin(a)*rr;
+      if(i===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
+    }
+    ctx2d.stroke();
+    ctx2d.restore();
   } else { // classic dot eyes
     ctx2d.fillStyle='#08110d';
     ctx2d.beginPath(); ctx2d.arc(-ex,ey,er,0,Math.PI*2); ctx2d.fill();
@@ -4594,17 +5356,24 @@ function chordHexTileRadius(rawIntervals, qrOffsets, targetSpan){
 // border, gold tone border) instead of the fainter translucent-backdrop
 // treatment this had when it was still just a texture layer hiding under a
 // separate marker.
+// Revision round 7 perf: precomputed once instead of recomputing 6
+// Math.cos/Math.sin calls per tile per chord per frame -- this draw runs
+// unconditionally for every note of every chord every frame (the single
+// hottest path touched this round), so trading that trig for 6 cached unit
+// vectors (just a multiply per point now) is a real, low-risk win. Also
+// drops the old per-tile save()/translate()/restore() in favor of computing
+// each point's absolute position directly -- three fewer canvas matrix-stack
+// ops per tile, same drawn result.
+const HEX_UNIT_PTS = Array.from({length:6}, (_,k)=>{ const ang=Math.PI/180*(60*k); return [Math.cos(ang),Math.sin(ang)]; });
 function drawChordHexMosaic(layout, raw, root, safeRootIdx, tileR, sat){
   if(tileR==null) return;
+  const rr = tileR*0.92;
   layout.forEach((pt,i)=>{
     const noteHue = hueForPc(root + raw[i]);
     const isRoot = i===safeRootIdx;
-    ctx2d.save();
-    ctx2d.translate(pt.x,pt.y);
     ctx2d.beginPath();
     for(let k=0;k<6;k++){
-      const ang = Math.PI/180*(60*k);
-      const px = tileR*0.92*Math.cos(ang), py = tileR*0.92*Math.sin(ang);
+      const px = pt.x + HEX_UNIT_PTS[k][0]*rr, py = pt.y + HEX_UNIT_PTS[k][1]*rr;
       if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
     }
     ctx2d.closePath();
@@ -4613,7 +5382,6 @@ function drawChordHexMosaic(layout, raw, root, safeRootIdx, tileR, sat){
     ctx2d.strokeStyle = isRoot ? '#bff4e6' : '#d6ac2c';
     ctx2d.lineWidth = Math.max(0.8, tileR*(isRoot?0.14:0.1));
     ctx2d.stroke();
-    ctx2d.restore();
   });
 }
 function drawChord(b,t){
@@ -4655,10 +5423,16 @@ function drawChord(b,t){
 
   if(b.glowUntil && t<b.glowUntil){
     const remain = Math.max(0,(b.glowUntil-t)/900);
-    const gg = ctx2d.createRadialGradient(0,0,b.radius*0.6,0,0,b.radius*2.6);
-    gg.addColorStop(0, hsl(headHue,sat(95),75,0.4*remain));
-    gg.addColorStop(1, hsl(headHue,sat(95),75,0));
-    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius*2.6,0,Math.PI*2); ctx2d.fillStyle=gg; ctx2d.fill();
+    // Revision round 8: "aumentar la intensidad y el alcance de su luz un
+    // poco" -- reach (2.6->3.1x radius) and peak opacity (0.4->0.56) both
+    // bumped a bit; the remain-based fade shape from each trigger site is
+    // untouched. Combined with updateAmbientRepitch's continuous glowUntil
+    // hold below, this glow now stays lit the whole time a chord is really
+    // sounding instead of only flashing at the trigger moment.
+    const gg = ctx2d.createRadialGradient(0,0,b.radius*0.55,0,0,b.radius*3.1);
+    gg.addColorStop(0, hsl(headHue,sat(95),76,0.56*remain));
+    gg.addColorStop(1, hsl(headHue,sat(95),76,0));
+    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius*3.1,0,Math.PI*2); ctx2d.fillStyle=gg; ctx2d.fill();
   }
   // Revision round 7: "que los acordes... emitan brillo a su alrededor
   // cuando es de noche" -- a soft always-on ambient glow at night, distinct
@@ -4721,7 +5495,7 @@ function drawChord(b,t){
   else if(style===5) drawFractalBloomHead(b.radius,t,headHue,sat);
   else if(style===6) drawMandalaHead(b.radius,t,headHue,sat);
   else drawClassicHead(b.radius,t,headHue,sat,b.dragging,b.x);
-  drawEyesStyle(b.eyeStyle||0, b.radius, sat);
+  drawEyesStyle(b.eyeStyle||0, b.radius, sat, b.eyeCount||4);
   if(b.isBig){
     ctx2d.strokeStyle = hsl(headHue,sat(90),85,0.55); ctx2d.lineWidth=1.5; ctx2d.setLineDash([3,4]);
     ctx2d.beginPath(); ctx2d.arc(0,0,b.radius+6,0,Math.PI*2); ctx2d.stroke(); ctx2d.setLineDash([]);
@@ -4766,12 +5540,19 @@ function render(nowMs){
   drawZoneDivider(w,h,nowMs);
   drawWater(w,h,nowMs);
   drawNurseryPlant(nowMs);
+  drawIslandTree(nowMs); // revision round 8
+  // Revision round 8: "que los fractales... aparezcan atras de las
+  // plataformas" -- moved from after everything (was right before
+  // applyBrightnessOverlay) to here, behind the platforms/objects/chords
+  // drawn below.
+  drawKaleidoscopeFractal(w,h,nowMs);
   ECO.world.platforms.forEach(p=>drawPlatform(p,nowMs));
   drawFoodParticles(nowMs);
   drawConstellationLines(nowMs);
   ECO.world.bodies.forEach(b=>{ if(b.kind==='object') drawObject(b,nowMs); });
   ECO.world.bodies.forEach(b=>{ if(b.kind==='roothex') drawRootHexagon(b,nowMs); });
   ECO.world.bodies.forEach(b=>{ if(b.kind==='chord') drawChord(b,nowMs); });
+  drawFish(nowMs); // revision round 7 -- on top of the chords so the bite reads clearly
   drawBursts(nowMs);
   drawTornado(nowMs);
   drawRain(w,h,nowMs);
@@ -5039,6 +5820,7 @@ function onResize(){
   ECO.world.width = window.innerWidth; ECO.world.height = window.innerHeight;
   ECO.world.platforms = buildPlatforms(ECO.world.width, ECO.world.height);
   setupNursery(ECO.world.width, ECO.world.height);
+  setupIslandTree(ECO.world.width, ECO.world.height); // revision round 8
   setupCanvasSize();
 }
 
@@ -5212,7 +5994,13 @@ function updateWhatIsHappeningPanel(nowMs){
   body.innerHTML = sounding.map(b=>{
     const sp = ECO.species.find(s=>s.signature===b.sig);
     const nick = sp ? ECO.nicknames[sp.signature] : '';
-    return '<div class="occ">'+chordTagHtml(b.num, nick)+' <span class="muted">'+escapeHtmlEco(b.intervals.join('.'))+'</span></div>';
+    // Revision round 8: "en whats happening indica las roots" -- each row
+    // now also shows the chord's live root (root shifts with zone/day-night/
+    // transpose, see liveRootRaw), colored by that root's own pitch-class hue.
+    const root = liveRootRaw(b);
+    const rootHue = hueForPc(root);
+    const rootLabel = '<span style="color:'+hsl(rootHue,80,68,1)+';font-weight:600;">root '+(root>=0?'+':'')+root+'</span>';
+    return '<div class="occ">'+chordTagHtml(b.num, nick)+' '+rootLabel+' <span class="muted">'+escapeHtmlEco(b.intervals.join('.'))+'</span></div>';
   }).join('');
 }
 // Revision round 3: renamed for the new eye-icon "god settings" button.
@@ -5311,14 +6099,34 @@ function updateHudText(nowMs){
 }
 
 /* ============================================================================
-   SECTION: START-SCREEN FRACTAL BACKGROUND (revision round 3)
+   SECTION: START-SCREEN FRACTAL BACKGROUND (revision round 3; wave shape
+   redesigned round 8)
    A looping fractal animation behind the "your ecosystem" title -- a slowly
-   rotating double-helix (DNA-reminiscent) whose ring radii and rung spacing
-   follow harmonic-series proportions (1/n falloff, same "overtone series"
-   character as the app's own 31-ED2 tuning), with small self-similar
-   forked spurs at each rung (the actual "fractal" part). Runs on its own
-   rAF loop independent of the main game loop -- starts immediately on page
-   load and stops for good the instant the user clicks to begin (see
+   rotating double-helix (DNA-reminiscent).
+   Revision round 8: "haz que el adn de fondo sea mucho mas parecido a un
+   esquema de la serie armonica con todas las ondas, comola forma de las
+   ondas de la imagen adjunta, pero haciendo un adn y con colores y
+   animacion" -- the attached reference image is the classic "harmonic
+   series" string diagram: nested sine arcs, one per harmonic/partial (n=1
+   the fundamental, biggest; n=2,3,4... progressively smaller), every arc
+   sharing the SAME two endpoints (a string is pinned at both ends, so every
+   mode is zero there). That shape is now drawn literally -- for each
+   harmonic n, wave(frac) = sin(n*PI*frac) * (baseR/n) is exactly an n-lobed
+   standing wave that is 0 at frac=0 and frac=1 for every n, with amplitude
+   shrinking 1/n same as the reference image's partials -- instead of the
+   old version's single mild "wobble factor" that only hinted at the
+   harmonic series. "todas las ondas" (all the waves) means every harmonic
+   n=1..START_HARMONICS is drawn as its own visible layered curve
+   (START_HARMONICS of them, each its own color), not collapsed into one.
+   The pre-existing rotating-angle formula (frac*PI*TWIST_COEF + t*speed +
+   s*PI) is unchanged and is what turns this stack of flat nested standing
+   waves into an actual 3D-reading double helix: it's applied to every
+   harmonic layer's radius, in sync, so the whole stack twists together.
+   Small self-similar forked spurs (the "fractal" part) and the DNA
+   base-pair rungs are kept on just the fundamental (n=1) layer, so the
+   6 fainter inner harmonics don't visually compete with them. Runs on its
+   own rAF loop independent of the main game loop -- starts immediately on
+   page load and stops for good the instant the user clicks to begin (see
    __fractalStopped in the startHandler below), so it never costs anything
    once real gameplay is running.
    ============================================================================ */
@@ -5332,6 +6140,7 @@ function drawFractalSpur(fctx, x, y, len, angle, depth){
   drawFractalSpur(fctx, x2, y2, len*0.62, angle-0.5, depth-1);
   drawFractalSpur(fctx, x2, y2, len*0.62, angle+0.5, depth-1);
 }
+const START_HARMONICS = 7; // n=1 (the fundamental, outermost/biggest arc) .. 7 (innermost/smallest), matching the reference image's run of partials
 function setupStartFractal(){
   const canvas = document.getElementById('startFractalCanvas');
   if(!canvas || !canvas.getContext) return;
@@ -5350,35 +6159,49 @@ function setupStartFractal(){
     const w = window.innerWidth, h = window.innerHeight;
     fctx.clearRect(0,0,w,h);
     const cx = w/2, cy = h*0.42;
-    const rungs = 24;
-    const helixR = Math.min(w,h)*0.24;
+    const rungs = 48; // finer sampling than round-7's 24 -- 7 layered n-lobed harmonics need more points per lobe to read cleanly
+    const baseR = Math.min(w,h)*0.26;
     const spanY = h*0.85;
-    for(let s=0;s<2;s++){
-      fctx.beginPath();
-      for(let i=0;i<=rungs;i++){
-        const frac = i/rungs;
-        const y = cy - spanY/2 + frac*spanY;
-        const harmonic = 1/(1+(i%7)); // harmonic-series-flavored radius wobble
-        const ang = frac*Math.PI*5 + t*0.00022 + s*Math.PI;
-        const x = cx + Math.cos(ang)*helixR*(0.7+0.3*harmonic);
-        if(i===0) fctx.moveTo(x,y); else fctx.lineTo(x,y);
+    const TWIST_COEF = 5; // unchanged from round 3/7 -- total sweep PI*5 = 2.5 full turns top-to-bottom
+    for(let n=1; n<=START_HARMONICS; n++){
+      const amp = baseR/n; // "todas las ondas": each harmonic drawn as its own full n-lobed curve, shrinking 1/n like the reference image's partials
+      const hueBase = (n-1)*(300/START_HARMONICS); // spreads the 7 harmonics across a warm(fundamental)-to-cool(highest partial) band
+      for(let s=0;s<2;s++){
+        fctx.beginPath();
+        for(let i=0;i<=rungs;i++){
+          const frac = i/rungs;
+          const y = cy - spanY/2 + frac*spanY;
+          // the actual n-lobed harmonic-series standing-wave shape -- zero at
+          // frac=0 and frac=1 (shared endpoints, exactly like every arc in
+          // the reference image), n antinodes in between.
+          const wave = Math.sin(n*Math.PI*frac) * amp;
+          const ang = frac*Math.PI*TWIST_COEF + t*0.00022 + s*Math.PI;
+          const x = cx + Math.cos(ang)*wave;
+          if(i===0) fctx.moveTo(x,y); else fctx.lineTo(x,y);
+        }
+        const hue = (hueBase + t*0.02 + s*160)%360;
+        fctx.strokeStyle = 'hsla('+hue+',80%,66%,'+(0.5-n*0.02)+')';
+        fctx.lineWidth = Math.max(0.8, 2.6-n*0.22);
+        fctx.stroke();
       }
-      fctx.strokeStyle = 'hsla('+((t*0.02+s*160)%360)+',75%,65%,0.5)';
-      fctx.lineWidth = 2;
-      fctx.stroke();
     }
-    for(let i=0;i<=rungs;i+=2){
+    // DNA "base-pair" rungs + small fractal spurs, kept on the fundamental
+    // (n=1) layer only -- the strongest/outermost wave, so the rungs read as
+    // the helix's structural backbone without competing with the 6 fainter
+    // inner harmonic layers above.
+    const amp1 = baseR;
+    for(let i=0;i<=rungs;i+=3){
       const frac = i/rungs;
       const y = cy - spanY/2 + frac*spanY;
-      const ang0 = frac*Math.PI*5 + t*0.00022;
-      const r = helixR*(0.7+0.3*(1/(1+(i%7))));
-      const x0 = cx+Math.cos(ang0)*r, x1 = cx+Math.cos(ang0+Math.PI)*r;
+      const wave1 = Math.sin(Math.PI*frac) * amp1;
+      const ang0 = frac*Math.PI*TWIST_COEF + t*0.00022;
+      const x0 = cx+Math.cos(ang0)*wave1, x1 = cx+Math.cos(ang0+Math.PI)*wave1;
       fctx.beginPath(); fctx.moveTo(x0,y); fctx.lineTo(x1,y);
-      fctx.strokeStyle = 'hsla('+((t*0.02+frac*200)%360)+',70%,60%,0.25)';
+      fctx.strokeStyle = 'hsla('+((t*0.02+frac*200)%360)+',70%,60%,0.22)';
       fctx.lineWidth=1;
       fctx.stroke();
-      drawFractalSpur(fctx, x0, y, 9*(1/(1+(i%5))), ang0, 2);
-      drawFractalSpur(fctx, x1, y, 9*(1/(1+(i%5))), ang0+Math.PI, 2);
+      drawFractalSpur(fctx, x0, y, 9*(1-frac*0.5), ang0, 2);
+      drawFractalSpur(fctx, x1, y, 9*(1-frac*0.5), ang0+Math.PI, 2);
     }
     requestAnimationFrame(drawFrame);
   }
@@ -5424,6 +6247,7 @@ function boot(){
   ECO.rootUsage = computeRootUsage(data.progressions); // revision round 4: flying-hexagon data (top 5 most-used absolute roots)
   ECO.topRoots = topUsedRoots(ECO.rootUsage, 5);
   ECO.rootIntervalUsage = computeRootIntervalUsage(data.progressions); // revision round 6: day-phase root pick (top 5 most-used root-to-root intervals)
+  ECO.progressions = data.progressions || []; // revision round 8: retained (previously only used transiently above to compute aggregates) -- feeds the island tree performance
 
   ECO.whitelist = loadWhitelist();
   ECO.maxPopulation = loadMaxPopulation(); // revision round 3
@@ -5442,9 +6266,9 @@ function boot(){
   ECO.quakeGrid = null;
   ECO.quakeQueue = [];
   ECO.quakeAudioPrevElapsed = -1;
-  ECO.huntNextCheckAt = performance.now()+4000;
+  ECO.huntNextCheckAt = performance.now()+4000*EVENT_PACE_MUL;
   ECO.summon = null;
-  ECO.summonNextAt = performance.now()+6000;
+  ECO.summonNextAt = performance.now()+6000*EVENT_PACE_MUL;
   ECO.tornado = null;
   ECO.raining = false;
   ECO.rainDrops = null;
@@ -5456,17 +6280,26 @@ function boot(){
   ECO.bursts = [];
   // Revision round 4: fixed twinkling starfield (night only, see drawBgStars).
   ECO.bgStars = Array.from({length:110}, ()=>({ xf:Math.random(), yf:Math.random()*0.62, phase:Math.random()*10, size:1+Math.random()*1.6 }));
+  // Revision round 8
+  ECO.treePerformance = { active:false, cooldownUntil:0 };
+  ECO.recentNoteTimestamps = [];
+  ECO.kaleidoscopeNextEligibleAt = 0;
+  ECO.activityHotSince = 0;
 
   ECO.world = createWorld({ width: window.innerWidth, height: window.innerHeight, platforms: buildPlatforms(window.innerWidth, window.innerHeight) });
   spawnObjects(ECO.world);
   spawnRootHexagons(ECO.world, ECO.topRoots); // revision round 4
   setupNursery(window.innerWidth, window.innerHeight);
+  setupIslandTree(window.innerWidth, window.innerHeight); // revision round 8
   setupFoodParticles(window.innerWidth, window.innerHeight);
   scheduleNextTornado(performance.now());
   scheduleNextRain(performance.now());
+  ECO.fish = null;
+  scheduleNextFish(performance.now()); // revision round 7
 
   const driver = createRealDriver(()=>ECO.settings);
   ECO.audioPort = createAudioPort(driver);
+  wireActivityTracking(ECO.audioPort); // revision round 8: feeds updateActivitySpikeFractal
 
   setupCanvas();
   wireInput();
@@ -5481,12 +6314,32 @@ function loop(t){
   if(__lastT==null) __lastT = t;
   let delta = (t-__lastT)/1000; __lastT = t;
   delta = Math.min(delta, 0.25); // clamp a backgrounded-tab pause instead of a spiral of huge catch-up steps
+
+  // Revision round 8: "todos los demas objetos de quedan parados" -- while
+  // the island tree's progression performance is playing, the ENTIRE world
+  // simulation freezes right here (one early-return gate, instead of
+  // threading a pause flag through every individual update function below),
+  // so every chord/object/weather/day-night system holds exactly where it
+  // was. render(t) and updateHudText(t) still run every frame so the frozen
+  // scene stays visible, and updateTreePerformance(t) still runs so the
+  // performance's own 2-repetition playback timer keeps advancing and can
+  // end the freeze on schedule. __acc is deliberately left un-accumulated
+  // while frozen so the fixed-timestep loop below can't build up a
+  // catch-up backlog that would jolt the world on resume.
+  if(ECO.treePerformance && ECO.treePerformance.active){
+    updateTreePerformance(t);
+    render(t);
+    updateHudText(t);
+    requestAnimationFrame(loop);
+    return;
+  }
   __acc += delta;
 
   updateDayNight(t);
   updateSpawning(t);
   updateEarthquake(t);
   updateTornadoSpawn(t);
+  updateFishSpawn(t); // revision round 7
   updateWeather(t);
   updatePlatformBreathing(t);
   updateAnchoredObjects(t); // revision round 5
@@ -5496,6 +6349,8 @@ function loop(t){
   updateBursts(t);
   // Revision round 4 additions (frame-granularity, matching the existing systems above):
   updateCommonTonesGate(t);
+  updateCelestialMidpointEvent(t); // revision round 7
+  updateActivitySpikeFractal(t); // revision round 8
   updateGrayDeaths(t);
   updateDyingBodies(t);
   updateStillTracking(t);
@@ -5503,6 +6358,7 @@ function loop(t){
   updateFlowerHold(t);
   updateFlowerAbsorption(t);
   updateWhatIsHappeningPanel(t);
+  updateTreePerformance(t); // revision round 8: trigger-detection only here (not yet active) -- see the frozen-world gate above for the active/playback path
 
   while(__acc >= FIXED_DT){
     updateBlackHolePull(FIXED_DT);
@@ -5517,12 +6373,13 @@ function loop(t){
     updateZones();
     updateLifecycle(t);
     updateEatingBodies(t);
+    updateFish(t); // revision round 7
     updateLandingTriggers(t);
     updateBorderAudio(t);
     updateCommonTonesArea(t);
     updateRootHexagons(t); // revision round 4
     updateQuakeAudio(t);
-    updateAmbientRepitch();
+    updateAmbientRepitch(t);
     __acc -= FIXED_DT;
   }
 
