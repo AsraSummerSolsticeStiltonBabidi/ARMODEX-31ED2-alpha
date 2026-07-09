@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ecosystem — 31ED2 Armodex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05070a; --panel:#0d1218cc; --panel-solid:#0d1218; --border:#26313d;
+    --text:#eef3f6; --muted:#93a3b0;
+    --accent:#7fe0c8; --accent2:#d6ac2c; --danger:#e0716a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+  #stage{position:fixed;inset:0;}
+  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;}
+  canvas#c.dragging{cursor:grabbing;}
+
+  /* ---------- start overlay ---------- */
+  #startOverlay{
+    position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse 900px 600px at 50% 40%, #10202a, #05070a 70%);
+    cursor:pointer;text-align:center;padding:24px;gap:14px;
+  }
+  #startOverlay.hidden{display:none;}
+  #startOverlay h1{
+    font-family:'Chakra Petch',sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:clamp(38px,9vw,84px);margin:0;letter-spacing:.03em;line-height:1;
+    color:#bff4e6;text-shadow:0 0 18px rgba(127,224,200,.55),0 0 44px rgba(127,224,200,.25);
+    animation:ecoHue 9s linear infinite;
+  }
+  #startOverlay p{max-width:560px;color:var(--muted);font-size:14.5px;line-height:1.55;margin:0;}
+  #startOverlay .go{
+    margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:#bff4e6;border:1.5px solid #3d5b56;padding:11px 26px;border-radius:999px;animation:ecoPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes ecoPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+  @keyframes ecoHue{from{filter:hue-rotate(0deg);}to{filter:hue-rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){ #startOverlay h1{animation:none;} #startOverlay .go{animation:none;} }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:fixed;top:12px;left:12px;right:12px;z-index:50;display:flex;justify-content:space-between;
+    align-items:flex-start;gap:10px;pointer-events:none;font-family:'JetBrains Mono',monospace;
+  }
+  #hud .cluster{display:flex;gap:8px;align-items:center;pointer-events:auto;flex-wrap:wrap;}
+  .eco-btn{
+    font-family:'Inter',sans-serif;font-weight:700;font-size:11.5px;cursor:pointer;border-radius:8px;
+    padding:7px 12px;border:1.3px solid var(--border);background:var(--panel);color:var(--text);
+    backdrop-filter:blur(6px);transition:all .15s ease;
+  }
+  .eco-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .eco-btn.active{background:var(--accent);color:#08211b;border-color:var(--accent);}
+  #dayNightReadout{
+    font-size:11px;color:var(--muted);background:var(--panel);border:1.3px solid var(--border);border-radius:8px;
+    padding:7px 12px;backdrop-filter:blur(6px);pointer-events:auto;white-space:nowrap;
+  }
+  #dayNightReadout b{color:var(--text);}
+
+  /* ---------- whitelist panel ---------- */
+  #whitelistPanel{
+    position:fixed;top:52px;right:12px;z-index:60;width:min(320px,86vw);max-height:min(60vh,480px);overflow:auto;
+    background:var(--panel-solid);border:1.3px solid var(--border);border-radius:10px;padding:10px;
+    box-shadow:0 12px 30px rgba(0,0,0,.5);
+  }
+  #whitelistPanel.hidden{display:none;}
+  #whitelistPanel h3{margin:2px 4px 8px;font-family:'Chakra Petch',sans-serif;font-size:13px;letter-spacing:.04em;color:var(--accent);}
+  #whitelistPanel label{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:6px;font-size:12.5px;cursor:pointer;}
+  #whitelistPanel label:hover{background:#ffffff0c;}
+  #whitelistPanel .empty-note{color:var(--muted);font-size:12px;padding:8px 4px;}
+
+  /* ---------- tooltip for a hovered/tapped chord ---------- */
+  #tip{
+    position:fixed;z-index:80;pointer-events:none;background:var(--panel-solid);border:1.3px solid var(--border);
+    border-radius:8px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);
+    transform:translate(-50%,-130%);white-space:nowrap;display:none;box-shadow:0 8px 20px rgba(0,0,0,.4);
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <div id="tip"></div>
+  </div>
+  <div id="hud">
+    <div class="cluster">
+      <button class="eco-btn" id="whitelistToggleBtn" title="Restrict the population to a hand-picked subset">☰ Whitelist</button>
+      <button class="eco-btn" id="muteBtn" title="Mute/unmute">🔊</button>
+    </div>
+    <div class="cluster">
+      <span id="dayNightReadout">—</span>
+      <button class="eco-btn" id="closeBtn" title="Close this tab">✕</button>
+    </div>
+  </div>
+  <div id="whitelistPanel" class="hidden">
+    <h3>WHITELIST — visible only in Ecosystem</h3>
+    <label style="display:flex;align-items:center;gap:8px;padding:4px;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);margin-bottom:6px;padding-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="wlActiveCheckbox"> Restrict population to checked chords only
+    </label>
+    <div id="whitelistList"></div>
+  </div>
+  <div id="startOverlay">
+    <h1>Ecosystem</h1>
+    <p>Up to 20 chords from your Armodex collection, wandering a small physics sandbox. Drag anything. Collide chords into the glowing objects to strum, sustain, launch, and transpose. A sun/moon cycle shifts the whole tuning reference every 15 seconds.</p>
+    <div class="go">click / tap to begin</div>
+  </div>
+<script>
+'use strict';
+
+/* ============================================================================
+   SECTION: DATA LAYER (ported + headless-tested against eco-src/test-data.js)
+   ============================================================================ */
+/* ============================================================================
+   ECOSYSTEM — DATA LAYER
+   Pure, side-effect-free functions ported from 31edo-harmonydex_121.html
+   (mod31, effectiveIntervals, signatureOf, computeSpecies,
+   computeMostCommonChordPair, findSpeciesContains, freqForRaw/REF_FREQ).
+   No DOM, no localStorage, no audio in this file — everything here takes
+   plain data in and returns plain data out, so it can be unit tested under
+   plain Node with zero mocking. localStorage reading lives in loader.js.
+   ============================================================================ */
+
+const N_STEPS = 31;
+
+function mod31(n) { return ((n % N_STEPS) + N_STEPS) % N_STEPS; }
+
+// Mirrors 31edo-harmonydex_121.html's effectiveIntervals(): with octave
+// equivalence ON, fold every interval into one octave and dedupe; OFF, keep
+// the raw (possibly >31 or negative) intervals as originally voiced.
+function effectiveIntervals(rawIntervals, octaveEquivalence) {
+  if (octaveEquivalence) return Array.from(new Set(rawIntervals.map(mod31))).sort((a, b) => a - b);
+  return rawIntervals.slice().sort((a, b) => a - b);
+}
+
+function signatureOf(intervals) { return intervals.join('.'); }
+
+// Mirrors computeSpecies(): derives the canonical deduplicated list of
+// "shapes" from every chord in every progression, keeping first-seen raw
+// intervals plus an occurrence count.
+function computeSpecies(progressions, octaveEquivalence) {
+  const map = {}; const order = [];
+  (progressions || []).forEach(p => {
+    (p.chords || []).forEach((c, idx) => {
+      const eff = effectiveIntervals(c.intervals, octaveEquivalence);
+      const sig = signatureOf(eff);
+      if (!map[sig]) {
+        // Keep the first occurrence's raw (unfolded) intervals AND its exact
+        // hex-map qrOffsets (root-relative {q,r} per raw interval), when the
+        // chord was built via the hex map -- this is what lets Ecosystem draw
+        // each creature's "limbs" in the same real layout as the main app's
+        // hex-map preview, not a generic radial guess. Mirrors computeSpecies
+        // in 31edo-harmonydex_121.html exactly.
+        const rawIntervals = c.intervals.slice();
+        const qrOffsets = (c.qrOffsets && c.qrOffsets.length === rawIntervals.length) ? c.qrOffsets : null;
+        map[sig] = { signature: sig, intervals: eff.slice(), rawIntervals, qrOffsets, count: 0, occurrences: [] };
+        order.push(sig);
+      }
+      map[sig].count++;
+      map[sig].occurrences.push({ progId: p.id, progName: p.name, idx, root: c.root, label: c.label || '' });
+    });
+  });
+  order.forEach((sig, i) => { map[sig].num = i + 1; });
+  return { map, list: order.map(s => map[s]) };
+}
+
+// ---- hex-map geometry (ported verbatim from 31edo-harmonydex_121.html) ----
+function pitchAt(q, r) { return 8 * q + 3 * r; }
+function axialToPixel(q, r, size) { return { x: size * 1.5 * q, y: size * Math.sqrt(3) * (r + q / 2) }; }
+
+// Normalizes a chord's real hex-map layout (from qrOffsets, root-relative)
+// into a root-centered pixel skeleton scaled so the farthest note sits
+// exactly `targetSpan` px from the root -- same shape/topology as the main
+// app's hex-map preview, just uniformly resized to fit a creature body.
+// Falls back to an evenly-spaced radial layout when qrOffsets isn't
+// available (e.g. a chord never built via the hex map).
+function computeChordLayout(rawIntervals, qrOffsets, targetSpan) {
+  const rootIdx = rawIntervals.indexOf(0);
+  const safeRootIdx = rootIdx >= 0 ? rootIdx : 0;
+  if (qrOffsets && qrOffsets.length === rawIntervals.length) {
+    const pts = qrOffsets.map(p => axialToPixel(p.q, p.r, 1));
+    const rootPt = pts[safeRootIdx] || { x: 0, y: 0 };
+    const rel = pts.map(p => ({ x: p.x - rootPt.x, y: p.y - rootPt.y }));
+    const maxDist = Math.max(1e-6, ...rel.map(p => Math.hypot(p.x, p.y)));
+    const scale = rel.length <= 1 ? 0 : targetSpan / maxDist;
+    return rel.map(p => ({ x: p.x * scale, y: p.y * scale }));
+  }
+  const n = rawIntervals.length;
+  const others = Math.max(1, n - 1);
+  return rawIntervals.map((iv, i) => {
+    if (i === safeRootIdx) return { x: 0, y: 0 };
+    const idxAmongOthers = i < safeRootIdx ? i : i - 1;
+    const angle = (idxAmongOthers / others) * Math.PI * 2 - Math.PI / 2;
+    return { x: Math.cos(angle) * targetSpan, y: Math.sin(angle) * targetSpan };
+  });
+}
+
+// Mirrors findSpeciesContains(): which OTHER cataloged shapes fit inside this
+// one as a sub-fragment, always compared by pitch class (fold via mod31)
+// regardless of the octave-equivalence setting, exactly like the main app.
+function findFragmentContains(Fpc, speciesList, excludeSig) {
+  const Fset = new Set(Fpc);
+  const contains = [];
+  speciesList.forEach(other => {
+    if (other.signature === excludeSig) return;
+    const Spc = Array.from(new Set(other.intervals.map(mod31)));
+    if (Spc.length >= Fpc.length) return; // must be strictly smaller to count as "contains"
+    const fits = Fpc.some(d => Spc.every(s => Fset.has(mod31(s + d))));
+    if (fits) contains.push(other);
+  });
+  return contains;
+}
+function findSpeciesContains(sp, speciesList) {
+  const Fpc = Array.from(new Set(sp.intervals.map(mod31)));
+  return findFragmentContains(Fpc, speciesList, sp.signature);
+}
+
+// Mirrors computeMostCommonChordPair(): the single most frequent
+// {shapeA, root-gap, shapeB} relationship between two consecutive chords
+// across the whole collection (count must be >=2 to count as "common").
+function computeMostCommonChordPair(progressions, octaveEquivalence) {
+  const counts = {};
+  (progressions || []).forEach(p => {
+    for (let i = 0; i < (p.chords || []).length - 1; i++) {
+      const cA = p.chords[i], cB = p.chords[i + 1];
+      const sigA = signatureOf(effectiveIntervals(cA.intervals, octaveEquivalence));
+      const sigB = signatureOf(effectiveIntervals(cB.intervals, octaveEquivalence));
+      const gap = cB.root - cA.root;
+      const key = sigA + '|' + gap + '|' + sigB;
+      if (!counts[key]) counts[key] = { count: 0, sigA, sigB, gap };
+      counts[key].count++;
+    }
+  });
+  let best = null;
+  Object.values(counts).forEach(c => { if (!best || c.count > best.count) best = c; });
+  return (best && best.count >= 2) ? best : null;
+}
+
+// Fallback zone-B root when the collection has no repeated pair (best.count>=2
+// requirement not met): reuse the same aggregation but accept count>=1, and
+// if there are truly no consecutive-chord pairs at all (e.g. no progressions
+// with 2+ chords), fall back to a fixed neutral interval of 18 steps
+// (~697 cents, close to a 12-tET fifth) so the two zones are still audibly
+// distinct. Documented explicitly since this is a judgment call, not spec'd.
+const FALLBACK_ZONE_GAP = 18;
+function computeZoneBGap(progressions, octaveEquivalence) {
+  const strict = computeMostCommonChordPair(progressions, octaveEquivalence);
+  if (strict) return strict.gap;
+  const counts = {};
+  (progressions || []).forEach(p => {
+    for (let i = 0; i < (p.chords || []).length - 1; i++) {
+      const cA = p.chords[i], cB = p.chords[i + 1];
+      const gap = cB.root - cA.root;
+      counts[gap] = (counts[gap] || 0) + 1;
+    }
+  });
+  let bestGap = null, bestCount = 0;
+  Object.entries(counts).forEach(([gap, count]) => { if (count > bestCount) { bestCount = count; bestGap = parseInt(gap, 10); } });
+  return bestGap !== null ? bestGap : FALLBACK_ZONE_GAP;
+}
+
+// "Big" chord determination (user's chosen definition: contains many other
+// collected chords). containCount = how many other cataloged species fit
+// inside this one as sub-fragments (findSpeciesContains). Chords land in the
+// top third of the collection by that count are "big" and get the 1-minute
+// lifespan timer; everything else lives until eaten. A species with
+// containCount 0 is never "big" regardless of where the cutoff falls.
+function annotateBigSpecies(speciesList) {
+  const withCounts = speciesList.map(sp => ({ sp, containCount: findSpeciesContains(sp, speciesList).length }));
+  const sorted = withCounts.slice().sort((a, b) => b.containCount - a.containCount);
+  const cutoffIdx = Math.max(0, Math.floor(sorted.length / 3) - 1);
+  const cutoffValue = sorted.length ? Math.max(sorted[Math.min(cutoffIdx, sorted.length - 1)].containCount, 1) : 1;
+  withCounts.forEach(({ sp, containCount }) => {
+    sp.containCount = containCount;
+    sp.isBig = containCount > 0 && containCount >= cutoffValue;
+  });
+  return speciesList;
+}
+
+const REF_FREQ = 220; // frequency assigned to raw step 0, mirrors the main app
+function freqForRaw(raw, generalPitchCents) {
+  return REF_FREQ * Math.pow(2, raw / N_STEPS) * Math.pow(2, (generalPitchCents || 0) / 1200);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    N_STEPS, mod31, effectiveIntervals, signatureOf, computeSpecies,
+    findSpeciesContains, computeMostCommonChordPair, computeZoneBGap,
+    FALLBACK_ZONE_GAP, annotateBigSpecies, REF_FREQ, freqForRaw,
+    pitchAt, axialToPixel, computeChordLayout,
+  };
+}
+
+/* ============================================================================
+   SECTION: SHARED UTIL (seeded PRNG)
+   ============================================================================ */
+/* ============================================================================
+   ECOSYSTEM — SHARED UTIL
+   Tiny seeded PRNG (mulberry32) so both tests and the running app can share
+   one deterministic-when-seeded random source. Production code seeds it from
+   Date.now()/performance.now() (still "effectively random" per spec); tests
+   seed it with a fixed number for repeatable assertions.
+   ============================================================================ */
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return function rng() {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { makeRng };
+}
+
+/* ============================================================================
+   SECTION: PHYSICS LAYER (ported + headless-tested against eco-src/test-physics.js)
+   ============================================================================ */
+/* ============================================================================
+   ECOSYSTEM — PHYSICS LAYER (Layer 1)
+   Pure simulation: positions, velocities, gravity, platforms, collisions.
+   NO rendering, NO audio, NO DOM. stepWorld() takes an explicit dt and
+   returns a plain array of collision events (rising-edge only, i.e. fired
+   once when two bodies START overlapping, not every frame while overlapping)
+   — callers (the director/audio layer) react to those events. This module
+   never calls into audio or rendering code, and never reaches into a body's
+   game-specific fields (sig, kind, objectType, etc.) beyond what's listed
+   below; it only touches the physical fields it owns.
+   ============================================================================ */
+
+const DEFAULTS = {
+  gravityAccel: 700,      // px/s^2
+  flySteer: 45,           // px/s^2 of random steering
+  flyMaxSpeed: 75,        // px/s
+  crawlSpeed: 32,         // px/s
+  rollAccel: 26,          // px/s^2
+  rollMaxSpeed: 95,       // px/s
+  wallRestitution: 0.55,
+  bodyRestitution: 0.7,
+  rollBounce: 0.32,
+  floorThickness: 40,
+};
+
+function pairKey(a, b) { return a < b ? a + ' ' + b : b + ' ' + a; }
+
+function createWorld(opts) {
+  opts = opts || {};
+  const cfg = Object.assign({}, DEFAULTS, opts.config || {});
+  return {
+    width: opts.width || 800,
+    height: opts.height || 500,
+    platforms: (opts.platforms || []).slice(), // [{x,y,w,h}], top surface solid
+    cfg,
+    bodies: [],
+    _collidingPairs: new Set(),
+    _nextId: 1,
+  };
+}
+
+// spec: { id?, x, y, vx?, vy?, radius, gravity, locomotion: 'crawl'|'fly'|'roll'|null, ...extra }
+// Any extra fields (sig, kind, objectType, ...) are preserved untouched on the
+// body object so the director/render layers can attach game-specific data —
+// physics only ever reads/writes the physical fields listed here.
+function addBody(world, spec) {
+  const id = spec.id != null ? spec.id : ('b' + (world._nextId++));
+  // NOTE: facing defaults to a fixed value (not Math.random()) so physics.js
+  // never touches an unseeded random source itself -- that would silently
+  // break the determinism guarantee (same seed -> same trajectory) even
+  // when the caller passes a seeded rng into stepWorld(). Callers that want
+  // a randomized starting facing should set spec.facing themselves using
+  // their own rng (the director/spawn layer does this).
+  const body = Object.assign({
+    vx: 0, vy: 0, angle: 0, angularVel: 0,
+    gravity: true, locomotion: null,
+    dragging: false, resting: false,
+    facing: 1,
+  }, spec, { id });
+  world.bodies.push(body);
+  return body;
+}
+
+function removeBody(world, id) {
+  world.bodies = world.bodies.filter(b => b.id !== id);
+  const toDelete = [];
+  world._collidingPairs.forEach(key => {
+    const parts = key.split(' ');
+    if (parts[0] === id || parts[1] === id) toDelete.push(key);
+  });
+  toDelete.forEach(k => world._collidingPairs.delete(k));
+}
+
+function findBody(world, id) { return world.bodies.find(b => b.id === id); }
+
+function stepWorld(world, dt, rng) {
+  rng = rng || Math.random;
+  const cfg = world.cfg;
+  const W = world.width, H = world.height;
+  const events = [];
+
+  world.bodies.forEach(b => {
+    if (b.dragging) { b.resting = false; return; } // position driven externally; still eligible for collisions below
+
+    const wasBottom = b.y + b.radius;
+
+    // 'fly' is intrinsically gravity-immune regardless of the body's own
+    // `gravity` flag — a caller mistake (spawning a fly body with
+    // gravity:true) must not be able to make it accelerate forever without
+    // ever landing, since fly bodies also never consult the platform-landing
+    // check below. Caught by the layer-1 fuzz test.
+    if (b.gravity && b.locomotion !== 'fly') b.vy += cfg.gravityAccel * dt;
+
+    if (b.locomotion === 'fly') {
+      b.vx += (rng() - 0.5) * cfg.flySteer * dt * 60;
+      b.vy += (rng() - 0.5) * cfg.flySteer * dt * 60;
+      const speed = Math.hypot(b.vx, b.vy);
+      if (speed > cfg.flyMaxSpeed) { b.vx = b.vx / speed * cfg.flyMaxSpeed; b.vy = b.vy / speed * cfg.flyMaxSpeed; }
+    } else if (b.locomotion === 'crawl' && b.resting) {
+      b.vx = b.facing * cfg.crawlSpeed;
+    } else if (b.locomotion === 'roll' && b.resting) {
+      b.vx += b.facing * cfg.rollAccel * dt;
+      b.vx = Math.max(-cfg.rollMaxSpeed, Math.min(cfg.rollMaxSpeed, b.vx));
+    }
+
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    if (b.locomotion === 'roll') { b.angularVel = b.vx / Math.max(1, b.radius); b.angle += b.angularVel * dt; }
+
+    b.resting = false;
+
+    // world bounds (bouncy walls, solid ceiling; floor handled as a platform below)
+    if (b.x - b.radius < 0) { b.x = b.radius; b.vx = Math.abs(b.vx) * cfg.wallRestitution; b.facing = 1; }
+    if (b.x + b.radius > W) { b.x = W - b.radius; b.vx = -Math.abs(b.vx) * cfg.wallRestitution; b.facing = -1; }
+    if (b.y - b.radius < 0) { b.y = b.radius; b.vy = Math.abs(b.vy) * cfg.wallRestitution; }
+
+    if (b.gravity && b.locomotion !== 'fly') {
+      const surfaces = world.platforms.concat([{ x: 0, y: H - cfg.floorThickness, w: W, h: cfg.floorThickness }]);
+      for (let i = 0; i < surfaces.length; i++) {
+        const pf = surfaces[i];
+        const withinX = b.x + b.radius > pf.x && b.x - b.radius < pf.x + pf.w;
+        const bottom = b.y + b.radius;
+        if (withinX && b.vy >= 0 && wasBottom <= pf.y + 1 && bottom >= pf.y) {
+          b.y = pf.y - b.radius;
+          b.vy = (b.locomotion === 'roll') ? -b.vy * cfg.rollBounce : 0;
+          b.resting = true;
+          break; // landed on the first qualifying surface this step
+        }
+      }
+    }
+  });
+
+  // circle-circle collisions (rising edge events only)
+  const currentPairs = new Set();
+  for (let i = 0; i < world.bodies.length; i++) {
+    for (let j = i + 1; j < world.bodies.length; j++) {
+      const a = world.bodies[i], b = world.bodies[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = a.radius + b.radius;
+      if (dist < minDist) {
+        const key = pairKey(a.id, b.id);
+        currentPairs.add(key);
+        if (!a.dragging && !b.dragging) {
+          const overlap = minDist - dist || 0.01;
+          const nx = dist > 1e-4 ? dx / dist : 1, ny = dist > 1e-4 ? dy / dist : 0;
+          a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+          b.x += nx * overlap / 2; b.y += ny * overlap / 2;
+          const relVx = b.vx - a.vx, relVy = b.vy - a.vy;
+          const rel = relVx * nx + relVy * ny;
+          if (rel < 0) {
+            const bounce = -rel * cfg.bodyRestitution;
+            a.vx -= nx * bounce / 2; a.vy -= ny * bounce / 2;
+            b.vx += nx * bounce / 2; b.vy += ny * bounce / 2;
+          }
+        }
+        if (!world._collidingPairs.has(key)) {
+          events.push({ type: 'collision', a: a.id, b: b.id });
+        }
+      }
+    }
+  }
+  world._collidingPairs = currentPairs;
+
+  // Final hard safety net: collision-separation can shove a body a large
+  // distance in one step (e.g. two bodies spawned almost exactly on top of
+  // each other), which can tunnel it through the world bounds faster than
+  // the gradual velocity-based landing check above can catch. This clamp
+  // runs after everything else and guarantees no body ever ends up outside
+  // the bounded space, regardless of how it got displaced. It does NOT
+  // protect against clipping through an internal floating platform under
+  // similarly extreme overlap — only the true outer bounds — since bodies
+  // can legitimately exist underneath a floating platform.
+  world.bodies.forEach(b => {
+    const minX = b.radius, maxX = W - b.radius;
+    const minY = b.radius, maxY = H - b.radius;
+    if (b.x < minX) { b.x = minX; if (b.vx < 0) b.vx = -b.vx * cfg.wallRestitution; }
+    if (b.x > maxX) { b.x = maxX; if (b.vx > 0) b.vx = -b.vx * cfg.wallRestitution; }
+    if (b.y < minY) { b.y = minY; if (b.vy < 0) b.vy = -b.vy * cfg.wallRestitution; }
+    if (b.y > maxY) {
+      b.y = maxY;
+      b.vy = (b.locomotion === 'roll') ? -b.vy * cfg.rollBounce : 0;
+      if (b.gravity) b.resting = true;
+    }
+  });
+
+  return events;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { createWorld, addBody, removeBody, findBody, stepWorld, pairKey, DEFAULTS };
+}
+
+/* ============================================================================
+   SECTION: AUDIO PORT — single-ambient-voice rule (tested against eco-src/test-audioPort.js)
+   ============================================================================ */
+/* ============================================================================
+   ECOSYSTEM — AUDIO PORT (Layer 2, driver-agnostic half)
+   Owns the "one ambient voice at a time" concurrency rule and nothing else.
+   One-shots (strum/noise) always just pass through and can overlap freely.
+   Ambient (ambient pad/hold) is a single named slot: starting a new one
+   always stops whichever was previously playing first. This wrapper is
+   identical in tests and production — only the underlying `driver` differs
+   (a MockDriver that records calls in tests, a real Web Audio driver in
+   ecosystem.html) — so the concurrency rule itself only has to be verified
+   once, against the mock, and is trusted from then on.
+   ============================================================================ */
+function createAudioPort(driver) {
+  let ambient = null; // { notes, root, handle }
+  return {
+    strum(rawNotes, root, timbre) {
+      if (!rawNotes || rawNotes.length === 0) return;
+      driver.playOneShot(rawNotes.slice(), root, timbre || 'guitar', 'strum');
+    },
+    noiseTick() {
+      driver.playNoise();
+    },
+    startAmbient(rawNotes, root, timbre) {
+      if (ambient) driver.stopSustain(ambient.handle);
+      const handle = driver.startSustain(rawNotes.slice(), root, timbre || 'guitar');
+      ambient = { notes: rawNotes.slice(), root, handle };
+    },
+    stopAmbient() {
+      if (ambient) { driver.stopSustain(ambient.handle); ambient = null; }
+    },
+    getAmbientNotes() { return ambient ? ambient.notes.slice() : null; },
+    getAmbientRoot() { return ambient ? ambient.root : null; },
+  };
+}
+
+function createMockDriver() {
+  const calls = [];
+  let handleSeq = 1;
+  return {
+    calls,
+    playOneShot(notes, root, timbre, style) { calls.push({ type: 'oneshot', notes, root, timbre, style }); },
+    playNoise() { calls.push({ type: 'noise' }); },
+    startSustain(notes, root, timbre) {
+      const handle = 'h' + (handleSeq++);
+      calls.push({ type: 'startSustain', notes, root, timbre, handle });
+      return handle;
+    },
+    stopSustain(handle) { calls.push({ type: 'stopSustain', handle }); },
+  };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { createAudioPort, createMockDriver };
+}
+
+/* ============================================================================
+   SECTION: DIRECTOR — collision -> action rules (tested against eco-src/test-director.js)
+   ============================================================================ */
+/* ============================================================================
+   ECOSYSTEM — DIRECTOR (Layer 2, game-logic half)
+   Turns a single physics collision event into a list of plain-data actions.
+   Pure function: same (entityA, entityB, ctx) always yields the same
+   actions, no side effects, no direct audio/physics calls -- a separate
+   applyActions() executes them against the real world + AudioPort. This is
+   what makes the collision RULES (share->strum, superset->eat, one ambient
+   voice, etc.) testable without any mock audio context at all: just call
+   resolveCollision() and inspect the returned array.
+
+   Entity shape this module expects (superset of a physics.js body):
+     chord:  { kind:'chord', id, intervals, transposeOffset, zone, isBig, ... }
+     object: { kind:'object', id, objectType: 'strum'|'padhold'|'commontones'
+                                              |'launcher'|'transposer', ... }
+
+   ctx shape:
+     {
+       zoneRootFor(zone) -> number,      // raw step, e.g. A:0  B:gap
+       nightSteps: number,               // 0 by day, moon phase (0-30) by night
+       rng() -> [0,1),
+       getAmbientNotes() -> number[]|null,
+       timbre: 'sine'|'guitar',
+     }
+   ============================================================================ */
+
+function mod31_(n) { return ((n % 31) + 31) % 31; }
+
+function computeChordRawNotes(entity, ctx) {
+  const base = ctx.zoneRootFor(entity.zone) + (entity.transposeOffset || 0) + (ctx.nightSteps || 0);
+  return entity.intervals.map(iv => base + iv);
+}
+function pcSetOf(rawNotes) { return new Set(rawNotes.map(mod31_)); }
+function isStrictSuperset(big, small) {
+  if (big.size <= small.size) return false;
+  for (const x of small) if (!big.has(x)) return false;
+  return true;
+}
+function sharedRawNotes(notesA, sharedPcs) { return notesA.filter(n => sharedPcs.has(mod31_(n))); }
+
+function randomNonZeroInt(rng, span) { // integer in [-span, span] excluding 0
+  let v;
+  do { v = Math.floor(rng() * (span * 2 + 1)) - span; } while (v === 0);
+  return v;
+}
+
+function resolveChordChord(a, b, ctx) {
+  const actions = [];
+  const notesA = computeChordRawNotes(a, ctx), notesB = computeChordRawNotes(b, ctx);
+  const pcA = pcSetOf(notesA), pcB = pcSetOf(notesB);
+  const sharedPcs = new Set([...pcA].filter(x => pcB.has(x)));
+  if (sharedPcs.size > 0) {
+    actions.push({ type: 'strum', notes: sharedRawNotes(notesA, sharedPcs), root: notesA[0], timbre: ctx.timbre });
+  } else {
+    actions.push({ type: 'noise' });
+  }
+  if (isStrictSuperset(pcA, pcB)) {
+    actions.push({ type: 'eat', eaterId: a.id, eatenId: b.id });
+  } else if (isStrictSuperset(pcB, pcA)) {
+    actions.push({ type: 'eat', eaterId: b.id, eatenId: a.id });
+  }
+  return actions;
+}
+
+function resolveChordObject(chord, obj, ctx) {
+  const notes = computeChordRawNotes(chord, ctx);
+  const root = notes[0];
+  switch (obj.objectType) {
+    case 'strum':
+      return [{ type: 'strum', notes, root, timbre: ctx.timbre }];
+    case 'padhold':
+      return [{ type: 'startAmbient', notes, root, timbre: ctx.timbre, sourceChordId: chord.id, objectId: obj.id }];
+    case 'commontones': {
+      const ambientNotes = ctx.getAmbientNotes();
+      if (!ambientNotes || ambientNotes.length === 0) {
+        return [{ type: 'strum', notes, root, timbre: ctx.timbre }];
+      }
+      const ambientPcs = pcSetOf(ambientNotes);
+      const chordPcs = pcSetOf(notes);
+      const sharedPcs = new Set([...chordPcs].filter(x => ambientPcs.has(x)));
+      if (sharedPcs.size > 0) {
+        return [{ type: 'strum', notes: sharedRawNotes(notes, sharedPcs), root, timbre: ctx.timbre }];
+      }
+      // Ambient is audible but shares nothing with this chord -- mirrors the
+      // chord-vs-chord "no shared notes -> noise tick" rule rather than
+      // inventing a third (silent) outcome the spec never describes.
+      return [{ type: 'noise' }];
+    }
+    case 'launcher': {
+      const angle = ctx.rng() * Math.PI * 2;
+      const speed = 220 + ctx.rng() * 90;
+      return [
+        { type: 'launch', id: chord.id, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed },
+        { type: 'strum', notes, root, timbre: ctx.timbre }, // audible confirmation of the hit
+      ];
+    }
+    case 'transposer': {
+      const delta = randomNonZeroInt(ctx.rng, 31);
+      const newOffset = (chord.transposeOffset || 0) + delta;
+      const transposedNotes = notes.map(n => n + delta);
+      return [
+        { type: 'setTransposeOffset', id: chord.id, transposeOffset: newOffset },
+        { type: 'strum', notes: transposedNotes, root: transposedNotes[0], timbre: ctx.timbre }, // confirms the new pitch
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
+// entityA/entityB are the two colliding bodies (order from physics is
+// arbitrary); normalizes which is the chord vs the object where relevant.
+function resolveCollision(entityA, entityB, ctx) {
+  if (entityA.kind === 'chord' && entityB.kind === 'chord') return resolveChordChord(entityA, entityB, ctx);
+  if (entityA.kind === 'chord' && entityB.kind === 'object') return resolveChordObject(entityA, entityB, ctx);
+  if (entityB.kind === 'chord' && entityA.kind === 'object') return resolveChordObject(entityB, entityA, ctx);
+  return []; // object-vs-object: no game logic defined, physics-only bounce
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { resolveCollision, computeChordRawNotes, pcSetOf, isStrictSuperset, randomNonZeroInt };
+}
+
+/* ============================================================================
+   SECTION: ACTION APPLIER (tested against eco-src/test-integration.js)
+   ============================================================================ */
+/* ============================================================================
+   ECOSYSTEM — ACTION APPLIER (Layer 2 glue)
+   Executes the plain-data actions resolveCollision() produces against a real
+   (or test) world + AudioPort. This is the ONLY place that mutates physics
+   bodies in response to game logic and the ONLY place that calls AudioPort
+   methods in response to a collision -- physics.js and director.js never
+   call each other or audio code directly, exactly per the "sections talk
+   through small, explicit function calls" requirement.
+   ============================================================================ */
+function applyActions(actions, env) {
+  // env: { world, physics: {findBody, removeBody}, audioPort, onDeath?, onAmbientStart? }
+  actions.forEach(action => {
+    switch (action.type) {
+      case 'strum':
+        env.audioPort.strum(action.notes, action.root, action.timbre);
+        break;
+      case 'noise':
+        env.audioPort.noiseTick();
+        break;
+      case 'startAmbient':
+        env.audioPort.startAmbient(action.notes, action.root, action.timbre);
+        if (env.onAmbientStart) env.onAmbientStart(action);
+        break;
+      case 'launch': {
+        const body = env.physics.findBody(env.world, action.id);
+        if (body) { body.vx = action.vx; body.vy = action.vy; body.resting = false; }
+        break;
+      }
+      case 'setTransposeOffset': {
+        const body = env.physics.findBody(env.world, action.id);
+        if (body) body.transposeOffset = action.transposeOffset;
+        break;
+      }
+      case 'eat': {
+        const eaten = env.physics.findBody(env.world, action.eatenId);
+        if (eaten) {
+          env.physics.removeBody(env.world, action.eatenId);
+          if (env.onDeath) env.onDeath({ reason: 'eaten', id: action.eatenId, eaterId: action.eaterId });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { applyActions };
+}
+
+/* ============================================================================
+   SECTION: REAL AUDIO DRIVER (new — Web Audio, not unit-testable under Node;
+   ported faithfully from 31edo-harmonydex_121.html's scheduleChordAudio /
+   schedulePad so the timbres sound the same. The single-ambient-voice RULE
+   itself lives in AudioPort above and is already tested against a mock; this
+   file only supplies the actual oscillators that rule turns on and off.)
+   ============================================================================ */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){ const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return null; audioCtx = new AC(); }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+const STRUM_GAP = 0.055; // seconds between successive notes, low to high — matches the main app
+function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents){
+  const freq = freqForRaw(raw, generalPitchCents);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, startTime);
+  if(timbre==='guitar'){
+    const real = new Float32Array([0,1,0.55,0.33,0.22,0.14,0.09,0.05]);
+    const imag = new Float32Array(real.length);
+    const wave = ctx.createPeriodicWave(real, imag, {disableNormalization:false});
+    const osc = ctx.createOscillator();
+    osc.setPeriodicWave(wave); osc.frequency.value = freq;
+    const filter = ctx.createBiquadFilter();
+    filter.type='lowpass';
+    filter.frequency.setValueAtTime(freq*8, startTime);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(200,freq*1.8), startTime+dur*0.85);
+    gain.gain.exponentialRampToValueAtTime(0.26, startTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+dur);
+    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.start(startTime); osc.stop(startTime+dur+0.05);
+  } else {
+    const osc = ctx.createOscillator();
+    osc.type='sine'; osc.frequency.value=freq;
+    gain.gain.exponentialRampToValueAtTime(0.2, startTime+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime+dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime); osc.stop(startTime+dur+0.05);
+  }
+}
+function realPlayOneShot(notes, root, timbre, style, settings){
+  const ctx = getAudioCtx(); if(!ctx || !notes.length) return;
+  const dur = timbre==='guitar' ? 2.2 : 1.5;
+  const ordered = notes.slice().sort((a,b)=>a-b);
+  ordered.forEach((raw,idx)=>{
+    const t = ctx.currentTime + (style==='strum' ? idx*STRUM_GAP : 0);
+    scheduleNote(ctx, raw, timbre, t, dur, settings.generalPitch);
+  });
+}
+function realPlayNoise(){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const dur = 0.16;
+  const buffer = ctx.createBuffer(1, Math.max(1,Math.floor(ctx.sampleRate*dur)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
+  const src = ctx.createBufferSource(); src.buffer = buffer;
+  const filter = ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=1500; filter.Q.value=0.8;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
+  src.connect(filter).connect(gain).connect(ctx.destination);
+  src.start();
+}
+function realStartSustain(notes, root, timbre, settings){
+  const ctx = getAudioCtx(); if(!ctx) return null;
+  const startTime = ctx.currentTime;
+  const nodes = notes.map((raw,i)=>{
+    const freq = freqForRaw(raw, settings.generalPitch);
+    const osc = ctx.createOscillator(); osc.type='sine'; osc.frequency.value=freq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.05, startTime+1.2); // slow attack, matches schedulePad
+    const lfo = ctx.createOscillator(); lfo.type='sine'; lfo.frequency.value = 0.1+i*0.045;
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = freq*0.003;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime); lfo.start(startTime);
+    return {osc,gain,lfo};
+  });
+  return {nodes};
+}
+function realStopSustain(handle){
+  if(!handle) return;
+  const ctx = audioCtx; if(!ctx) return;
+  const now = ctx.currentTime;
+  handle.nodes.forEach(({osc,gain,lfo})=>{
+    try{
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(Math.max(gain.gain.value,0.0001), now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
+      osc.stop(now+0.4); lfo.stop(now+0.4);
+    }catch(e){ /* already stopped */ }
+  });
+}
+function createRealDriver(getSettings){
+  return {
+    playOneShot(notes, root, timbre, style){ if(getSettings().muted) return; realPlayOneShot(notes, root, timbre, style, getSettings()); },
+    playNoise(){ if(getSettings().muted) return; realPlayNoise(); },
+    startSustain(notes, root, timbre){ if(getSettings().muted) return null; return realStartSustain(notes, root, timbre, getSettings()); },
+    stopSustain(handle){ realStopSustain(handle); },
+  };
+}
+
+/* ============================================================================
+   SECTION: LOADER — reads the main app's existing localStorage keys
+   (harmodex:*), read-only. Only ever WRITES to ecosystem:whitelist, a
+   clearly-namespaced key of its own that cannot collide with the main app.
+   ============================================================================ */
+function loadHarmodexData(){
+  function get(key, fallback){
+    try{ const raw = localStorage.getItem('harmodex:'+key); return raw!=null ? JSON.parse(raw) : fallback; }
+    catch(e){ return fallback; }
+  }
+  const progressions = get('progressions', []);
+  const nicknames = get('nicknames', {});
+  const chordTags = get('chordTags', {});
+  const octaveEquivalence = get('octaveEquivalence', false);
+  let generalPitch = 0, timbre = 'guitar';
+  const interp = get('interpretationSettings', null);
+  if(interp){
+    if(typeof interp.generalPitch==='number') generalPitch = interp.generalPitch;
+    if(typeof interp.progressionsTabTimbre==='string') timbre = interp.progressionsTabTimbre;
+  }
+  return { progressions, nicknames, chordTags, octaveEquivalence, generalPitch, timbre };
+}
+function loadWhitelist(){
+  try{
+    const raw = localStorage.getItem('ecosystem:whitelist');
+    if(raw==null) return { active:false, signatures:[] };
+    const d = JSON.parse(raw);
+    return { active: !!d.active, signatures: Array.isArray(d.signatures) ? d.signatures : [] };
+  }catch(e){ return { active:false, signatures:[] }; }
+}
+function saveWhitelist(wl){
+  try{ localStorage.setItem('ecosystem:whitelist', JSON.stringify({ active: !!wl.active, signatures: wl.signatures||[] })); }
+  catch(e){ /* ignore quota/availability errors */ }
+}
+
+/* ============================================================================
+   SECTION: WORLD SETUP — platforms, the 5 interactive objects, per-shape hue.
+   ============================================================================ */
+function buildPlatforms(w,h){
+  const defs = [
+    {xf:0.05, yf:0.80, wf:0.20, hf:0.026},
+    {xf:0.30, yf:0.64, wf:0.20, hf:0.026},
+    {xf:0.58, yf:0.72, wf:0.18, hf:0.026},
+    {xf:0.18, yf:0.44, wf:0.16, hf:0.026},
+    {xf:0.62, yf:0.36, wf:0.20, hf:0.026},
+    {xf:0.80, yf:0.58, wf:0.16, hf:0.026},
+  ];
+  // Collision bounds stay a plain, flat-topped rect (physics.js's landing
+  // check needs a simple surface); the Gaudi/trencadís wave-and-mosaic look
+  // is layered on purely visually in drawPlatform(), never touching x/y/w/h.
+  return defs.map((d,idx)=>{
+    const x=d.xf*w, y=d.yf*h, ww=d.wf*w, hh=Math.max(10,d.hf*h);
+    const cols = Math.max(5, Math.round(ww/15));
+    const tiles = [];
+    for(let i=0;i<cols;i++){
+      const s1 = Math.sin(idx*97.13+i*13.37), s2=Math.sin(idx*17.7+i*3.11);
+      tiles.push({ fx:(i+0.5)/cols, hue:((Math.abs(s1)*360)%360), wob:Math.abs(s2) });
+    }
+    return { x, y, w:ww, h:hh, tiles, wobSeed: idx*1.7 };
+  });
+}
+const OBJECT_DEFS = [
+  { objectType:'strum',       xf:0.12, color:'#ffcf5c', hue:46,  label:'STRUM' },
+  { objectType:'padhold',     xf:0.30, color:'#7fe0c8', hue:165, label:'PAD-HOLD' },
+  { objectType:'commontones', xf:0.50, color:'#c99bf0', hue:280, label:'COMMON TONES' },
+  { objectType:'launcher',    xf:0.68, color:'#ff8a65', hue:18,  label:'LAUNCHER' },
+  { objectType:'transposer',  xf:0.86, color:'#7aa8ff', hue:210, label:'TRANSPOSER' },
+];
+function spawnObjects(world){
+  OBJECT_DEFS.forEach((def,i)=>{
+    addBody(world, {
+      id:'obj_'+def.objectType, kind:'object', objectType:def.objectType, color:def.color, hue:def.hue, label:def.label,
+      x: def.xf*world.width, y: 30+i*8, radius: 24, gravity:true, locomotion:null,
+    });
+  });
+}
+// Same hue convention the main app uses for pitch classes on its hex map
+// (hue = pc/31*360) -- reused here so a creature's colors mean the same
+// thing they'd mean in Armodex itself.
+function hueForPc(pc){ return (mod31(pc)/N_STEPS)*360; }
+let ZONE_B_GAP = 18;
+function zoneRootFor(zone){ return zone==='B' ? ZONE_B_GAP : 0; }
+// The chord's actual currently-AUDIBLE root (zone + any transposer offset +
+// the night's lunar shift) -- used for both audio (see makeCollisionCtx) and,
+// now, the creature's head/limb colors, so a creature's appearance always
+// matches what it actually sounds like right now.
+function liveRootRaw(b){ return zoneRootFor(b.zone) + (b.transposeOffset||0) + currentNightSteps(); }
+
+/* ============================================================================
+   SECTION: SPAWN / LIFECYCLE (new)
+   Population trickles in (not all 20 at once), replacements spawn on death
+   (eaten or, for "big" chords, expired after 1 minute), whitelist mode
+   restricts the eligible pool without inventing any new localStorage key
+   beyond ecosystem:whitelist.
+   ============================================================================ */
+const ECO = {
+  world:null, rng:null, audioPort:null,
+  species:[], nicknames:{}, whitelist:{active:false,signatures:[]},
+  targetCount:0, nextSpawnAt:0,
+  isNight:false, dayNightStartMs:0, moonPhase:0,
+  settings:{ generalPitch:0, muted:false, timbre:'guitar' },
+  chordSeq:1, ambientVisual:null,
+  lastQuakeAt:0, quakeShakeUntil:0,
+  mostCommonPair:null, zoneLabelRects:null,
+};
+const DAY_NIGHT_MS = 15000;
+
+function effectivePool(){
+  if(ECO.whitelist.active && ECO.whitelist.signatures.length){
+    const set = new Set(ECO.whitelist.signatures);
+    return ECO.species.filter(sp=>set.has(sp.signature));
+  }
+  return ECO.species;
+}
+function currentSignaturesOnMap(){
+  return new Set(ECO.world.bodies.filter(b=>b.kind==='chord').map(b=>b.sig));
+}
+function pickSpeciesToSpawn(){
+  const pool = effectivePool();
+  if(pool.length===0) return null;
+  const present = currentSignaturesOnMap();
+  const notPresent = pool.filter(sp=>!present.has(sp.signature));
+  const choices = notPresent.length ? notPresent : pool;
+  return choices[Math.floor(ECO.rng()*choices.length)];
+}
+function spawnChord(sp){
+  const loc = ['crawl','fly','roll'][Math.floor(ECO.rng()*3)];
+  const noteCount = sp.intervals.length;
+  const radius = 15 + Math.min(noteCount,8)*2.4;
+  const zone = ECO.rng()<0.5 ? 'A':'B';
+  const x = 30 + ECO.rng()*Math.max(1,(ECO.world.width-60));
+  addBody(ECO.world, {
+    id:'chord_'+(ECO.chordSeq++), kind:'chord', sig:sp.signature, intervals:sp.intervals.slice(),
+    rawIntervals: (sp.rawIntervals||sp.intervals).slice(),
+    qrOffsets: sp.qrOffsets ? sp.qrOffsets.map(p=>({q:p.q,r:p.r})) : null,
+    nickname: ECO.nicknames[sp.signature]||'', num: sp.num, isBig: !!sp.isBig,
+    transposeOffset:0, zone,
+    bornAt: performance.now(), lifespanMs: sp.isBig ? 60000 : null,
+    x, y: 8, radius, gravity: loc!=='fly', locomotion: loc,
+    facing: ECO.rng()<0.5?-1:1,
+    vx:(ECO.rng()-0.5)*40, vy:0,
+  });
+}
+
+/* ---------- earthquake: every 30s, redistribute anything that's settled
+   into one clump (per user feedback) with a random shake, instead of
+   leaving population density to drift wherever gravity/wandering happens to
+   carry it. Chords get a real scatter; the 5 landmark objects get a gentler
+   nudge so they stay roughly where the player last learned to find them. ---------- */
+const QUAKE_INTERVAL_MS = 30000;
+const QUAKE_SHAKE_MS = 550;
+function triggerEarthquake(nowMs){
+  ECO.world.bodies.forEach(b=>{
+    if(b.dragging) return;
+    const angle = ECO.rng()*Math.PI*2;
+    const mag = (b.kind==='chord' ? 230+ECO.rng()*260 : 60+ECO.rng()*90);
+    b.vx += Math.cos(angle)*mag;
+    b.vy += Math.sin(angle)*mag - mag*0.35; // biased upward so resting bodies actually lift off
+    b.resting = false;
+  });
+  ECO.lastQuakeAt = nowMs;
+  ECO.quakeShakeUntil = nowMs + QUAKE_SHAKE_MS;
+}
+function updateEarthquake(nowMs){
+  if(ECO.lastQuakeAt===0) ECO.lastQuakeAt = nowMs; // first quake 30s into the session, not immediately on load
+  if(nowMs - ECO.lastQuakeAt >= QUAKE_INTERVAL_MS) triggerEarthquake(nowMs);
+}
+function updateSpawning(nowMs){
+  const pool = effectivePool();
+  ECO.targetCount = Math.min(20, pool.length);
+  const currentChordCount = ECO.world.bodies.filter(b=>b.kind==='chord').length;
+  if(currentChordCount < ECO.targetCount && nowMs >= ECO.nextSpawnAt){
+    const sp = pickSpeciesToSpawn();
+    if(sp) spawnChord(sp);
+    ECO.nextSpawnAt = nowMs + 1400 + ECO.rng()*1600; // trickle in, not all at once
+  }
+}
+function handleDeath(info){
+  // Death (eaten or expired) already removed the body; queue a prompt
+  // replacement so the population keeps flowing, per spec.
+  ECO.nextSpawnAt = Math.min(ECO.nextSpawnAt, performance.now()+350);
+}
+function updateLifecycle(nowMs){
+  ECO.world.bodies.slice().forEach(b=>{
+    if(b.kind==='chord' && b.lifespanMs!=null && (nowMs-b.bornAt)>=b.lifespanMs){
+      removeBody(ECO.world, b.id);
+      handleDeath({ reason:'expired', id:b.id });
+    }
+  });
+}
+function applyWhitelistFilterNow(){
+  if(!ECO.whitelist.active) return;
+  const set = new Set(ECO.whitelist.signatures);
+  ECO.world.bodies.slice().forEach(b=>{ if(b.kind==='chord' && !set.has(b.sig)) removeBody(ECO.world, b.id); });
+}
+
+/* ---------- zones (re-anchoring is just keeping .zone current -- the
+   director recomputes actual playback root from .zone at trigger time,
+   so there is no separate "re-anchor" step needed beyond this) ---------- */
+function updateZones(){
+  const mid = ECO.world.width/2;
+  ECO.world.bodies.forEach(b=>{ if(b.kind==='chord') b.zone = b.x<mid ? 'A':'B'; });
+}
+
+/* ---------- day/night + lunar phase ---------- */
+function updateDayNight(nowMs){
+  if(ECO.dayNightStartMs===0) ECO.dayNightStartMs = nowMs;
+  if(nowMs - ECO.dayNightStartMs >= DAY_NIGHT_MS){
+    ECO.dayNightStartMs = nowMs;
+    ECO.isNight = !ECO.isNight;
+    if(ECO.isNight) ECO.moonPhase = (ECO.moonPhase+1)%31; // advances once per night, not within a night
+  }
+}
+function currentNightSteps(){ return ECO.isNight ? ECO.moonPhase : 0; }
+
+/* ---------- collision -> director -> audio, wired to physics EVENTS ---------- */
+function makeCollisionCtx(){
+  return {
+    zoneRootFor,
+    nightSteps: currentNightSteps(),
+    rng: ECO.rng,
+    getAmbientNotes: ()=>ECO.audioPort.getAmbientNotes(),
+    timbre: ECO.settings.timbre,
+  };
+}
+function onAmbientStart(action){ ECO.ambientVisual = { objectId:action.objectId, sourceChordId:action.sourceChordId }; }
+function handleEvents(events){
+  events.forEach(ev=>{
+    const a = findBody(ECO.world, ev.a), b = findBody(ECO.world, ev.b);
+    if(!a || !b) return; // one side may already be gone (e.g. eaten by an earlier event this same frame)
+    const ctx = makeCollisionCtx();
+    const actions = resolveCollision(a, b, ctx);
+    applyActions(actions, {
+      world: ECO.world, physics: { findBody, removeBody },
+      audioPort: ECO.audioPort, onDeath: handleDeath, onAmbientStart,
+    });
+  });
+}
+
+/* ============================================================================
+   SECTION: RENDERING (Layer 3 — last, and only after physics+audio were
+   solid). Canvas 2D. Bioluminescent-creature style per the chosen direction:
+   glowing wobble-blobs colored by each chord's own pitch-class signature,
+   size/tendrils from note count, soft-glow sun by day / phase-shaded moon by
+   night, dashed zone divider labeled with each zone's actual root.
+   ============================================================================ */
+let canvasEl, ctx2d;
+function setupCanvas(){
+  canvasEl = document.getElementById('c');
+  ctx2d = canvasEl.getContext('2d');
+  setupCanvasSize();
+}
+function setupCanvasSize(){
+  const dpr = window.devicePixelRatio||1;
+  canvasEl.width = Math.max(1,Math.floor(window.innerWidth*dpr));
+  canvasEl.height = Math.max(1,Math.floor(window.innerHeight*dpr));
+  canvasEl.style.width = window.innerWidth+'px';
+  canvasEl.style.height = window.innerHeight+'px';
+  ctx2d.setTransform(dpr,0,0,dpr,0,0);
+}
+function hsl(h,s,l,a){ return 'hsla('+h+','+s+'%,'+l+'%,'+(a==null?1:a)+')'; }
+
+function drawBackground(w,h){
+  const g = ctx2d.createLinearGradient(0,0,0,h);
+  if(ECO.isNight){ g.addColorStop(0,'#070a12'); g.addColorStop(1,'#0c1119'); }
+  else { g.addColorStop(0,'#0a1420'); g.addColorStop(1,'#070a0d'); }
+  ctx2d.fillStyle=g; ctx2d.fillRect(0,0,w,h);
+  // Each zone washed in the color of ITS root's pitch class (same hue
+  // convention as the rest of the app), strongest at the outer edge and
+  // fading toward the center divider -- keeps the dark bioluminescent mood
+  // while still making the two zones read as distinct "keys" at a glance.
+  const mid=w/2;
+  const hueA = hueForPc(0), hueB = hueForPc(ZONE_B_GAP);
+  const gA = ctx2d.createLinearGradient(0,0,mid,0);
+  gA.addColorStop(0, hsl(hueA,70,50,0.17)); gA.addColorStop(1, hsl(hueA,70,50,0.02));
+  ctx2d.fillStyle=gA; ctx2d.fillRect(0,0,mid,h);
+  const gB = ctx2d.createLinearGradient(w,0,mid,0);
+  gB.addColorStop(0, hsl(hueB,70,50,0.17)); gB.addColorStop(1, hsl(hueB,70,50,0.02));
+  ctx2d.fillStyle=gB; ctx2d.fillRect(mid,0,w-mid,h);
+}
+function drawSun(x,y,nowMs){
+  const R=15;
+  ctx2d.save();
+  ctx2d.translate(x,y);
+  const outerGlow = ctx2d.createRadialGradient(0,0,R*0.5,0,0,R*3.2);
+  outerGlow.addColorStop(0,'rgba(255,241,199,0.35)'); outerGlow.addColorStop(1,'rgba(255,207,92,0)');
+  ctx2d.fillStyle=outerGlow; ctx2d.beginPath(); ctx2d.arc(0,0,R*3.2,0,Math.PI*2); ctx2d.fill();
+  const rays=14;
+  for(let i=0;i<rays;i++){
+    const a = (i/rays)*Math.PI*2 + nowMs*0.00025;
+    const len = R*(1.55+0.35*Math.sin(nowMs*0.0016+i*1.3));
+    ctx2d.strokeStyle='rgba(255,223,150,0.6)'; ctx2d.lineWidth=2.4; ctx2d.lineCap='round';
+    ctx2d.beginPath();
+    ctx2d.moveTo(Math.cos(a)*R*1.2, Math.sin(a)*R*1.2);
+    ctx2d.lineTo(Math.cos(a)*len, Math.sin(a)*len);
+    ctx2d.stroke();
+  }
+  const core = ctx2d.createRadialGradient(-R*0.3,-R*0.3,0,0,0,R);
+  core.addColorStop(0,'#fffdf2'); core.addColorStop(0.55,'#ffe08a'); core.addColorStop(1,'#ffb84d');
+  ctx2d.beginPath(); ctx2d.arc(0,0,R,0,Math.PI*2); ctx2d.fillStyle=core; ctx2d.fill();
+  ctx2d.strokeStyle='rgba(255,255,255,0.5)'; ctx2d.lineWidth=1; ctx2d.stroke();
+  ctx2d.restore();
+}
+function drawMoonPhase(cx,cy,r,phase31){
+  const t = phase31/31;
+  const illum = (1-Math.cos(t*2*Math.PI))/2; // 0 new -> 1 full -> 0
+  const waxing = t < 0.5;
+  const outerGlow = ctx2d.createRadialGradient(cx,cy,r*0.7,cx,cy,r*2.6);
+  outerGlow.addColorStop(0,'rgba(210,222,255,0.3)'); outerGlow.addColorStop(1,'rgba(210,222,255,0)');
+  ctx2d.fillStyle=outerGlow; ctx2d.beginPath(); ctx2d.arc(cx,cy,r*2.6,0,Math.PI*2); ctx2d.fill();
+  ctx2d.save();
+  ctx2d.beginPath(); ctx2d.arc(cx,cy,r,0,Math.PI*2); ctx2d.closePath(); ctx2d.clip();
+  ctx2d.fillStyle = '#151c29'; ctx2d.fillRect(cx-r,cy-r,2*r,2*r);
+  const litGrad = ctx2d.createRadialGradient(cx-r*0.25,cy-r*0.25,0,cx,cy,r);
+  litGrad.addColorStop(0,'#fbfcff'); litGrad.addColorStop(1,'#d7e0f2');
+  ctx2d.fillStyle = litGrad;
+  ctx2d.beginPath();
+  ctx2d.arc(cx,cy,r, waxing? -Math.PI/2 : Math.PI/2, waxing? Math.PI/2 : Math.PI*1.5);
+  ctx2d.closePath(); ctx2d.fill();
+  const ex = r*Math.abs(1-2*illum);
+  ctx2d.fillStyle = illum>0.5 ? litGrad : '#151c29';
+  ctx2d.beginPath(); ctx2d.ellipse(cx,cy,ex,r,0,0,Math.PI*2); ctx2d.fill();
+  // soft craters for texture, subtle on both the lit and shadowed side
+  [[-0.3,-0.2,0.17],[0.25,0.08,0.12],[-0.06,0.32,0.1],[0.36,-0.32,0.08],[-0.42,0.15,0.09]].forEach(([ox,oy,orr])=>{
+    ctx2d.beginPath(); ctx2d.arc(cx+ox*r, cy+oy*r, orr*r, 0, Math.PI*2);
+    ctx2d.fillStyle='rgba(20,27,38,0.16)'; ctx2d.fill();
+  });
+  ctx2d.restore();
+  ctx2d.strokeStyle='rgba(220,230,255,0.35)'; ctx2d.lineWidth=1; ctx2d.beginPath(); ctx2d.arc(cx,cy,r,0,Math.PI*2); ctx2d.stroke();
+}
+function drawCelestial(w,h,nowMs){
+  const frac = ECO.dayNightStartMs ? Math.min(1,(nowMs-ECO.dayNightStartMs)/DAY_NIGHT_MS) : 0;
+  const x = 60+frac*(w-120), y = 66-Math.sin(frac*Math.PI)*26;
+  if(ECO.isNight) drawMoonPhase(x,y,19,ECO.moonPhase);
+  else drawSun(x,y,nowMs);
+}
+function drawZoneDivider(w,h){
+  const mid=w/2;
+  ctx2d.save();
+  ctx2d.strokeStyle='rgba(255,255,255,0.12)'; ctx2d.setLineDash([6,8]);
+  ctx2d.beginPath(); ctx2d.moveTo(mid,0); ctx2d.lineTo(mid,h); ctx2d.stroke();
+  ctx2d.setLineDash([]);
+  ctx2d.font="600 11px 'JetBrains Mono', monospace"; ctx2d.textAlign='center';
+  const labelA = 'ZONE A · root 0', labelB = 'ZONE B · root '+(ZONE_B_GAP>=0?'+':'')+ZONE_B_GAP;
+  const ax = Math.max(80,mid-100), bx = Math.min(w-80,mid+100), ly=44;
+  ctx2d.fillStyle='rgba(255,255,255,0.4)';
+  ctx2d.fillText(labelA, ax, ly);
+  ctx2d.fillText(labelB, bx, ly);
+  // Hoverable regions for the "most common pair" tooltip (see updateHoverTip).
+  const wA = ctx2d.measureText(labelA).width, wB = ctx2d.measureText(labelB).width;
+  ECO.zoneLabelRects = {
+    A: { x:ax-wA/2-6, y:ly-14, w:wA+12, h:20 },
+    B: { x:bx-wB/2-6, y:ly-14, w:wB+12, h:20 },
+  };
+  ctx2d.restore();
+}
+function drawPlatform(p){
+  // Undulating Gaudi/Park Güell-bench top edge instead of a flat rectangle,
+  // covered in small trencadís (broken-tile mosaic) patches. The actual
+  // collision surface underneath is still the flat p.y line.
+  const waveAmp = Math.min(6, p.h*0.55);
+  const segs = Math.max(6, Math.round(p.w/20));
+  ctx2d.beginPath();
+  ctx2d.moveTo(p.x, p.y+p.h*1.4);
+  for(let i=0;i<=segs;i++){
+    const fx = i/segs;
+    const x = p.x + fx*p.w;
+    const yWave = p.y + Math.sin(fx*Math.PI*3 + p.wobSeed)*waveAmp;
+    ctx2d.lineTo(x, yWave);
+  }
+  ctx2d.lineTo(p.x+p.w, p.y+p.h*1.4);
+  ctx2d.closePath();
+  const g = ctx2d.createLinearGradient(p.x,p.y-waveAmp,p.x,p.y+p.h*1.4);
+  g.addColorStop(0,'#3d3020'); g.addColorStop(1,'#171310');
+  ctx2d.fillStyle=g; ctx2d.fill();
+  ctx2d.save();
+  ctx2d.clip();
+  p.tiles.forEach(tl=>{
+    const x = p.x + tl.fx*p.w;
+    const y = p.y + Math.sin(tl.fx*Math.PI*3+p.wobSeed)*waveAmp + tl.wob*p.h*0.9;
+    ctx2d.save();
+    ctx2d.translate(x,y);
+    ctx2d.rotate(tl.wob*1.6);
+    ctx2d.fillStyle = hsl(tl.hue,70,58,0.85);
+    ctx2d.fillRect(-4,-4,8,8);
+    ctx2d.strokeStyle='rgba(0,0,0,0.35)'; ctx2d.lineWidth=0.6; ctx2d.strokeRect(-4,-4,8,8);
+    ctx2d.restore();
+  });
+  ctx2d.restore();
+  ctx2d.strokeStyle='rgba(0,0,0,0.45)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
+}
+/* ---------- interactive objects: art nouveau / Gaudi organic forms, not
+   literal glyphs -- psychedelic rotating-hue gradients, sinuous curves.
+   Each is drawn in local space (already translated to the body's x,y). ---------- */
+function psychedelicGradient(cx,cy,r,baseHue,t){
+  const g = ctx2d.createRadialGradient(cx,cy,0,cx,cy,Math.max(1,r));
+  g.addColorStop(0, hsl((baseHue+t*0.02)%360, 90, 78, 0.95));
+  g.addColorStop(0.55, hsl((baseHue+55+t*0.02)%360, 88, 58, 0.9));
+  g.addColorStop(1, hsl((baseHue+130+t*0.02)%360, 80, 40, 0.88));
+  return g;
+}
+function drawMosaicRing(r, hue){ // Gaudi trencadís (broken-tile) accent, shared with platforms
+  const n = 14;
+  for(let i=0;i<n;i++){
+    const a = (i/n)*Math.PI*2;
+    const tileHue = (hue + i*(360/n)*0.7 + 40)%360;
+    ctx2d.save();
+    ctx2d.translate(Math.cos(a)*r, Math.sin(a)*r);
+    ctx2d.rotate(a + i*0.4);
+    ctx2d.fillStyle = hsl(tileHue,75,60,0.6);
+    ctx2d.fillRect(-2.6,-2.6,5.2,5.2);
+    ctx2d.restore();
+  }
+}
+function drawFlower(R,t,hue){ // strum
+  const petals=7;
+  for(let i=0;i<petals;i++){
+    ctx2d.save();
+    ctx2d.rotate((i/petals)*Math.PI*2 + t*0.00015);
+    ctx2d.beginPath();
+    ctx2d.moveTo(0,0);
+    ctx2d.bezierCurveTo(R*0.22,-R*0.16, R*0.82,-R*0.24, R*1.05,0);
+    ctx2d.bezierCurveTo(R*0.82,R*0.24, R*0.22,R*0.16, 0,0);
+    ctx2d.closePath();
+    ctx2d.fillStyle = psychedelicGradient(R*0.5,0,R*0.65, hue+i*(360/petals), t);
+    ctx2d.fill();
+    ctx2d.strokeStyle = hsl((hue+i*30)%360,90,88,0.4); ctx2d.lineWidth=1; ctx2d.stroke();
+    ctx2d.restore();
+  }
+  const cg = ctx2d.createRadialGradient(0,0,0,0,0,R*0.3);
+  cg.addColorStop(0,'#fff6d8'); cg.addColorStop(1, hsl(hue,90,55,0.92));
+  ctx2d.beginPath(); ctx2d.arc(0,0,R*0.3,0,Math.PI*2); ctx2d.fillStyle=cg; ctx2d.fill();
+  for(let i=0;i<8;i++){
+    const a=(i/8)*Math.PI*2;
+    ctx2d.beginPath(); ctx2d.arc(Math.cos(a)*R*0.15, Math.sin(a)*R*0.15, R*0.035,0,Math.PI*2);
+    ctx2d.fillStyle='#2b1a06'; ctx2d.fill();
+  }
+}
+function drawMushroom(R,t,hue){ // pad-hold
+  ctx2d.fillStyle = hsl(hue+40,25,88,0.92);
+  ctx2d.beginPath();
+  ctx2d.moveTo(-R*0.22, R*0.12);
+  ctx2d.quadraticCurveTo(-R*0.3,R*0.78,-R*0.13,R*0.98);
+  ctx2d.lineTo(R*0.13,R*0.98);
+  ctx2d.quadraticCurveTo(R*0.3,R*0.78,R*0.22,R*0.12);
+  ctx2d.closePath(); ctx2d.fill();
+  ctx2d.beginPath();
+  ctx2d.moveTo(-R*1.05, R*0.12);
+  ctx2d.bezierCurveTo(-R*1.1,-R*0.78, R*1.1,-R*0.78, R*1.05, R*0.12);
+  const scallops=6;
+  for(let i=0;i<=scallops;i++){
+    const x = R*1.05 - (i/scallops)*R*2.1;
+    const dip = (i%2===0)? R*0.12 : R*0.02;
+    ctx2d.quadraticCurveTo(x+R*(1.05/scallops), R*0.12+dip, x, R*0.12);
+  }
+  ctx2d.closePath();
+  ctx2d.fillStyle = psychedelicGradient(0,-R*0.3,R*1.1,hue,t);
+  ctx2d.fill();
+  ctx2d.strokeStyle=hsl(hue,80,30,0.4); ctx2d.lineWidth=1.2; ctx2d.stroke();
+  const spotHue=(hue+180)%360;
+  [[-0.5,-0.35,0.15],[0.15,-0.55,0.12],[0.55,-0.18,0.14],[-0.08,-0.08,0.09]].forEach(([sx,sy,sr])=>{
+    ctx2d.beginPath(); ctx2d.ellipse(sx*R,sy*R,sr*R,sr*R*0.8,0,0,Math.PI*2);
+    ctx2d.fillStyle = hsl(spotHue,70,90,0.85); ctx2d.fill();
+  });
+}
+function drawCrystal(R,t,hue){ // common-tones
+  const crystals=[
+    {ang:-0.35, len:1.0, w:0.32, hueOff:0},
+    {ang:-0.05, len:1.25, w:0.24, hueOff:60},
+    {ang:0.28, len:0.9, w:0.3, hueOff:120},
+    {ang:0.55, len:0.68, w:0.22, hueOff:200},
+  ];
+  crystals.forEach(c=>{
+    ctx2d.save();
+    ctx2d.rotate(c.ang);
+    const h=R*c.len, w=R*c.w;
+    ctx2d.beginPath();
+    ctx2d.moveTo(0, R*0.3); ctx2d.lineTo(-w, R*0.1); ctx2d.lineTo(-w*0.6, -h*0.6);
+    ctx2d.lineTo(0, -h); ctx2d.lineTo(w*0.6, -h*0.6); ctx2d.lineTo(w, R*0.1);
+    ctx2d.closePath();
+    const g = ctx2d.createLinearGradient(-w,-h,w,R*0.3);
+    g.addColorStop(0, hsl((hue+c.hueOff)%360,85,76,0.92));
+    g.addColorStop(0.5, hsl((hue+c.hueOff+40)%360,90,55,0.86));
+    g.addColorStop(1, hsl((hue+c.hueOff+80)%360,80,35,0.9));
+    ctx2d.fillStyle=g; ctx2d.fill();
+    ctx2d.strokeStyle='rgba(255,255,255,0.5)'; ctx2d.lineWidth=0.8; ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(0,R*0.3); ctx2d.lineTo(0,-h);
+    ctx2d.strokeStyle='rgba(255,255,255,0.35)'; ctx2d.stroke();
+    ctx2d.restore();
+  });
+}
+function drawSeedBurst(R,t,hue){ // launcher
+  const spokes=10;
+  for(let i=0;i<spokes;i++){
+    const a=(i/spokes)*Math.PI*2 + Math.sin(t*0.001+i)*0.05;
+    const len = R*(0.75+0.35*Math.sin(i*2.1));
+    const x2=Math.cos(a)*len, y2=Math.sin(a)*len;
+    ctx2d.strokeStyle = hsl((hue+i*20)%360,85,65,0.8); ctx2d.lineWidth=1.3;
+    ctx2d.beginPath(); ctx2d.moveTo(Math.cos(a)*R*0.25,Math.sin(a)*R*0.25); ctx2d.lineTo(x2,y2); ctx2d.stroke();
+    for(let k=0;k<5;k++){
+      const ta = a + (k-2)*0.18;
+      ctx2d.beginPath(); ctx2d.moveTo(x2,y2);
+      ctx2d.lineTo(x2+Math.cos(ta)*R*0.18, y2+Math.sin(ta)*R*0.18);
+      ctx2d.strokeStyle = hsl((hue+i*20+40)%360,90,75,0.6); ctx2d.lineWidth=0.8; ctx2d.stroke();
+    }
+  }
+  const cg = ctx2d.createRadialGradient(0,0,0,0,0,R*0.3);
+  cg.addColorStop(0,'#fff6d8'); cg.addColorStop(1,hsl(hue,85,55,0.95));
+  ctx2d.beginPath(); ctx2d.arc(0,0,R*0.28,0,Math.PI*2); ctx2d.fillStyle=cg; ctx2d.fill();
+}
+function drawFrond(R,t,hue){ // transposer
+  ctx2d.strokeStyle = hsl(hue,70,58,0.85); ctx2d.lineWidth=2;
+  ctx2d.beginPath();
+  const turns=2.2, steps=60;
+  for(let i=0;i<=steps;i++){
+    const frac=i/steps;
+    const ang = frac*turns*Math.PI*2 + t*0.0002;
+    const rad = R*0.08 + frac*R*0.85;
+    const x=Math.cos(ang)*rad, y=Math.sin(ang)*rad;
+    if(i===0) ctx2d.moveTo(x,y); else ctx2d.lineTo(x,y);
+  }
+  ctx2d.stroke();
+  for(let i=8;i<=steps;i+=8){
+    const frac=i/steps;
+    const ang = frac*turns*Math.PI*2 + t*0.0002;
+    const rad = R*0.08 + frac*R*0.85;
+    const x=Math.cos(ang)*rad, y=Math.sin(ang)*rad;
+    ctx2d.save();
+    ctx2d.translate(x,y); ctx2d.rotate(ang+Math.PI/2);
+    ctx2d.beginPath();
+    ctx2d.moveTo(0,0);
+    ctx2d.quadraticCurveTo(R*0.18,-R*0.05,R*0.28,0);
+    ctx2d.quadraticCurveTo(R*0.18,R*0.05,0,0);
+    ctx2d.fillStyle = hsl((hue+frac*160)%360,80,60,0.75);
+    ctx2d.fill();
+    ctx2d.restore();
+  }
+}
+function drawObject(b,nowMs){
+  const t = nowMs||0;
+  ctx2d.save();
+  ctx2d.translate(b.x,b.y);
+  ctx2d.shadowColor=b.color; ctx2d.shadowBlur = b.dragging?28:15;
+  switch(b.objectType){
+    case 'strum': drawFlower(b.radius,t,b.hue); break;
+    case 'padhold': drawMushroom(b.radius,t,b.hue); break;
+    case 'commontones': drawCrystal(b.radius,t,b.hue); break;
+    case 'launcher': drawSeedBurst(b.radius,t,b.hue); break;
+    case 'transposer': drawFrond(b.radius,t,b.hue); break;
+    default: break;
+  }
+  ctx2d.shadowBlur=0;
+  drawMosaicRing(b.radius*1.2, b.hue);
+  ctx2d.restore();
+  ctx2d.save();
+  ctx2d.fillStyle=b.color; ctx2d.font="600 10px 'JetBrains Mono', monospace"; ctx2d.textAlign='center';
+  ctx2d.fillText(b.label, b.x, b.y+b.radius+16);
+  ctx2d.restore();
+}
+// Combines the original wobble-blob "head" (kept, at the user's request)
+// with the chord's REAL hex-map layout (from qrOffsets, same geometry the
+// main app's hex-map preview uses) for its other notes: the head sits at
+// the root and is colored by the root's live pitch class; each other note
+// is a small hexagon at its true relative hex-grid position, colored by
+// ITS OWN pitch class. This is what makes every chord's silhouette visually
+// distinct (not just a generic radial tendril count), and keeps a
+// creature's colors always matching what it currently sounds like (root
+// shifts with zone/transpose/night, and the head recolors live with it).
+function drawChord(b,t){
+  const root = liveRootRaw(b);
+  const headHue = hueForPc(root);
+  const targetSpan = b.radius*1.4;
+  const raw = (b.rawIntervals && b.rawIntervals.length===b.intervals.length) ? b.rawIntervals : b.intervals;
+  const layout = computeChordLayout(raw, b.qrOffsets, targetSpan);
+  const rootIdx = raw.indexOf(0);
+  const safeRootIdx = rootIdx>=0 ? rootIdx : 0;
+
+  ctx2d.save();
+  ctx2d.translate(b.x,b.y);
+  if(b.locomotion==='roll') ctx2d.rotate(b.angle);
+
+  // limbs: connecting curves first (underneath), then small hex nodes, each
+  // note colored by its own live pitch class (root + that raw interval).
+  layout.forEach((pt,i)=>{
+    if(i===safeRootIdx) return;
+    const noteHue = hueForPc(root + raw[i]);
+    ctx2d.strokeStyle = hsl(noteHue,75,62,0.5); ctx2d.lineWidth=1.6;
+    ctx2d.beginPath();
+    ctx2d.moveTo(0,0);
+    ctx2d.quadraticCurveTo(pt.x*0.5+Math.sin(t*0.003+i)*3, pt.y*0.5+Math.cos(t*0.003+i)*3, pt.x, pt.y);
+    ctx2d.stroke();
+  });
+  layout.forEach((pt,i)=>{
+    if(i===safeRootIdx) return;
+    const noteHue = hueForPc(root + raw[i]);
+    const hexR = Math.max(3.5, b.radius*0.24);
+    ctx2d.save();
+    ctx2d.translate(pt.x,pt.y);
+    ctx2d.shadowColor = hsl(noteHue,90,60,0.85); ctx2d.shadowBlur = 8;
+    ctx2d.beginPath();
+    for(let k=0;k<6;k++){
+      const ang = Math.PI/180*(60*k);
+      const px = hexR*Math.cos(ang), py = hexR*Math.sin(ang);
+      if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
+    }
+    ctx2d.closePath();
+    ctx2d.fillStyle = hsl(noteHue,85,60,0.92); ctx2d.fill();
+    ctx2d.shadowBlur = 0;
+    ctx2d.strokeStyle='rgba(255,255,255,0.4)'; ctx2d.lineWidth=1; ctx2d.stroke();
+    ctx2d.restore();
+  });
+
+  // head: the original wobble-blob, at the root, colored by the root's live pitch class
+  const wobble = 3+Math.min(b.radius*0.18,6);
+  const points = 10;
+  ctx2d.shadowColor = hsl(headHue,85,60,0.9); ctx2d.shadowBlur = b.dragging? 30 : 18;
+  const grad = ctx2d.createRadialGradient(0,-b.radius*0.2,b.radius*0.15,0,0,b.radius*1.15);
+  grad.addColorStop(0, hsl(headHue,90,80,0.95));
+  grad.addColorStop(0.55, hsl(headHue,85,58,0.85));
+  grad.addColorStop(1, hsl(headHue,80,40,0.12));
+  ctx2d.beginPath();
+  for(let i=0;i<=points;i++){
+    const a=(i/points)*Math.PI*2;
+    const r = b.radius + Math.sin(a*3 + t*0.0022 + b.x*0.01)*wobble;
+    const px=Math.cos(a)*r, py=Math.sin(a)*r;
+    if(i===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
+  }
+  ctx2d.closePath(); ctx2d.fillStyle=grad; ctx2d.fill();
+  ctx2d.shadowBlur=0;
+  ctx2d.fillStyle='#08110d';
+  const ex=b.radius*0.28, ey=-b.radius*0.15, er=Math.max(1.6,b.radius*0.07);
+  ctx2d.beginPath(); ctx2d.arc(-ex,ey,er,0,Math.PI*2); ctx2d.fill();
+  ctx2d.beginPath(); ctx2d.arc(ex,ey,er,0,Math.PI*2); ctx2d.fill();
+  if(b.isBig){
+    ctx2d.strokeStyle = hsl(headHue,90,85,0.55); ctx2d.lineWidth=1.5; ctx2d.setLineDash([3,4]);
+    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius+6,0,Math.PI*2); ctx2d.stroke(); ctx2d.setLineDash([]);
+  }
+  ctx2d.restore();
+}
+function render(nowMs){
+  if(!ctx2d) return;
+  const w=ECO.world.width, h=ECO.world.height;
+  ctx2d.save();
+  const shakeLeft = ECO.quakeShakeUntil - nowMs;
+  if(shakeLeft>0){
+    const k = shakeLeft/QUAKE_SHAKE_MS; // 1 -> 0, eases the jitter out
+    const jitter = () => (ECO.rng ? ECO.rng() : Math.random()) - 0.5;
+    ctx2d.translate(jitter()*14*k, jitter()*14*k);
+  }
+  drawBackground(w,h);
+  drawCelestial(w,h,nowMs);
+  drawZoneDivider(w,h);
+  ECO.world.platforms.forEach(drawPlatform);
+  ECO.world.bodies.forEach(b=>{ if(b.kind==='object') drawObject(b,nowMs); });
+  ECO.world.bodies.forEach(b=>{ if(b.kind==='chord') drawChord(b,nowMs); });
+  ctx2d.restore();
+}
+
+/* ============================================================================
+   SECTION: INPUT — drag any chord or object with mouse/touch; hover tooltip.
+   Dragging sets body.dragging=true (physics.js then treats it as kinematic,
+   still eligible for collisions) and tracks a running velocity so releasing
+   the drag flings the body onward instead of just dropping it dead.
+   ============================================================================ */
+const pointerState = { draggingId:null, lastX:0, lastY:0, lastT:0, vx:0, vy:0 };
+function eventXY(e){
+  const rect = canvasEl.getBoundingClientRect();
+  const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+  const clientX = t ? t.clientX : e.clientX, clientY = t ? t.clientY : e.clientY;
+  return { x: clientX-rect.left, y: clientY-rect.top };
+}
+function hitTest(x,y){
+  let best=null, bestD=Infinity;
+  for(const b of ECO.world.bodies){
+    const d = Math.hypot(b.x-x, b.y-y);
+    if(d<=b.radius && d<bestD){ best=b; bestD=d; }
+  }
+  return best;
+}
+function clampSpeed(v){ return Math.max(-500,Math.min(500,v)); }
+function onPointerDown(e){
+  const p = eventXY(e);
+  const hit = hitTest(p.x,p.y);
+  if(hit){
+    hit.dragging = true;
+    pointerState.draggingId = hit.id;
+    pointerState.lastX=p.x; pointerState.lastY=p.y; pointerState.lastT=performance.now();
+    pointerState.vx=0; pointerState.vy=0;
+    canvasEl.classList.add('dragging');
+    e.preventDefault();
+  }
+}
+function onPointerMove(e){
+  const p = eventXY(e);
+  if(pointerState.draggingId){
+    const b = findBody(ECO.world, pointerState.draggingId);
+    const now = performance.now();
+    const dt = Math.max(1, now-pointerState.lastT)/1000;
+    if(b){
+      pointerState.vx = (p.x-b.x)/dt; pointerState.vy = (p.y-b.y)/dt;
+      b.x = Math.max(b.radius, Math.min(ECO.world.width-b.radius, p.x));
+      b.y = Math.max(b.radius, Math.min(ECO.world.height-b.radius, p.y));
+    }
+    pointerState.lastT = now;
+    e.preventDefault();
+  } else {
+    updateHoverTip(p);
+  }
+}
+function onPointerUp(){
+  if(pointerState.draggingId){
+    const b = findBody(ECO.world, pointerState.draggingId);
+    if(b){ b.dragging=false; b.vx=clampSpeed(pointerState.vx); b.vy=clampSpeed(pointerState.vy); }
+    pointerState.draggingId = null;
+    canvasEl.classList.remove('dragging');
+  }
+}
+function pointInRect(x,y,r){ return !!r && x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h; }
+function mostCommonPairTooltipText(){
+  if(!ECO.mostCommonPair) return "Zone B doesn't have a strong repeated pair yet in your collection — it's using a fallback root for now.";
+  const p = ECO.mostCommonPair;
+  const spA = ECO.species.find(s=>s.signature===p.sigA), spB = ECO.species.find(s=>s.signature===p.sigB);
+  const numA = spA ? '#'+spA.num : '?', numB = spB ? '#'+spB.num : '?';
+  return 'Your most common pair: '+numA+' → '+numB+' (+'+p.gap+'), appears ×'+p.count;
+}
+function updateHoverTip(p){
+  const tip = document.getElementById('tip');
+  if(ECO.zoneLabelRects && (pointInRect(p.x,p.y,ECO.zoneLabelRects.A) || pointInRect(p.x,p.y,ECO.zoneLabelRects.B))){
+    tip.textContent = mostCommonPairTooltipText();
+    tip.style.left = p.x+'px'; tip.style.top = p.y+'px';
+    tip.style.display = 'block';
+    return;
+  }
+  const hit = hitTest(p.x,p.y);
+  if(!hit){ tip.style.display='none'; return; }
+  let text;
+  if(hit.kind==='chord'){
+    text = (hit.nickname ? '"'+hit.nickname+'" ' : '') + '#'+hit.num+'  '+hit.intervals.join('.')+(hit.isBig?'  ⏳1min':'');
+  } else {
+    text = hit.label;
+  }
+  tip.textContent = text;
+  tip.style.left = p.x+'px'; tip.style.top = p.y+'px';
+  tip.style.display = 'block';
+}
+function wireInput(){
+  canvasEl.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+  canvasEl.addEventListener('touchstart', onPointerDown, {passive:false});
+  window.addEventListener('touchmove', onPointerMove, {passive:false});
+  window.addEventListener('touchend', onPointerUp);
+  window.addEventListener('resize', onResize);
+}
+function onResize(){
+  if(!ECO.world) return;
+  ECO.world.width = window.innerWidth; ECO.world.height = window.innerHeight;
+  ECO.world.platforms = buildPlatforms(ECO.world.width, ECO.world.height);
+  setupCanvasSize();
+}
+
+/* ============================================================================
+   SECTION: UI — whitelist panel, mute, close, HUD readout.
+   ============================================================================ */
+function escapeHtmlEco(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function renderWhitelistPanel(){
+  const list = document.getElementById('whitelistList');
+  if(ECO.species.length===0){ list.innerHTML = '<div class="empty-note">No cataloged shapes in your collection yet.</div>'; return; }
+  list.innerHTML = ECO.species.map(sp=>{
+    const checked = ECO.whitelist.signatures.indexOf(sp.signature)!==-1 ? 'checked' : '';
+    const nick = ECO.nicknames[sp.signature];
+    return '<label><input type="checkbox" data-sig="'+escapeHtmlEco(sp.signature)+'" '+checked+'> #'+sp.num+(nick?' "'+escapeHtmlEco(nick)+'"':'')+' <span style="color:var(--muted)">('+sp.intervals.length+'n'+(sp.isBig?', big':'')+')</span></label>';
+  }).join('');
+  list.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const sig = cb.getAttribute('data-sig');
+      if(cb.checked){ if(ECO.whitelist.signatures.indexOf(sig)===-1) ECO.whitelist.signatures.push(sig); }
+      else { ECO.whitelist.signatures = ECO.whitelist.signatures.filter(s=>s!==sig); }
+      saveWhitelist(ECO.whitelist);
+      if(ECO.whitelist.active) applyWhitelistFilterNow();
+    });
+  });
+}
+function syncWhitelistUI(){
+  document.getElementById('whitelistToggleBtn').classList.toggle('active', ECO.whitelist.active);
+  const activeCb = document.getElementById('wlActiveCheckbox');
+  if(activeCb) activeCb.checked = ECO.whitelist.active;
+}
+function wireUI(){
+  document.getElementById('whitelistToggleBtn').addEventListener('click', ()=>{
+    const panel = document.getElementById('whitelistPanel');
+    const opening = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
+    if(opening) renderWhitelistPanel();
+  });
+  document.getElementById('wlActiveCheckbox').addEventListener('change', (e)=>{
+    ECO.whitelist.active = e.target.checked;
+    saveWhitelist(ECO.whitelist);
+    syncWhitelistUI();
+    if(ECO.whitelist.active) applyWhitelistFilterNow();
+  });
+  document.getElementById('muteBtn').addEventListener('click', ()=>{
+    ECO.settings.muted = !ECO.settings.muted;
+    const btn = document.getElementById('muteBtn');
+    btn.textContent = ECO.settings.muted ? '🔇' : '🔊';
+    btn.classList.toggle('active', ECO.settings.muted);
+    if(ECO.settings.muted) ECO.audioPort.stopAmbient();
+  });
+  document.getElementById('closeBtn').addEventListener('click', ()=>{ window.close(); });
+}
+function updateHudText(nowMs){
+  const el = document.getElementById('dayNightReadout');
+  if(!el) return;
+  const secLeft = Math.max(0, Math.ceil((DAY_NIGHT_MS-(nowMs-ECO.dayNightStartMs))/1000));
+  el.innerHTML = (ECO.isNight ? '🌙 night · phase <b>'+ECO.moonPhase+'/31</b>' : '☀ day')+'  <span style="opacity:.55">'+secLeft+'s</span>';
+}
+
+/* ============================================================================
+   SECTION: MAIN LOOP / BOOTSTRAP
+   Fixed-timestep physics (accumulator pattern) decoupled from the render
+   framerate, so behavior doesn't change between fast and slow machines.
+   Nothing runs until the start overlay is clicked -- that click is also
+   what's allowed to create/resume the AudioContext under browser autoplay
+   rules.
+   ============================================================================ */
+const FIXED_DT = 1/60;
+let __lastT = null, __acc = 0;
+
+function boot(){
+  const data = loadHarmodexData();
+  ECO.nicknames = data.nicknames;
+  ECO.settings.generalPitch = data.generalPitch;
+  ECO.settings.timbre = data.timbre;
+  ECO.settings.muted = false;
+
+  const speciesResult = computeSpecies(data.progressions, data.octaveEquivalence);
+  ECO.species = speciesResult.list;
+  annotateBigSpecies(ECO.species); // computed over the FULL collection, independent of whitelist
+  ZONE_B_GAP = computeZoneBGap(data.progressions, data.octaveEquivalence);
+  ECO.mostCommonPair = computeMostCommonChordPair(data.progressions, data.octaveEquivalence); // for the zone-title tooltip
+
+  ECO.whitelist = loadWhitelist();
+
+  const seed = ((Date.now() ^ Math.floor(performance.now()*1000)) >>> 0) || 1;
+  ECO.rng = makeRng(seed);
+  ECO.moonPhase = Math.floor(Math.random()*31); // effectively random start each (re)load, per spec
+  ECO.isNight = false;
+  ECO.dayNightStartMs = 0;
+  ECO.lastQuakeAt = 0;
+  ECO.quakeShakeUntil = 0;
+
+  ECO.world = createWorld({ width: window.innerWidth, height: window.innerHeight, platforms: buildPlatforms(window.innerWidth, window.innerHeight) });
+  spawnObjects(ECO.world);
+
+  const driver = createRealDriver(()=>ECO.settings);
+  ECO.audioPort = createAudioPort(driver);
+
+  setupCanvas();
+  wireInput();
+  wireUI();
+  syncWhitelistUI();
+
+  __lastT = null; __acc = 0;
+  requestAnimationFrame(loop);
+}
+
+function loop(t){
+  if(__lastT==null) __lastT = t;
+  let delta = (t-__lastT)/1000; __lastT = t;
+  delta = Math.min(delta, 0.25); // clamp a backgrounded-tab pause instead of a spiral of huge catch-up steps
+  __acc += delta;
+
+  updateDayNight(t);
+  updateSpawning(t);
+  updateEarthquake(t);
+
+  while(__acc >= FIXED_DT){
+    const events = stepWorld(ECO.world, FIXED_DT, ECO.rng);
+    handleEvents(events);
+    updateZones();
+    updateLifecycle(t);
+    __acc -= FIXED_DT;
+  }
+
+  render(t);
+  updateHudText(t);
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('startOverlay').addEventListener('click', function startHandler(){
+  document.getElementById('startOverlay').classList.add('hidden');
+  getAudioCtx();
+  boot();
+}, { once:true });
+</script>
+</body>
+</html>
