@@ -188,8 +188,8 @@
     <h3>👁 GOD SETTINGS</h3>
     <div class="pop-row">
       <span class="muted" style="font-size:12px;">Max population</span>
-      <input type="range" id="maxPopSlider" min="1" max="20" step="1" value="7">
-      <span class="pop-val" id="maxPopVal">7</span>
+      <input type="range" id="maxPopSlider" min="1" max="20" step="1" value="4">
+      <span class="pop-val" id="maxPopVal">4</span>
     </div>
     <div class="pop-row">
       <span class="muted" style="font-size:12px;">Astro cycle speed</span>
@@ -2202,45 +2202,32 @@ function loadHarmodexData(){
 // load with nothing checked yet still shows the full collection until the
 // user starts checking boxes. Once the user has ever saved a preference
 // (raw!=null), that saved choice always wins, exactly as before.
+// Revision round 9: "haz que no se guarde la configuracion de god settings"
+// -- the 3 God Settings values below (whitelist, max population, cycle
+// speed) no longer persist across reloads. Each save* is now an intentional
+// no-op (kept as a real function, not deleted, so their existing call sites
+// in wireUI don't need to change -- they still update the live ECO.* value
+// that actually drives gameplay every time, exactly as before, they just no
+// longer also write it to localStorage) and each load* always returns a
+// hardcoded default, ignoring localStorage entirely -- including any value
+// a PRIOR round's build may have already written under these keys, so this
+// this is a real "never remembers" reset rather than just "stops remembering
+// from now on". boot() also clears out any such leftover keys once, so old
+// saved state can't linger unused on the user's machine either.
 function loadWhitelist(){
-  try{
-    const raw = localStorage.getItem('ecosystem:whitelist');
-    if(raw==null) return { active:true, signatures:[] };
-    const d = JSON.parse(raw);
-    return { active: !!d.active, signatures: Array.isArray(d.signatures) ? d.signatures : [] };
-  }catch(e){ return { active:true, signatures:[] }; }
+  return { active:true, signatures:[] };
 }
-function saveWhitelist(wl){
-  try{ localStorage.setItem('ecosystem:whitelist', JSON.stringify({ active: !!wl.active, signatures: wl.signatures||[] })); }
-  catch(e){ /* ignore quota/availability errors */ }
-}
-// Revision round 3: max population (1-20), configurable from the new God
-// Settings panel. A separate namespaced key, same read-only-elsewhere
-// discipline as ecosystem:whitelist above.
-// Revision round 4: default changed 20 -> 7 per spec.
+function saveWhitelist(wl){ /* revision round 9: intentionally a no-op -- see comment above */ }
+// Revision round 9: default changed 7 -> 4 per spec ("por defecto el
+// maximo de acordes sea 4").
 function loadMaxPopulation(){
-  try{
-    const raw = localStorage.getItem('ecosystem:maxPopulation');
-    const n = raw!=null ? parseInt(raw,10) : 7;
-    return (Number.isFinite(n) && n>=1 && n<=20) ? n : 7;
-  }catch(e){ return 7; }
+  return 4;
 }
-function saveMaxPopulation(n){
-  try{ localStorage.setItem('ecosystem:maxPopulation', String(Math.max(1,Math.min(20,n|0)))); }
-  catch(e){ /* ignore quota/availability errors */ }
-}
-// Revision round 4: astrological cycle speed multiplier (0.3x-3x, default 1x).
+function saveMaxPopulation(n){ /* revision round 9: intentionally a no-op -- see comment above */ }
 function loadCycleSpeed(){
-  try{
-    const raw = localStorage.getItem('ecosystem:cycleSpeed');
-    const n = raw!=null ? parseFloat(raw) : 1;
-    return (Number.isFinite(n) && n>=0.3 && n<=3) ? n : 1;
-  }catch(e){ return 1; }
+  return 1;
 }
-function saveCycleSpeed(n){
-  try{ localStorage.setItem('ecosystem:cycleSpeed', String(Math.max(0.3,Math.min(3,n)))); }
-  catch(e){ /* ignore quota/availability errors */ }
-}
+function saveCycleSpeed(n){ /* revision round 9: intentionally a no-op -- see comment above */ }
 
 /* ============================================================================
    SECTION: WORLD SETUP — platforms, the 6 interactive objects (5 original +
@@ -2479,6 +2466,8 @@ const ECO = {
   recentNoteTimestamps:[],          // rolling log of note-trigger times, see wireActivityTracking -- feeds the activity-spike kaleidoscope retrigger
   kaleidoscopeNextEligibleAt:0,     // 180s hard cooldown for the activity-spike kaleidoscope retrigger (NOT scaled by EVENT_PACE_MUL, per spec)
   activityHotSince:0,                // see updateActivitySpikeFractal -- 0 when not currently in a "hot" streak, else the timestamp the streak started
+  // Revision round 9
+  pillarEvent:null, pillarNextAt:0, // Gaudi pillar/column event, see updatePillarEvent/startPillarEvent
 };
 
 function effectivePool(){
@@ -2499,11 +2488,26 @@ function pickSpeciesToSpawn(){
   const choices = notPresent.length ? notPresent : pool;
   return choices[Math.floor(ECO.rng()*choices.length)];
 }
+// Egyptian-eye style index, per NUM_EYE_STYLES' own documentation comment
+// above ("8=Egyptian/Eye of Horus") -- kept as a small named constant here
+// (rather than adding it to the tested DATA-layer module.exports block
+// above, which this ECO-only spawn-behavior concern has no reason to touch)
+// purely so spawnChord below doesn't need a bare magic-number comparison.
+const EGYPTIAN_EYE_STYLE = 8;
 // Some newly-spawned chords appear hanging from the nursery plant instead of
 // dropping in from the top of the screen (feature: nursery plant). Also
 // assigns this chord's per-chord pitch micro-variation and initial
 // border/eat/hunt bookkeeping fields up front so nothing downstream ever has
 // to guard against them being undefined.
+// Revision round 9: "que el ojo egipcio sea una forma atipica de spawnear"
+// -- a chord whose per-signature eyeStyle is the Egyptian-eye style gets a
+// THIRD, distinct entrance (isEgyptianEye below), on top of the two that
+// already existed (nursery-hang / top-drop): it materializes in place,
+// mid-world, with zero initial velocity and a one-shot golden burst (see
+// spawnBurst's new 'ankh' kind + drawBursts), like it's being conjured
+// rather than born or falling in. eyeStyle is fixed per-signature (see
+// assignCreatureStyles, DATA layer), so this is a permanent, deterministic
+// trait of that chord shape, not a one-off per-spawn coin flip.
 function spawnChord(sp){
   const loc = ['crawl','fly','roll'][Math.floor(ECO.rng()*3)];
   const noteCount = sp.intervals.length;
@@ -2515,12 +2519,14 @@ function spawnChord(sp){
   const tierMul = sizeTier===1 ? 0.76 : (sizeTier===3 ? 1.34 : 1.0);
   const radius = (15 + Math.min(noteCount,8)*2.4) * tierMul;
   const zone = ECO.rng()<0.5 ? 'A':'B';
-  const useNursery = ECO.nursery && ECO.nursery.stems.length && ECO.rng()<0.4;
+  const isEgyptianEye = (sp.eyeStyle||0) === EGYPTIAN_EYE_STYLE;
+  const useNursery = !isEgyptianEye && ECO.nursery && ECO.nursery.stems.length && ECO.rng()<0.4;
   const stemIdx = useNursery ? Math.floor(ECO.rng()*ECO.nursery.stems.length) : -1;
   const stem = stemIdx>=0 ? ECO.nursery.stems[stemIdx] : null;
-  const x = stem ? stem.x : (30 + ECO.rng()*Math.max(1,(ECO.world.width-60)));
-  const y = stem ? stem.y+10 : 8;
+  const x = isEgyptianEye ? (60+ECO.rng()*Math.max(1,ECO.world.width-120)) : (stem ? stem.x : (30 + ECO.rng()*Math.max(1,(ECO.world.width-60))));
+  const y = isEgyptianEye ? (ECO.world.height*0.28 + ECO.rng()*ECO.world.height*0.4) : (stem ? stem.y+10 : 8);
   const now = performance.now();
+  if(isEgyptianEye) spawnBurst('ankh', x, y, 45); // warm gold, matching the Egyptian-eye motif
   addBody(ECO.world, {
     id:'chord_'+(ECO.chordSeq++), kind:'chord', sig:sp.signature, intervals:sp.intervals.slice(),
     rawIntervals: (sp.rawIntervals||sp.intervals).slice(),
@@ -2530,7 +2536,7 @@ function spawnChord(sp){
     bornAt: now, lifespanMs: sp.isBig ? 60000 : null,
     x, y, radius, gravity: loc!=='fly', locomotion: loc,
     facing: ECO.rng()<0.5?-1:1,
-    vx: stem?0:(ECO.rng()-0.5)*40, vy:0,
+    vx: isEgyptianEye ? 0 : (stem?0:(ECO.rng()-0.5)*40), vy:0,
     pitchVarianceCents: pickPitchVarianceCents(ECO.rng),
     dragging: !!stem, nurseryPinned: !!stem, nurseryStemIdx: stemIdx,
     nurseryAttachedAt: stem ? now : null,
@@ -3172,6 +3178,62 @@ function updateFish(nowMs){
       }
     }
   }
+}
+
+/* ---------- Revision round 9: the Gaudi pillar/column event. "que seres
+   parecidos a pilares/columnas/chimeneas/torres gaudinianas con muchas
+   formas muy coloridas emerjan una vez cada 120 segundos de debajo del agua
+   durante 10 segundos en los que se acelera el ciclo del dia y la noche"
+   (clarified with the user: "el ciclo" = the day/night cycle). Same overall
+   shape as the tornado/fish/rain systems above (a scheduled next-time plus
+   an active-state object), but purely visual/atmospheric -- no physics
+   collision surface, matching how the fish is also a non-colliding visual
+   creature -- with one live side effect: it temporarily multiplies the
+   user's own current God Settings cycle-speed for the whole window,
+   restoring it exactly on end. 120s/10s are literal spec numbers,
+   deliberately NOT scaled by EVENT_PACE_MUL, same precedent as the round-8
+   kaleidoscope's 180s cooldown. ---------- */
+const PILLAR_INTERVAL_MS = 120000;
+const PILLAR_DURATION_MS = 10000;
+const PILLAR_CYCLE_SPEED_BOOST = 3; // multiplies whatever cycle speed the user currently has set, for the event's duration only
+const PILLAR_RISE_FRAC = 0.2, PILLAR_SINK_FRAC = 0.2; // fraction of PILLAR_DURATION_MS spent rising / sinking back at the end
+function scheduleNextPillarEvent(nowMs){ ECO.pillarNextAt = nowMs + PILLAR_INTERVAL_MS; }
+function startPillarEvent(nowMs){
+  const count = 3 + Math.floor(ECO.rng()*3); // 3-5 pillars
+  const waterY = ECO.world.height - ECO.world.cfg.floorThickness;
+  const pillars = [];
+  for(let i=0;i<count;i++){
+    const x = ECO.world.width*(0.1+0.8*((i+0.5)/count)) + (ECO.rng()-0.5)*ECO.world.width*0.06;
+    pillars.push({
+      x, hueBase: ECO.rng()*360, height: 100+ECO.rng()*80,
+      halfW: 13+ECO.rng()*9, capStyle: Math.floor(ECO.rng()*3), seed: ECO.rng()*1000,
+    });
+    spawnBurst('splash', x, waterY, 195);
+  }
+  ECO.audioPort.waterTap();
+  ECO.pillarEvent = { startedAt: nowMs, endsAt: nowMs+PILLAR_DURATION_MS, pillars, prevCycleSpeedMul: ECO.cycleSpeedMul };
+  ECO.cycleSpeedMul = Math.min(9, (ECO.cycleSpeedMul||1)*PILLAR_CYCLE_SPEED_BOOST);
+  recordBigEvent(nowMs);
+}
+function updatePillarEvent(nowMs){
+  if(ECO.pillarEvent){
+    if(nowMs >= ECO.pillarEvent.endsAt){
+      ECO.cycleSpeedMul = ECO.pillarEvent.prevCycleSpeedMul;
+      ECO.pillarEvent = null;
+      scheduleNextPillarEvent(nowMs);
+    }
+    return;
+  }
+  if(nowMs < (ECO.pillarNextAt||0)) return;
+  startPillarEvent(nowMs);
+}
+// 0 (fully submerged) -> 1 (fully risen) -> 0 (submerged again) across the
+// whole PILLAR_DURATION_MS window -- reuses the same smoothstep easing the
+// Gaudi fish's own rise/retreat already uses (easeInOutFish, above).
+function pillarRiseFrac(elapsedFrac){
+  if(elapsedFrac < PILLAR_RISE_FRAC) return easeInOutFish(elapsedFrac/PILLAR_RISE_FRAC);
+  if(elapsedFrac > 1-PILLAR_SINK_FRAC) return easeInOutFish((1-elapsedFrac)/PILLAR_SINK_FRAC);
+  return 1;
 }
 
 /* ---------- anti-clump: a gentle continuous nudge for any 3+ body pile-up
@@ -4085,7 +4147,14 @@ function drawZoneDivider(w,h,nowMs){
   ctx2d.setLineDash([]);
   ctx2d.font="600 11px 'JetBrains Mono', monospace"; ctx2d.textAlign='center';
   const labelA = 'ZONE A · root 0', labelB = 'ZONE B · root '+(ZONE_B_GAP>=0?'+':'')+ZONE_B_GAP;
-  const ax = Math.max(80,mid-100), bx = Math.min(w-80,mid+100), ly=44;
+  // Revision round 9: "que zone a y zone b no quede debajo de la planta de
+  // donde nacen los acordes, si no a sus lados" -- setupNursery centers the
+  // whole plant on the world (baseX: w*0.5, stems spanning roughly
+  // 0.36w-0.66w), which used to directly overlap these labels' old mid±100
+  // position. Pushed out to near the left/right screen edges instead (still
+  // clamped so they can't run off-screen on a narrow window), clear of the
+  // nursery's central column either way.
+  const ax = Math.max(90,w*0.08), bx = Math.min(w-90,w*0.92), ly=44;
   // Hoverable regions for the "most common pair" tooltip (see updateHoverTip).
   const wA = ctx2d.measureText(labelA).width, wB = ctx2d.measureText(labelB).width;
   ECO.zoneLabelRects = {
@@ -4519,6 +4588,18 @@ function drawRootHexagon(b,nowMs){
   const t = nowMs||0;
   ctx2d.save();
   ctx2d.translate(b.x,b.y);
+  // Revision round 9: "que las shapes y hexagonitos con alas emitan luz en
+  // la noche de su color" -- chords already got this ambient night halo in
+  // round 7 (see drawChord's own ECO.isNight block); this mirrors that exact
+  // gradient-halo treatment for the winged root-hexagons, using their own
+  // b.hue, drawn first/underneath so it reads as light coming from behind
+  // the creature rather than painted on top of it.
+  if(ECO.isNight){
+    const ng = ctx2d.createRadialGradient(0,0,b.radius*0.5,0,0,b.radius*2.1);
+    ng.addColorStop(0, hsl(b.hue,85,68,0.24));
+    ng.addColorStop(1, hsl(b.hue,85,68,0));
+    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius*2.1,0,Math.PI*2); ctx2d.fillStyle=ng; ctx2d.fill();
+  }
   const flap = Math.sin(t*0.012 + (b.hue||0));
   [-1,1].forEach(side=>{
     ctx2d.save();
@@ -4804,6 +4885,19 @@ function drawIslandTree(nowMs){
 // mosaic body in the same psychedelicGradient language the mushroom/other
 // Gaudi shapes already use, facing whichever direction it's actually
 // travelling, mouth visibly opening right at the 'bite' phase.
+// Revision round 9: "haz que el pez tenga forma de heptograma y vaya
+// cambiando de color rapidamente de manera gradual" -- the body silhouette
+// is now a real heptagram (7-pointed star), the exact same alternating
+// outer/inner-radius construction the "heptagram" eye style already uses
+// (style===9 in drawEyes, spikes=7) so the shape reads as literally the same
+// figure elsewhere in the app, just squashed horizontally (R, R*0.56) to
+// keep the fish's elongated silhouette instead of a perfectly round star.
+// fastHue replaces the previously-static baseHue arguments to
+// psychedelicGradient (which only carries its own slow built-in t*0.02
+// rotation, ~18s/cycle) with a much quicker standalone rotation, ~2s/cycle
+// -- "rapidamente" -- while still going through psychedelicGradient itself
+// so it keeps blending smoothly through 3 gradient stops rather than
+// snapping between flat colors -- "de manera gradual".
 function drawFish(nowMs){
   const fish = ECO.fish;
   if(!fish) return;
@@ -4812,6 +4906,7 @@ function drawFish(nowMs){
   const bob = Math.sin(t*0.006)*4;
   const R = 34;
   const wag = Math.sin(t*0.014)*0.35;
+  const fastHue = (t*0.18)%360;
   ctx2d.save();
   ctx2d.translate(fish.x, fish.y+bob);
   ctx2d.scale(facing,1);
@@ -4821,14 +4916,23 @@ function drawFish(nowMs){
   ctx2d.beginPath();
   ctx2d.moveTo(0,0); ctx2d.quadraticCurveTo(-R*0.55,-R*0.5,-R*0.7,0); ctx2d.quadraticCurveTo(-R*0.55,R*0.5,0,0);
   ctx2d.closePath();
-  ctx2d.fillStyle = psychedelicGradient(-R*0.3,0,R*0.55,190,t);
+  ctx2d.fillStyle = psychedelicGradient(-R*0.3,0,R*0.55,(fastHue+180)%360,t);
   ctx2d.fill();
   ctx2d.strokeStyle='rgba(255,255,255,0.35)'; ctx2d.lineWidth=1; ctx2d.stroke();
   ctx2d.restore();
-  // body
+  // body: heptagram (7-pointed star), same construction as the heptagram eye
+  // style (drawEyes style===9) -- alternating outer/inner vertices, squashed
+  // vertically (*0.56) to keep the fish's elongated look.
+  const spikes=7, outerR=R, innerR=R*0.42;
   ctx2d.beginPath();
-  ctx2d.ellipse(0,0,R,R*0.56,0,0,Math.PI*2);
-  ctx2d.fillStyle = psychedelicGradient(0,-R*0.2,R*1.3,205,t);
+  for(let i=0;i<spikes*2;i++){
+    const a=(i/(spikes*2))*Math.PI*2 - Math.PI/2;
+    const rr=(i%2===0)?outerR:innerR;
+    const px=Math.cos(a)*rr, py=Math.sin(a)*rr*0.56;
+    if(i===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py);
+  }
+  ctx2d.closePath();
+  ctx2d.fillStyle = psychedelicGradient(0,-R*0.2,R*1.3,fastHue,t);
   ctx2d.fill();
   ctx2d.strokeStyle='rgba(255,255,255,0.45)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
   // trencadís mosaic tile texture scattered across the body
@@ -4836,12 +4940,12 @@ function drawFish(nowMs){
     const a = (i/10)*Math.PI*2;
     const mx = Math.cos(a)*R*0.62, my = Math.sin(a)*R*0.34;
     ctx2d.beginPath(); ctx2d.arc(mx,my,3.4,0,Math.PI*2);
-    ctx2d.fillStyle = hsl((200+i*24+t*0.03)%360,80,62,0.55); ctx2d.fill();
+    ctx2d.fillStyle = hsl((fastHue+i*24)%360,80,62,0.55); ctx2d.fill();
   }
   // dorsal fin
   ctx2d.beginPath();
   ctx2d.moveTo(-R*0.1,-R*0.5); ctx2d.quadraticCurveTo(R*0.15,-R*0.98,R*0.4,-R*0.46); ctx2d.closePath();
-  ctx2d.fillStyle = hsl(280,70,55,0.85); ctx2d.fill();
+  ctx2d.fillStyle = hsl((fastHue+75)%360,70,55,0.85); ctx2d.fill();
   // eye
   ctx2d.beginPath(); ctx2d.arc(R*0.62,-R*0.08,R*0.1,0,Math.PI*2); ctx2d.fillStyle='#0a0f14'; ctx2d.fill();
   ctx2d.beginPath(); ctx2d.arc(R*0.65,-R*0.11,R*0.035,0,Math.PI*2); ctx2d.fillStyle='rgba(255,255,255,0.85)'; ctx2d.fill();
@@ -4853,6 +4957,70 @@ function drawFish(nowMs){
   ctx2d.quadraticCurveTo(R*1.05,-R*0.02,R*0.94,0);
   ctx2d.fillStyle='#5a1f22'; ctx2d.fill();
   ctx2d.restore();
+}
+// Revision round 9: the Gaudi pillar/column event (see updatePillarEvent
+// above) -- tapering trencadís-mosaic columns rising out of the water, each
+// topped with one of 3 whimsical Gaudi-chimney cap styles (dome/spire/
+// scalloped crown), covered in scattered colorful mosaic flecks ("muchas
+// formas muy coloridas") in the same clip-then-scatter pattern drawPlatform
+// already uses for its own tile texture.
+function drawPillarEvent(nowMs){
+  const ev = ECO.pillarEvent;
+  if(!ev) return;
+  const elapsedFrac = Math.max(0,Math.min(1,(nowMs-ev.startedAt)/PILLAR_DURATION_MS));
+  const rise = pillarRiseFrac(elapsedFrac);
+  if(rise<=0.001) return;
+  const waterY = ECO.world.height - ECO.world.cfg.floorThickness;
+  ev.pillars.forEach(p=>{
+    const topY = waterY - rise*p.height;
+    const baseY = waterY + 30;
+    const topW = p.halfW*0.62;
+    ctx2d.save();
+    ctx2d.translate(p.x, 0);
+    ctx2d.beginPath();
+    ctx2d.moveTo(-p.halfW, baseY);
+    ctx2d.lineTo(-topW, topY);
+    ctx2d.lineTo(topW, topY);
+    ctx2d.lineTo(p.halfW, baseY);
+    ctx2d.closePath();
+    const g = ctx2d.createLinearGradient(0,topY,0,baseY);
+    g.addColorStop(0, hsl((p.hueBase+nowMs*0.02)%360,75,68,0.95));
+    g.addColorStop(1, hsl((p.hueBase+50+nowMs*0.02)%360,70,38,0.95));
+    ctx2d.fillStyle=g; ctx2d.fill();
+    ctx2d.strokeStyle='rgba(255,255,255,0.4)'; ctx2d.lineWidth=1.4; ctx2d.stroke();
+    // scattered colorful trencadís mosaic flecks up the shaft, clipped to
+    // the same tapered path just filled above.
+    ctx2d.save();
+    ctx2d.clip();
+    const flecks = 16;
+    for(let i=0;i<flecks;i++){
+      const fy = topY + ((i+0.5)/flecks)*(baseY-topY);
+      const localHalfW = topW + (p.halfW-topW)*((fy-topY)/Math.max(1,baseY-topY));
+      const jig = Math.sin(p.seed+i*2.7)*localHalfW*0.7; // stable per-fleck offset (no live rng), so it doesn't jitter frame to frame
+      ctx2d.save(); ctx2d.translate(jig, fy); ctx2d.rotate(Math.cos(p.seed+i)*1.4);
+      ctx2d.fillStyle = hsl((p.hueBase+i*37+nowMs*0.05)%360,85,65,0.8);
+      ctx2d.beginPath();
+      const shape = i%3;
+      if(shape===0) ctx2d.rect(-3,-3,6,6);
+      else if(shape===1) ctx2d.arc(0,0,3.2,0,Math.PI*2);
+      else { ctx2d.moveTo(0,-3.6); ctx2d.lineTo(3.2,2.4); ctx2d.lineTo(-3.2,2.4); ctx2d.closePath(); }
+      ctx2d.fill();
+      ctx2d.restore();
+    }
+    ctx2d.restore();
+    // whimsical Gaudi chimney-pot cap
+    ctx2d.beginPath();
+    if(p.capStyle===0){ ctx2d.arc(0, topY, topW*1.5, Math.PI, 0); }
+    else if(p.capStyle===1){ ctx2d.moveTo(-topW*1.6,topY); ctx2d.lineTo(0,topY-topW*2.2); ctx2d.lineTo(topW*1.6,topY); ctx2d.closePath(); }
+    else {
+      for(let k=0;k<8;k++){ const a=(k/8)*Math.PI*2; const rr=topW*1.4; const px=Math.cos(a)*rr, py=topY+Math.sin(a)*rr*0.5; if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py); }
+      ctx2d.closePath();
+    }
+    ctx2d.fillStyle = hsl((p.hueBase+180+nowMs*0.02)%360,80,72,0.95);
+    ctx2d.fill();
+    ctx2d.strokeStyle='rgba(255,255,255,0.5)'; ctx2d.lineWidth=1.2; ctx2d.stroke();
+    ctx2d.restore();
+  });
 }
 // Tornado funnel: a stack of slightly-offset swirling rings positioned via
 // tornadoPositionAt (same formula the physics-force side uses), so the
@@ -5032,6 +5200,23 @@ function drawBursts(nowMs){
         const dx = Math.cos(a)*dropR, dy = Math.sin(a)*dropR*0.4 - frac*18;
         ctx2d.fillStyle='rgba(195,228,255,'+(0.7*(1-frac)).toFixed(3)+')';
         ctx2d.beginPath(); ctx2d.arc(dx,dy,2.2*(1-frac*0.6),0,Math.PI*2); ctx2d.fill();
+      }
+    } else if(bu.kind==='ankh'){
+      // Revision round 9: the Egyptian-eye "atypical spawn" materialization
+      // flash -- radiating golden sun-rays plus an expanding ring, like a
+      // brief conjuring shimmer instead of a splash/pop.
+      const rays = 10, rayLen = 8+frac*30;
+      ctx2d.strokeStyle = 'rgba(255,208,110,'+(0.8*(1-frac)).toFixed(3)+')'; ctx2d.lineWidth=2; ctx2d.lineCap='round';
+      for(let i=0;i<rays;i++){
+        const a = (i/rays)*Math.PI*2 + frac*0.6;
+        ctx2d.beginPath(); ctx2d.moveTo(Math.cos(a)*rayLen*0.35,Math.sin(a)*rayLen*0.35); ctx2d.lineTo(Math.cos(a)*rayLen,Math.sin(a)*rayLen); ctx2d.stroke();
+      }
+      const ringR = 5+frac*26;
+      ctx2d.strokeStyle = 'rgba(255,224,160,'+(0.7*(1-frac)).toFixed(3)+')'; ctx2d.lineWidth=1.6;
+      ctx2d.beginPath(); ctx2d.arc(0,0,ringR,0,Math.PI*2); ctx2d.stroke();
+      if(frac<0.5){
+        ctx2d.fillStyle = 'rgba(255,244,214,'+((0.5-frac)*1.6).toFixed(3)+')';
+        ctx2d.beginPath(); ctx2d.arc(0,0,6,0,Math.PI*2); ctx2d.fill();
       }
     } else {
       const big = bu.kind==='eat';
@@ -5553,6 +5738,7 @@ function render(nowMs){
   ECO.world.bodies.forEach(b=>{ if(b.kind==='roothex') drawRootHexagon(b,nowMs); });
   ECO.world.bodies.forEach(b=>{ if(b.kind==='chord') drawChord(b,nowMs); });
   drawFish(nowMs); // revision round 7 -- on top of the chords so the bite reads clearly
+  drawPillarEvent(nowMs); // revision round 9
   drawBursts(nowMs);
   drawTornado(nowMs);
   drawRain(w,h,nowMs);
@@ -6230,6 +6416,15 @@ const FIXED_DT = 1/60;
 let __lastT = null, __acc = 0;
 
 function boot(){
+  // Revision round 9: one-time cleanup of any God Settings values a prior
+  // round's build may have already saved -- load* now always returns
+  // hardcoded defaults regardless, but this also removes the stale keys
+  // themselves so nothing unused lingers in localStorage.
+  try{
+    localStorage.removeItem('ecosystem:whitelist');
+    localStorage.removeItem('ecosystem:maxPopulation');
+    localStorage.removeItem('ecosystem:cycleSpeed');
+  }catch(e){ /* ignore quota/availability errors */ }
   const data = loadHarmodexData();
   ECO.nicknames = data.nicknames;
   ECO.settings.generalPitch = data.generalPitch;
@@ -6296,6 +6491,8 @@ function boot(){
   scheduleNextRain(performance.now());
   ECO.fish = null;
   scheduleNextFish(performance.now()); // revision round 7
+  ECO.pillarEvent = null;
+  scheduleNextPillarEvent(performance.now()); // revision round 9
 
   const driver = createRealDriver(()=>ECO.settings);
   ECO.audioPort = createAudioPort(driver);
@@ -6340,6 +6537,7 @@ function loop(t){
   updateEarthquake(t);
   updateTornadoSpawn(t);
   updateFishSpawn(t); // revision round 7
+  updatePillarEvent(t); // revision round 9
   updateWeather(t);
   updatePlatformBreathing(t);
   updateAnchoredObjects(t); // revision round 5
