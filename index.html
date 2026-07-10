@@ -522,8 +522,9 @@
     white-space:nowrap; animation:helpHintPulse 1.4s ease-in-out infinite;
     max-width:min(70vw, 260px); white-space:normal; text-align:center; line-height:1.3;
   }
-  .help-hint-arrow-svg{ width:34px; height:26px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35)); }
-  .help-hint-arrow-svg path{ fill:#ff3b6b; stroke:#fff; stroke-width:1.5; }
+  /* Pink glow on the Help button itself, standing in for the removed pointing arrow -- ties the
+     floating bubble to its target even on layouts where the bubble doesn't land right above it. */
+  .help-hint-glow{ background:#ff3b6b !important; border-color:#ff3b6b !important; color:#fff !important; animation:helpHintPulse 1.4s ease-in-out infinite; box-shadow:0 0 0 2px rgba(255,59,107,.35), 0 4px 14px rgba(255,59,107,.5); }
   @keyframes helpHintPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.06); } }
   @media (prefers-reduced-motion: reduce){ .help-hint-bubble{ animation:none; } }
   .modal-backdrop{
@@ -611,7 +612,6 @@
 <body>
 <div class="help-hint-layer hidden" id="helpHintLayer" onclick="dismissHelpHint()">
   <div class="help-hint-bubble" id="helpHintBubble"></div>
-  <svg class="help-hint-arrow-svg" viewBox="0 0 34 26" xmlns="http://www.w3.org/2000/svg"><path d="M17,26 L2,4 Q17,14 32,4 Z"/></svg>
 </div>
 <div class="splash-screen" id="splashScreen" onclick="dismissSplash()">
   <svg class="splash-logo" viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -1293,6 +1293,18 @@ function stopHoverPlay(){
   if(hoverPlayTimeout){ clearTimeout(hoverPlayTimeout); hoverPlayTimeout=null; }
   if(hoverPlayInterval){ clearInterval(hoverPlayInterval); hoverPlayInterval=null; }
   stopChordHoverAudio();
+  // Progression-card hover-play (playProgressionAudio/playChordsAudio) tracks its own nodes in
+  // activeProgressionSessions, separate from the chord-hover session stopChordHoverAudio()
+  // handles above -- this loop was never actually stopping it on mouseleave, only preventing the
+  // *next* loop iteration from firing, so whatever chord was already sounding kept ringing out to
+  // its natural length instead of cutting off. stopAudioSession already does a quick (30ms)
+  // exponential fade rather than an abrupt cut, and switching straight to hovering a different
+  // card already relied on this same fade via registerProgressionSession, so this keeps that
+  // behavior identical -- it just also runs it when the mouse leaves with nothing to replace it.
+  if(activeProgressionSessions.length){
+    activeProgressionSessions.forEach(s=>stopAudioSession(s));
+    activeProgressionSessions = [];
+  }
 }
 function hoverPlayProgression(progId){
   const p = state.progressions.find(x=>x.id===progId); if(!p) return;
@@ -5072,7 +5084,7 @@ function render(){
       <input type="file" id="importProgFileInput" accept="application/json,.json" style="display:none" onchange="handleImportProgressionsFile(this)">
       <input type="file" id="importChordFileInput" accept="application/json,.json" style="display:none" onchange="handleImportChordsFile(this)">
       <span class="help-dropdown-wrap">
-        <button id="helpBtn" class="btn mini ${state.showHelpMenu?'primary':''}" onclick="dismissHelpHint(); toggleHelpMenu();">${t('word.help')}</button>
+        <button id="helpBtn" class="btn mini ${state.showHelpMenu?'primary':''} ${state.showHelpHint?'help-hint-glow':''}" onclick="dismissHelpHint(); toggleHelpMenu();">${t('word.help')}</button>
         ${state.showHelpMenu ? `
           <div class="help-dropdown-menu">
             <button class="btn small" onclick="toggleInfoSoftware(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🤖</span>${t('help.menu.software')}</button>
