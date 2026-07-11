@@ -1081,6 +1081,29 @@ function addBody(world, spec) {
 }
 
 function removeBody(world, id) {
+  // BUG FIX (task 2, "acorde sostenido que no para de sonar"): a chord
+  // removed here (eaten, fused, despawned by the population cap, culled as
+  // an off-screen fragment, absorbed by a transform, etc.) could still have
+  // an in-flight ascending-mono-landing sequence -- pending setTimeouts in
+  // b._monoSeqTimers, and/or an actively held note in b._monoVoiceHandle
+  // (see playAscendingMonoLanding / startMonoSustainNote below). Monophonic
+  // voice-stealing there only stops a note when the NEXT one in its OWN
+  // sequence starts, so the note started by the sequence's last tick has no
+  // "next" to ever trigger its cleanup -- if this chord then gets removed
+  // (or simply never lands again) before another landing happens, that note
+  // was left ringing forever. removeBody is the single real chokepoint every
+  // "chord leaves the world" path already funnels through (eaten, fused,
+  // culled, capped, etc. -- see call sites), so stopping any lingering mono
+  // voice/timers right here closes every one of those gaps at once.
+  const dying = world.bodies.find(b => b.id === id);
+  if(dying){
+    if(dying._monoSeqTimers){ dying._monoSeqTimers.forEach(t=>clearTimeout(t)); dying._monoSeqTimers=null; }
+    if(dying._monoVoiceHandle){
+      if(dying._monoVoiceHandle._failsafeTimer) clearTimeout(dying._monoVoiceHandle._failsafeTimer);
+      if(typeof ECO!=='undefined' && ECO.audioPort) ECO.audioPort.stopMonoSustainNote(dying._monoVoiceHandle);
+      dying._monoVoiceHandle = null;
+    }
+  }
   world.bodies = world.bodies.filter(b => b.id !== id);
   const toDelete = [];
   world._collidingPairs.forEach(key => {
@@ -2820,7 +2843,12 @@ const REPEAT_STREAK_MIN = 3;          // streak must reach 3+ fires within the w
 function trackRepeatStreak(raw, nowMs){
   if(typeof ECO==='undefined') return 0;
   if(!ECO.repeatStreak) ECO.repeatStreak = {};
-  const key = Math.round(raw);
+  // TASK 1 (platform-crossing softening): realPlayArpeggio now also calls
+  // this with a STRING key (one per landing-arpeggio burst, not per raw
+  // pitch -- see its own comment) so a rapid cascade of platform-crossing
+  // landings can be tracked as its own streak, same window/shape as the
+  // existing per-pitch tracking below, just not forced through Math.round.
+  const key = (typeof raw==='number') ? Math.round(raw) : raw;
   let entry = ECO.repeatStreak[key];
   if(!entry || (nowMs - entry.lastFiredAt) > REPEAT_STREAK_WINDOW_MS){
     entry = { count: 1, lastFiredAt: nowMs };
@@ -3235,9 +3263,42 @@ function realPlayArpeggio(notes, root, timbre, totalDurSec, extraCents, settings
   const n = ordered.length;
   const gap = totalDurSec/n;
   const noteDur = Math.max(0.22, gap*1.5);
+  // TASK 1 (this round): "que se suavice sin perder fidelidad a las normas
+  // fisicas... un % de los sonidos que la forman sea atenuado" -- the user
+  // likes the harshness this landing-arpeggio adds when a chord rapid-fires
+  // across platforms, just wants it less PROLONGED, achieved by attenuating
+  // a growing percentage of the notes rather than an arbitrary hard cutoff
+  // or duration cap. This is the exact "rapid retrigger" scenario
+  // trackRepeatStreak/repeatStreakGainMul in scheduleNote were built for --
+  // but that system keys off a single repeated raw PITCH firing 3+ times in
+  // REPEAT_STREAK_WINDOW_MS, and this arpeggio's notes are mostly distinct
+  // pitches (low-to-high spread), so it wasn't actually engaging per call.
+  // Fix: this call itself now feeds the SAME tracker with a key identifying
+  // "a landing-arpeggio burst for this chord" (root+timbre, not raw pitch),
+  // so a rapid CASCADE of landings (the platform-crossing case the user is
+  // describing) genuinely builds a streak count call over call, exactly like
+  // repeated identical notes do for scheduleNote's own per-pitch case.
+  const landStreakCount = trackRepeatStreak('land_'+Math.round(root)+'_'+timbre, performance.now());
+  // 0 until the burst has genuinely become a rapid retrigger cascade
+  // (mirrors REPEAT_STREAK_MIN's own "3+ fires" bar), ramping up to full
+  // strength by about 4 landings deep into the cascade.
+  const landStreakLevel = Math.max(0, Math.min(1, (landStreakCount-REPEAT_STREAK_MIN+1)/4));
   ordered.forEach((raw,idx)=>{
     const t = ctx.currentTime + idx*gap;
-    scheduleNote(ctx, raw, timbre, t, noteDur, (settings.generalPitch||0)+(extraCents||0), quiet);
+    // The burst always STARTS at full harsh intensity -- idx 0 (and any
+    // single, non-rapid landing, since landStreakLevel stays 0 then) is
+    // never touched -- and only a growing percentage of the notes further
+    // into any one landing's own sweep, compounded by how deep into a rapid
+    // multi-landing cascade this is, get attenuated. That's what makes it
+    // taper/thin out organically over time instead of staying uniformly
+    // loud for the whole burst or being abruptly cut off.
+    const posInBurst = n>1 ? idx/(n-1) : 0; // 0 at the first note, 1 at the last
+    const attenChance = landStreakLevel * posInBurst * 0.85; // capped well under 100% so it never goes fully silent
+    let gainMul = 1;
+    if(landStreakLevel>0 && Math.random() < attenChance){
+      gainMul = 0.35 + Math.random()*0.35; // audible attenuation (0.35x-0.7x), not a hard mute
+    }
+    scheduleNote(ctx, raw, timbre, t, noteDur, (settings.generalPitch||0)+(extraCents||0), quiet, 1, gainMul);
   });
 }
 function realPlayBlip(notes, root, extraCents, settings, quiet){
@@ -7406,7 +7467,10 @@ function playAscendingMonoLanding(b, quiet, zone){
   // (e.g. it landed again on another platform before the last one finished)
   // so overlapping landings stay monophonic too, not just each one on its own.
   if(b._monoSeqTimers){ b._monoSeqTimers.forEach(t=>clearTimeout(t)); }
-  if(b._monoVoiceHandle){ ECO.audioPort.stopMonoSustainNote(b._monoVoiceHandle); b._monoVoiceHandle=null; }
+  if(b._monoVoiceHandle){
+    if(b._monoVoiceHandle._failsafeTimer) clearTimeout(b._monoVoiceHandle._failsafeTimer);
+    ECO.audioPort.stopMonoSustainNote(b._monoVoiceHandle); b._monoVoiceHandle=null;
+  }
   b._monoSeqTimers = [];
   notes.forEach((raw,i)=>{
     const t = setTimeout(()=>{
@@ -7414,8 +7478,32 @@ function playAscendingMonoLanding(b, quiet, zone){
       // removed in the meantime -- bail out quietly rather than sound a
       // note (or leak a voice) for a chord that's no longer there.
       if(!findBody(ECO.world, b.id) || b.beingEaten) return;
-      if(b._monoVoiceHandle) ECO.audioPort.stopMonoSustainNote(b._monoVoiceHandle); // voice-stealing: cut the previous note before the next one starts
-      b._monoVoiceHandle = ECO.audioPort.startMonoSustainNote(raw, notes[0], b.pitchVarianceCents||0, quiet, zone);
+      if(b._monoVoiceHandle){
+        if(b._monoVoiceHandle._failsafeTimer) clearTimeout(b._monoVoiceHandle._failsafeTimer);
+        ECO.audioPort.stopMonoSustainNote(b._monoVoiceHandle); // voice-stealing: cut the previous note before the next one starts
+      }
+      const wrapped = ECO.audioPort.startMonoSustainNote(raw, notes[0], b.pitchVarianceCents||0, quiet, zone);
+      b._monoVoiceHandle = wrapped;
+      // BUG FIX (task 2): monophonic voice-stealing only ever stops a note
+      // when the NEXT one in ITS OWN sequence starts -- but the very last
+      // note fired by any given sequence has no "next" note to trigger that
+      // cleanup, so without this it would ring forever the instant nothing
+      // else ever lands on this chord again (the exact "acorde sostenido
+      // hasta la eternidad" bug reported). Give every note in the sequence
+      // its own standalone failsafe stop, independent of the sequence-
+      // advance logic: ~650ms after starting (500ms cadence + a short tail
+      // so it still reads as a held/sustained note, not a clipped blip).
+      // The `b._monoVoiceHandle===wrapped` check makes this a safe no-op if
+      // voice-stealing (or removeBody's own cleanup) already stopped/
+      // replaced this exact handle by the time the timer fires.
+      if(wrapped){
+        wrapped._failsafeTimer = setTimeout(()=>{
+          if(b._monoVoiceHandle === wrapped){
+            ECO.audioPort.stopMonoSustainNote(wrapped);
+            b._monoVoiceHandle = null;
+          }
+        }, 650);
+      }
     }, i*500);
     b._monoSeqTimers.push(t);
   });
@@ -9215,7 +9303,19 @@ function updateSeedHexagons(nowMs){
   // Same "flying" definition updateBird already uses for "shapes que estan
   // volando" -- reused verbatim rather than inventing a new flag (see file
   // header comment on this whole block).
-  const flyingChords = ECO.world.bodies.filter(b=>b.kind==='chord' && b.locomotion==='fly' && !b.beingEaten && !b.dying && !b.dragging && !b.resting);
+  // PERF (task 3, this round): this used to be its own full pass over
+  // ECO.world.bodies, on top of the liveChords pass just above -- two full
+  // O(n) scans of the entire body array every frame for what's ultimately
+  // two nested subsets of the same population. flyingChords' predicate
+  // (kind/beingEaten/dying + locomotion/dragging/resting) is a strict
+  // narrowing of liveChords' own predicate (kind/beingEaten/dying), so
+  // deriving it by filtering the already-computed liveChords array instead
+  // is behavior-identical but scans the smaller intermediate array a second
+  // time rather than the full body list -- free with this file's population
+  // sizes today, but avoids the redundant full-array walk on principle (this
+  // is the same kind of low-risk "reuse an already-computed pass" win noted
+  // as a remaining opportunity in a previous optimization round).
+  const flyingChords = liveChords.filter(b=>b.locomotion==='fly' && !b.dragging && !b.resting);
   ECO.seedHexagons = ECO.seedHexagons.filter(hex=>{
     if(hex.state==='rising'){
       const surfaceY = waterSurfaceYAt(hex.x, ECO.world.width, floorY, nowMs, quakeActive) - 6;
@@ -15846,9 +15946,45 @@ function watchdogResumeAudioContext(nowMs){
     try{ audioCtx.resume(); }catch(e){ /* ignore -- best-effort watchdog */ }
   }
 }
+// AUDIO BUG FIX (task 2, general safety net, same spirit as
+// watchdogResumeAudioContext just above): "un sonido sostenido no para de
+// sonar incesantemente" -- root-caused to playAscendingMonoLanding's
+// b._monoVoiceHandle having no guaranteed stop (voice-stealing only stops a
+// note when the NEXT one in its own sequence starts, so a sequence's last
+// note, or one orphaned by a chord removed mid-sequence, had nothing left to
+// ever stop it). That's now fixed at the source (an explicit per-note
+// failsafe timer in playAscendingMonoLanding, plus cleanup in removeBody
+// when a chord dies), but per the spec this adds a cheap defensive sweep on
+// top, in case some other/future removal path manages to skip removeBody
+// (e.g. a chord silently dropped from the array some other way) and leaves
+// a handle referencing a body that's no longer actually in the world.
+// Throttled like the audio-resume watchdog above (no need to run this every
+// single frame) -- just walks ECO.world.bodies looking for any chord whose
+// _monoVoiceHandle is set but who is itself gone from findBody's reach or
+// mid-death (beingEaten), and force-stops it.
+let __lastMonoVoiceSweepMs = 0;
+function watchdogSweepOrphanedMonoVoices(nowMs){
+  if(nowMs - __lastMonoVoiceSweepMs < 1000) return;
+  __lastMonoVoiceSweepMs = nowMs;
+  if(!ECO.world || !ECO.world.bodies) return;
+  ECO.world.bodies.forEach(b=>{
+    if(!b._monoVoiceHandle) return;
+    // A live, non-dying chord still mid-sequence is fine -- only force-stop
+    // ones that are already being eaten (about to be removed, possibly on a
+    // path that doesn't route through removeBody) since a healthy in-flight
+    // sequence legitimately holds a note for up to ~650ms at a time.
+    if(b.beingEaten || b.kind!=='chord'){
+      if(b._monoSeqTimers){ b._monoSeqTimers.forEach(t=>clearTimeout(t)); b._monoSeqTimers=null; }
+      if(b._monoVoiceHandle._failsafeTimer) clearTimeout(b._monoVoiceHandle._failsafeTimer);
+      ECO.audioPort.stopMonoSustainNote(b._monoVoiceHandle);
+      b._monoVoiceHandle = null;
+    }
+  });
+}
 function __loopFrameBody(t){
   measureAndHandleLag(t, (typeof performance!=='undefined' && performance.now) ? performance.now() : t);
   watchdogResumeAudioContext((typeof performance!=='undefined' && performance.now) ? performance.now() : t);
+  watchdogSweepOrphanedMonoVoices((typeof performance!=='undefined' && performance.now) ? performance.now() : t);
   if(__lastT==null) __lastT = t;
   let delta = (t-__lastT)/1000; __lastT = t;
   // Revision round 11 perf: clamp tightened 0.25->0.1 ("optimiza rendimiento,
