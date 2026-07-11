@@ -19,8 +19,53 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
   #stage{position:fixed;inset:0;}
-  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;}
-  canvas#c.dragging{cursor:grabbing;}
+
+  /* ---------- native CSS cursor (revision: replaces the old JS-driven
+     #cursorReticle DOM element that used to follow the mouse via a
+     mousemove + requestAnimationFrame loop). That approach was tied to the
+     browser's main-thread frame budget -- under this file's heavy per-frame
+     simulation work, the reticle's own rAF callback could get delayed or
+     dropped right along with everything else, and even in the best case
+     there was an inherent one-frame lag versus the OS's own hardware-
+     composited cursor. User feedback ("se mueve como tromiconado y
+     smootheado, quiero que se mueva como de normal") made clear that ANY
+     synthetic position-tracking cursor will always feel laggier than a true
+     native one, so this now uses the browser's real `cursor:url(...)`
+     mechanism instead: the SVG circle (same size/color as the old reticle)
+     is baked into a data URI and handed straight to the OS/browser cursor
+     compositor, which paints and moves it with zero JS involvement and zero
+     per-frame cost -- genuinely identical responsiveness to the plain
+     system arrow, just a different shape.
+     Trade-off: the old reticle's hue-cycling animation (@keyframes
+     pupilHue) was only possible because it was a live DOM element with a
+     CSS animation on it -- a native `cursor:` image is rendered by the OS,
+     outside the DOM, so it cannot be animated by CSS/JS at all. That
+     animation is intentionally dropped here; the user explicitly asked to
+     trade any cosmetic flourish for true native movement. The "grows 1.5x
+     while hovering/pressing something clickable" behavior IS kept, because
+     it doesn't require position tracking -- it's just an instant swap to a
+     second, larger cursor image, toggled by a `body.cursor-active` class
+     that is only touched by real discrete events (mouseover/mouseout/
+     mousedown/mouseup delegated listeners, plus the canvas's own existing
+     .dragging class toggles in onPointerDown/onPointerUp) -- never by a
+     per-frame poll, so it can't reintroduce the lag the user complained
+     about. See initCursorActiveState() near the end of <body>. */
+  html,body{
+    cursor:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJoc2woMCA3MCUgNTUlKSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjEuNSIvPjwvc3ZnPgo=") 12 12, auto;
+  }
+  *, *::before, *::after{
+    cursor:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJoc2woMCA3MCUgNTUlKSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjEuNSIvPjwvc3ZnPgo=") 12 12, auto !important;
+  }
+  body.cursor-active, body.cursor-active *, body.cursor-active *::before, body.cursor-active *::after{
+    cursor:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDM2IDM2Ij48Y2lyY2xlIGN4PSIxOCIgY3k9IjE4IiByPSIxMiIgZmlsbD0iaHNsKDAgNzAlIDU1JSkiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSIyLjI1Ii8+PC9zdmc+Cg==") 18 18, auto !important;
+  }
+  canvas#c{
+    position:absolute;inset:0;width:100%;height:100%;display:block;
+    cursor:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJoc2woMCA3MCUgNTUlKSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjEuNSIvPjwvc3ZnPgo=") 12 12, auto !important;
+  }
+  canvas#c.dragging{
+    cursor:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDM2IDM2Ij48Y2lyY2xlIGN4PSIxOCIgY3k9IjE4IiByPSIxMiIgZmlsbD0iaHNsKDAgNzAlIDU1JSkiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSIyLjI1Ii8+PC9zdmc+Cg==") 18 18, auto !important;
+  }
 
   /* ---------- start overlay ---------- */
   #startOverlay{
@@ -1589,7 +1634,13 @@ function pickVoiceCounts(rng) {
 // durationMs: total quake length. slotMs: length of one repeating cycle.
 function createQuakeGrid(rng, durationMs, slotMs) {
   rng = rng || Math.random;
-  slotMs = slotMs || (1400 + rng() * 900); // ~1.4-2.3s per slot, a comfortable "bar" length
+  // Revision round 12: "a veces vaya a tempos mas lentos" -- the old range
+  // (1400-2300ms per slot) never produced a bar slow enough to be felt as
+  // "slow", especially once you divide it by up to 11 subdivisions (as low
+  // as ~127ms between onsets). Widened to 1400-4200ms so a genuinely slow,
+  // spacious bar (long enough that even an 11-against-7 grid reads as
+  // unhurried) is now a real possibility each quake, not just the fast end.
+  slotMs = slotMs || (1400 + rng() * 2800); // ~1.4-4.2s per slot, sometimes a slow "bar", sometimes brisk
   const { voiceA, voiceB } = pickVoiceCounts(rng);
   const toplineOn = rng() < 0.55;
   const numSlots = Math.max(1, Math.ceil(durationMs / slotMs));
@@ -1842,12 +1893,20 @@ function createAudioPort(driver) {
     // stereo-pan hint; see panForZone/getPannedBus above for why this is a
     // flag set around the call rather than a parameter threaded through
     // driver/scheduleNote themselves.
-    strum(rawNotes, root, timbre, extraCents, quiet, midiHint, zone) {
-      if (!rawNotes || rawNotes.length === 0) return;
+    strum(rawNotes, root, timbre, extraCents, quiet, midiHint, zone, releaseMul) {
+      if (!rawNotes || rawNotes.length === 0) return null;
       currentSoundPan = panForZone(zone);
-      driver.playOneShot(rawNotes.slice(), root, timbre || 'guitar', 'strum', extraCents || 0, !!quiet);
+      // Round 22: now returns driver.playOneShot's handle (rather than
+      // nothing) so the browser-only voice-ducking wrapper (wireVoiceCapture,
+      // wired in boot()) can stash it for runAction to register into
+      // ECO.activeVoices right after this strum fires. Existing callers
+      // (applyActions -- a tested module -- and wireActivityTracking) both
+      // just discarded/forwarded this return value already, so returning a
+      // real value now instead of undefined doesn't change their behavior.
+      const handle = driver.playOneShot(rawNotes.slice(), root, timbre || 'guitar', 'strum', extraCents || 0, !!quiet, releaseMul || 1);
       currentSoundPan = 0;
       midiBlipOut(midiHint || timbreToMidiChannelKey(timbre), rawNotes, 260, quiet, 0);
+      return handle;
     },
     noiseTick() {
       driver.playNoise();
@@ -1922,6 +1981,19 @@ function createAudioPort(driver) {
       driver.playSoloNote(rawNote, root, timbre || 'sine', durSec || 1, extraCents || 0, !!quiet, attackMul);
       currentSoundPan = 0;
       midiBlipOut(midiHint || timbreToMidiChannelKey(timbre), [rawNote], (durSec||1)*1000, quiet, 0);
+    },
+    // "la segunda repeticion de una progresion en la performance del arbol
+    // tenga la voz mas aguda seguida por un sonido que recuerde a un pad con
+    // armonicos" -- see realPlayEtherealPad/advanceTreePerformance. Modeled
+    // directly on soloNote() just above (single arbitrary-duration note,
+    // its own duration/zone), just routed to the new soft-pad driver call
+    // instead of playSoloNote.
+    etherealPad(rawNote, root, durSec, quiet, midiHint, zone) {
+      if (rawNote == null) return;
+      currentSoundPan = panForZone(zone);
+      driver.playEtherealPad(rawNote, root, durSec || 2.6);
+      currentSoundPan = 0;
+      midiBlipOut(midiHint || 'tree', [rawNote], (durSec||2.6)*1000, quiet, 0);
     },
     startAmbient(rawNotes, root, timbre, extraCents, quiet, midiHint, zone) {
       if (ambient) { driver.stopSustain(ambient.handle); midiSustainOffOut(ambient.midiHandle); }
@@ -2428,10 +2500,12 @@ let currentWaterfallCrush = false; // TASK 9: mirrors currentSoundPan's "flag se
 function panForZone(zone){
   // "sutilmente" -- a gentle push, not a hard hard-left/hard-right split.
   // Revision round 13: "acentua sutilmente el paneo izquierda/derecha de la
-  // zona A y C" -- nudged from 0.32 to 0.44 magnitude. Still well short of
-  // +-1 (a full hard pan), just noticeably more separated than before.
-  if(zone==='A') return -0.44;
-  if(zone==='C') return 0.44;
+  // zona A y C" -- nudged from 0.32 to 0.44 magnitude. Task #4 (this round):
+  // "acentua un poco mas los paneos L y R" -- a second, similarly modest
+  // nudge, 0.44 -> 0.5, same increment-size spirit as the prior bump, still
+  // comfortably short of +-1 (a full hard pan).
+  if(zone==='A') return -0.5;
+  if(zone==='C') return 0.5;
   return 0; // zone B/0, or unknown -- center
 }
 // TASK 9 (waterfall): lightweight bitcrusher via a quantizing WaveShaper
@@ -2475,13 +2549,15 @@ function getPannedBus(ctx){
   // "aumenta sutilmente la amplitud estereo en funcion de si el sonido
   // proviene de la izquierda o de la derecha" -- a wider stereo image: any
   // voice that's already panned off-center gets a small extra gain boost
-  // proportional to |pan|, up to +12% at a full hard pan (|pan|==1). At
-  // center (pan==0) this is a no-op gain of 1.0. Implemented as its own
-  // GainNode ahead of the panner so it composes with every existing
-  // per-voice envelope/gain node instead of touching them.
+  // proportional to |pan|, up to +16% at a full hard pan (|pan|==1) -- Task #4
+  // (this round): nudged again from +12% to +16%, same modest-increment
+  // spirit as panForZone's own second bump just above. At center (pan==0)
+  // this is still a no-op gain of 1.0. Implemented as its own GainNode ahead
+  // of the panner so it composes with every existing per-voice envelope/gain
+  // node instead of touching them.
   if(typeof ctx.createGain==='function'){
     const widthGain = ctx.createGain();
-    widthGain.gain.value = 1 + Math.abs(panAmt)*0.12;
+    widthGain.gain.value = 1 + Math.abs(panAmt)*0.16;
     widthGain.connect(panner);
     panner.connect(dest);
     return widthGain;
@@ -2498,6 +2574,17 @@ const STRUM_GAP = 0.055; // seconds between successive notes, low to high — ma
 // Revision round 8: short synthesized noise-click transient layered onto the
 // onset of notes that get swapped to the new triangle voice while the sky
 // kaleidoscope fractal is active (see kaleidoActive inside scheduleNote).
+// TASK 7: this is the file's one shared noise-hit-generating helper -- every
+// noise-burst one-shot that layers onto a note (the gray/quiet-chord
+// audibility layer at the `if(quiet) addNoiseClick(...)` call sites in
+// scheduleNote/realPlaySoloNote, plus the sky-kaleidoscope triangle-voice
+// onset click) funnels through here, so it's the cleanest single place to
+// add the 50/50 lowpass variation rather than touching each call site.
+// Coin-flipped once per trigger: half the time unchanged (highpassed click,
+// as before); half the time an extra BiquadFilterNode lowpass (~800-1500Hz,
+// randomized per-hit within that range for a little extra variety) is
+// inserted into the same chain before `master`, giving that hit a
+// noticeably duller/muffled character instead of the bright highpassed tick.
 function addNoiseClick(ctx, master, startTime){
   const clickDur = 0.045;
   const buffer = ctx.createBuffer(1, Math.max(1,Math.floor(ctx.sampleRate*clickDur)), ctx.sampleRate);
@@ -2508,22 +2595,206 @@ function addNoiseClick(ctx, master, startTime){
   const clickGain = ctx.createGain();
   clickGain.gain.setValueAtTime(0.24, startTime);
   clickGain.gain.exponentialRampToValueAtTime(0.0001, startTime+clickDur);
-  src.connect(hp).connect(clickGain).connect(master);
+  let chainOut = clickGain;
+  // Two independent 50/50 coin flips stacked in series -> 4 reachable combos:
+  // neither / A-only (dark, full vol) / B-only (bright-ish, quiet) / both (dark+quiet)
+  const flipA = Math.random() < 0.5; // notable strong lowpass (~800-1500Hz)
+  const flipB = Math.random() < 0.5; // 0.66 gain + lighter/partial highcut (~2500-4000Hz)
+  if(flipA){
+    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 800 + Math.random()*700; // ~800-1500Hz
+    chainOut.connect(lp);
+    chainOut = lp;
+  }
+  if(flipB){
+    const lp2 = ctx.createBiquadFilter(); lp2.type='lowpass'; lp2.frequency.value = 2500 + Math.random()*1500; // ~2500-4000Hz, lighter/partial highcut
+    const quietGain = ctx.createGain(); quietGain.gain.value = 0.66; // "un 66% de su volumen normal"
+    chainOut.connect(lp2);
+    lp2.connect(quietGain);
+    chainOut = quietGain;
+  }
+  src.connect(hp).connect(clickGain);
+  chainOut.connect(master);
   src.start(startTime); src.stop(startTime+clickDur+0.01);
 }
 const KALEIDO_RELEASE_MUL = 1.35; // revision round 8: "augmente un poco el release de todo" while the sky kaleidoscope is showing
 const KALEIDO_TRIANGLE_CHANCE = 0.4; // "algunas shapes suenen en timbre triangle y con un click de noise al inicio"
+// ---------- Round 19: ear-fatigue safety net -- "si una nota muy aguda (por
+// encima de 1200hz) lleva mas de 3s sonando sin parar o siendo trigereada
+// muchas veces seguidas, esta empieze a decer de volumen poco a poco, sin
+// llegar a silenciarse". Identity/bucketing choice: keyed by the integer
+// `raw` 31-EDO note-class scheduleNote already receives (the same value
+// freqForRaw(raw,...) converts to Hz right below) -- raw is already a small
+// discrete integer, so unlike a raw float-Hz comparison (which would almost
+// never repeat exactly) two triggers of "the same note" naturally share a
+// key with zero rounding/tolerance logic needed. This is a small dedicated
+// tracker (not a reuse of ECO.noteFireLog/the round-13 echo-doubling log)
+// because that log is a flat rolling {pc,t} array meant for a "top 5 most-
+// fired pitch-classes across the WHOLE recent mix" scan -- what's needed
+// here is a fast O(1) per-note lookup of one specific raw note's own
+// continuous-sounding streak, which a plain object keyed by raw serves much
+// more cheaply than re-scanning/filtering that array on every single note
+// trigger (which happens far more often than the once-per-lock-window echo
+// scan). Small on purpose: ECO.highNoteFatigue only ever holds as many
+// entries as distinct raw note-classes have actually sounded above 1200Hz,
+// a handful at most, each just {streakStartedAt, lastFiredAt}.
+const HIGH_NOTE_FATIGUE_HZ = 1200;         // only notes above this pitch are tracked at all
+// Round 20: separate, higher threshold for the flat 50%-chance-of-half-volume
+// rule (see scheduleNote's veryHighCoinMul) -- deliberately above
+// HIGH_NOTE_FATIGUE_HZ so "muy muy agudas" is a distinctly higher band than
+// the existing "high" (fatigue-eligible) one, not the same band re-used.
+const VERY_HIGH_NOTE_HZ = 1400;
+const HIGH_NOTE_FATIGUE_GRACE_MS = 1500;   // "sin parar" -- a gap this short or shorter still counts as the same continuous streak; longer resets it
+const HIGH_NOTE_FATIGUE_ONSET_MS = 3000;   // "lleva mas de 3s" -- attenuation only starts kicking in past this streak length
+const HIGH_NOTE_FATIGUE_RAMP_MS = 6000;    // how much further streak time it takes to reach the full floor reduction, from the onset point
+const HIGH_NOTE_FATIGUE_FLOOR_MUL = 0.45;  // "sin llegar a silenciarse" -- gain multiplier never drops below this (a ~55% reduction, never 0)
+function highNoteFatigueGainMul(raw, freq, nowMs){
+  if(!(freq > HIGH_NOTE_FATIGUE_HZ)) return 1; // not a high note -- untracked, always full volume
+  if(typeof ECO==='undefined') return 1; // guard for any non-browser/test context scheduleNote might theoretically run in
+  if(!ECO.highNoteFatigue) ECO.highNoteFatigue = {};
+  const key = Math.round(raw);
+  let entry = ECO.highNoteFatigue[key];
+  if(!entry || (nowMs - entry.lastFiredAt) > HIGH_NOTE_FATIGUE_GRACE_MS){
+    // either the very first time this note's been seen above 1200Hz, or the
+    // gap since its last trigger was long enough to count as fully "stopped"
+    // -- streak resets back to full volume from here.
+    entry = { streakStartedAt: nowMs, lastFiredAt: nowMs };
+    ECO.highNoteFatigue[key] = entry;
+    return 1;
+  }
+  entry.lastFiredAt = nowMs; // still within the grace window -- extend the continuous streak, don't reset it
+  const streakMs = nowMs - entry.streakStartedAt;
+  if(streakMs <= HIGH_NOTE_FATIGUE_ONSET_MS) return 1;
+  const t = Math.min(1, (streakMs - HIGH_NOTE_FATIGUE_ONSET_MS) / HIGH_NOTE_FATIGUE_RAMP_MS);
+  return 1 - t*(1-HIGH_NOTE_FATIGUE_FLOOR_MUL); // gradual linear ramp from 1.0 down to the floor, never past it
+}
+// TASK 6: rapid-repeat-streak randomization. Distinct from the blanket
+// +-10% randomVarMul applied to every note (see scheduleNote below) -- this
+// only kicks in once the SAME raw note has fired 3+ times in a short window,
+// and then adds noticeably wider randomization on top of the normal
+// humanization for that burst. Small dedicated tracker, same
+// keyed-by-integer-raw / {count,lastFiredAt} shape as ECO.highNoteFatigue
+// just above (reused pattern, not the same object -- this one tracks EVERY
+// note, not just high ones, and resets on a much shorter gap since it's
+// about rapid retriggering, not sustained streaks).
+const REPEAT_STREAK_WINDOW_MS = 260;  // "a few hundred ms" -- a gap longer than this resets the streak count
+const REPEAT_STREAK_MIN = 3;          // streak must reach 3+ fires within the window before extra randomization kicks in
+function trackRepeatStreak(raw, nowMs){
+  if(typeof ECO==='undefined') return 0;
+  if(!ECO.repeatStreak) ECO.repeatStreak = {};
+  const key = Math.round(raw);
+  let entry = ECO.repeatStreak[key];
+  if(!entry || (nowMs - entry.lastFiredAt) > REPEAT_STREAK_WINDOW_MS){
+    entry = { count: 1, lastFiredAt: nowMs };
+  } else {
+    entry.count++;
+    entry.lastFiredAt = nowMs;
+  }
+  ECO.repeatStreak[key] = entry;
+  return entry.count;
+}
 // TASK 6 (round 17): "haz que el 66% de notas atenuadas... tengan el attack
 // un poco mas lento de lo normal" -- optional trailing attackMul param
 // (default 1 = unchanged behavior for every existing call site) multiplies
 // every timbre branch's own attack-ramp-to-peak time constant below. Only
 // the echo-doubling path (see maybeFireEcho) passes a value >1.
-function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet, attackMul){
+function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet, attackMul, gainMul){
   attackMul = attackMul||1;
+  // TASK 6: on top of normal attackMul threading, a detected rapid-repeat
+  // streak (3+ fires of this same raw note within REPEAT_STREAK_WINDOW_MS)
+  // gets extra per-repetition randomization: a wider gain swing than the
+  // blanket +-10% (randomVarMul below), plus independent jitter on attack
+  // time and release/decay duration, so a rapidly retriggered note doesn't
+  // sound like a perfectly identical machine-gun repeat.
+  const repeatStreakCount = trackRepeatStreak(raw, performance.now());
+  const inRepeatStreak = repeatStreakCount >= REPEAT_STREAK_MIN;
+  if(inRepeatStreak){
+    attackMul *= 0.7 + Math.random()*0.6;      // +-30% attack-time jitter per repetition
+    dur = dur * (0.75 + Math.random()*0.5);    // +-25% release/decay-duration jitter per repetition
+  }
   const freq = freqForRaw(raw, generalPitchCents);
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.0001, startTime);
-  const master = getPannedBus(ctx);
+  let master = getPannedBus(ctx);
+  // Round 19: ear-fatigue safety net (see highNoteFatigueGainMul above for
+  // the full tracker writeup) -- folded into the SAME gainMul combined below
+  // as the existing round-17 "tired mini shape at night" multiplier, since
+  // both are just uniform output-scaling stages and the existing tiredGain
+  // node pattern already covers "apply once, cover every timbre branch"
+  // for free. Uses performance.now() rather than startTime/ctx.currentTime
+  // (an AudioContext-relative clock that can be scheduled slightly ahead of
+  // real time) because the tracker's whole job is measuring real-world
+  // elapsed wall-clock time between actual trigger calls.
+  const fatigueMul = highNoteFatigueGainMul(raw, freq, performance.now());
+  // Round 20: "haz que las notas muy muy agudas tengan un 50% de chance de
+  // sonar a la mitad de su volumen normal" -- a NEW, separate, simpler rule
+  // from the fatigue system just above: a flat one-shot coin-flip applied on
+  // EVERY individual trigger of a "very high" note, independent of duration/
+  // retriggering history (unlike fatigueMul, which only ramps in after 3s+ of
+  // a sustained/retriggered streak). Threshold picked at
+  // VERY_HIGH_NOTE_HZ = 1400 -- deliberately a bit ABOVE the existing
+  // HIGH_NOTE_FATIGUE_HZ (1200) so "muy muy agudas" reads as a distinctly
+  // higher band than the existing "high" (fatigue-eligible) band, per the
+  // task's own "1400-1600Hz to mean very very agudas as distinctly higher"
+  // guidance. Stacks multiplicatively with fatigueMul -- they address
+  // different things (random per-note variety vs. cumulative fatigue) and
+  // both can legitimately apply to the same very-high, long-sustained note.
+  // Round 21: "haz que los tonos bastante agudos tengan mas chances de
+  // atenuarse en mayor cantidad" -- bumped the trigger probability from the
+  // original flat 50% up to 65%, AND replaced the original flat 0.5x cut
+  // with a cut that SCALES with how far above VERY_HIGH_NOTE_HZ the note
+  // sits: 0.5x right at the threshold (same as before, so notes just barely
+  // in the "very high" band aren't hit any harder than they used to be),
+  // ramping down to 0.3x by 1000Hz above the threshold (~2400Hz) for the
+  // most extreme highs, i.e. "en mayor cantidad" for the "bastante agudas"
+  // (more strongly high-pitched) end of the band specifically, not a flat
+  // across-the-board increase. Still stacks multiplicatively with fatigueMul.
+  const veryHighCoinMul = (() => {
+    if(!(freq > VERY_HIGH_NOTE_HZ)) return 1;
+    if(Math.random() >= 0.65) return 1; // 65% trigger chance (was 50%)
+    const t = Math.min(1, (freq - VERY_HIGH_NOTE_HZ) / 1000);
+    return 0.5 - t*0.2; // 0.5x near threshold ramping down to 0.3x far above it (was flat 0.5x)
+  })();
+  // TASK 4: a small unconditional +-10% random gain variation applied to
+  // EVERY note trigger (unlike the conditional multipliers above), so
+  // repeated identical notes don't sound perfectly identical in level --
+  // folded into the same multiplicative gainMul chain as the others.
+  const randomVarMul = 0.9 + Math.random()*0.2;
+  // TASK 6: extra, wider gain swing on top of randomVarMul above, only while
+  // in a detected rapid-repeat streak (inRepeatStreak, computed earlier in
+  // this function from trackRepeatStreak) -- +-25% vs. the blanket +-10%,
+  // tasteful rather than chaotic.
+  const repeatStreakGainMul = inRepeatStreak ? (0.75 + Math.random()*0.5) : 1;
+  gainMul = (gainMul && gainMul!==1 ? gainMul : 1) * fatigueMul * veryHighCoinMul * randomVarMul * repeatStreakGainMul;
+  // Task #3 ("mini shapes de 1 nota suenan mas bajitas de noche, como
+  // cansadas"): a shared output-scaling stage inserted here (rather than
+  // touching every timbre branch's own hard-coded gain target below) so a
+  // single gainMul from the caller (realPlayOneShot, based on note-count===1
+  // && ECO.isNight) applies uniformly regardless of which timbre branch
+  // actually plays. Every branch below already ends its chain with
+  // `.connect(master)`, so reassigning `master` to this extra node here is
+  // enough to cover all of them without duplicating logic per-branch.
+  if(gainMul && gainMul!==1){
+    const tiredGain = ctx.createGain();
+    tiredGain.gain.value = gainMul;
+    tiredGain.connect(master);
+    master = tiredGain;
+  }
+  // Round 22: "haz que si mientras esta sonando una shape suena otra shape
+  // haya 50% de chances de que la que sono primero haga fade out" -- the
+  // ducking feature (see runAction/fadeOutActiveVoice/ECO.activeVoices, and
+  // the createAudioPort 'strum' method that now returns this note's handle)
+  // needs SOME single gain node it can ramp to zero early to cut this note's
+  // volume off cleanly if it gets ducked, on top of whatever its own normal
+  // release envelope already is. Unconditionally created (not folded into
+  // the gainMul-only tiredGain node above, which only exists when gainMul!==1)
+  // so every note, ducked or not, has this handle available -- the ramp
+  // just never gets touched for the (usual) non-ducked case, so this is a
+  // no-op the rest of the time. Returned from every branch below so
+  // realPlayOneShot can collect all of a strum's per-note fadeNodes.
+  const voiceFadeGain = ctx.createGain();
+  voiceFadeGain.gain.value = 1;
+  voiceFadeGain.connect(master);
+  master = voiceFadeGain;
   // Revision round 8 kaleidoscope audio effects: scheduleNote is
   // Web-Audio/browser-only (not part of any tested module.exports block), so
   // it reads the ECO global directly here rather than threading a new
@@ -2563,7 +2834,7 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime+sawDur);
     osc.connect(filter).connect(gain).connect(master);
     osc.start(startTime); osc.stop(startTime+sawDur+0.05);
-    return;
+    return voiceFadeGain;
   }
   // Revision round 4: 'square' -- the Gaudi sphere's descending-octaves
   // strum. Hard-capped short decay/release regardless of dur, same pattern
@@ -2576,7 +2847,7 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime+sqDur);
     osc.connect(gain).connect(master);
     osc.start(startTime); osc.stop(startTime+sqDur+0.05);
-    return;
+    return voiceFadeGain;
   }
   // Revision round 8: new triangle-wave voice, reached only via the
   // kaleidoActive note-swap roll above -- softer/rounder than sine, paired
@@ -2589,7 +2860,7 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime+triDur);
     osc.connect(gain).connect(master);
     osc.start(startTime); osc.stop(startTime+triDur+0.05);
-    return;
+    return voiceFadeGain;
   }
   // Revision round 11: new 'bell' timbre for the tree progression's random
   // topline (see scheduleTreeTopline/advanceTreePerformance) -- a sharp
@@ -2616,7 +2887,7 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet
     partial.connect(partGain).connect(master);
     fundamental.start(startTime); fundamental.stop(startTime+bellDur+0.05);
     partial.start(startTime); partial.stop(startTime+bellDur+0.05);
-    return;
+    return voiceFadeGain;
   }
   const effDur = quiet ? Math.max(0.1, dur*0.14) : dur;
   if(timbre==='guitar'){
@@ -2641,15 +2912,55 @@ function scheduleNote(ctx, raw, timbre, startTime, dur, generalPitchCents, quiet
     osc.connect(gain).connect(master);
     osc.start(startTime); osc.stop(startTime+effDur+0.05);
   }
+  return voiceFadeGain;
 }
-function realPlayOneShot(notes, root, timbre, style, extraCents, settings, quiet){
-  const ctx = getAudioCtx(); if(!ctx || !notes.length) return;
-  const dur = timbre==='guitar' ? 2.2 : 1.5;
+// Round 22: fades an in-progress note (or notes) out early over `ms`
+// milliseconds -- used by the voice-ducking feature (fadeOutActiveVoice
+// below) to cut a still-sounding strum's volume short cleanly rather than
+// abruptly, when it loses the 50% duck coinflip against a newer chord that
+// just started sounding. `handle` is whatever realPlayOneShot returned
+// (see its own comment): {fadeNodes, ctx}. Linear (not exponential) ramp
+// since the target is exactly 0 and exponentialRampToValueAtTime can't
+// target 0 -- 0.0001 floor matches the convention every other envelope in
+// this file already uses for "effectively silent".
+function fadeOutVoiceHandle(handle, ms){
+  if(!handle || !handle.fadeNodes || !handle.ctx) return;
+  const ctx = handle.ctx;
+  const now = ctx.currentTime;
+  const fadeSec = (ms||250)/1000;
+  handle.fadeNodes.forEach(node=>{
+    if(!node || !node.gain) return;
+    try{
+      const cur = node.gain.value;
+      node.gain.cancelScheduledValues(now);
+      node.gain.setValueAtTime(Math.max(cur,0.0001), now);
+      node.gain.linearRampToValueAtTime(0.0001, now+fadeSec);
+    }catch(e){ /* node already stopped/disconnected */ }
+  });
+}
+function realPlayOneShot(notes, root, timbre, style, extraCents, settings, quiet, releaseMul){
+  const ctx = getAudioCtx(); if(!ctx || !notes.length) return null;
+  const dur = (timbre==='guitar' ? 2.2 : 1.5) * (releaseMul||1); // Task #1: tree performances of a 1-3-chord saved progression pass releaseMul>1 here for a longer release
   const ordered = notes.slice().sort((a,b)=>a-b);
+  // Task #3 ("mini shapes de 1 nota mas bajitas de noche, como cansadas"):
+  // a "mini shape" is any chord body playing with exactly 1 note (this
+  // covers both a genuine 1-note saved/spawned chord AND the crystal's
+  // shatter fragments, which are also single-note chords by construction --
+  // see resolveChordObject's 'crystal' case / onShatter). Judgment call on
+  // the exact multiplier: 0.65 (a modest, clearly-audible-but-tired dip,
+  // within the requested 0.6-0.7 range), applied only while ECO.isNight.
+  const isMiniShape = notes.length===1;
+  const tiredGainMul = (isMiniShape && typeof ECO!=='undefined' && ECO.isNight) ? 0.65 : 1;
+  // Round 22: collect every note's voiceFadeGain node (see scheduleNote)
+  // into fadeNodes so the caller gets back a single handle it can pass to
+  // fadeOutVoiceHandle to duck this whole strum early if needed.
+  const fadeNodes = [];
   ordered.forEach((raw,idx)=>{
     const t = ctx.currentTime + (style==='strum' ? idx*STRUM_GAP : 0);
-    scheduleNote(ctx, raw, timbre, t, dur, (settings.generalPitch||0)+(extraCents||0), quiet);
+    const node = scheduleNote(ctx, raw, timbre, t, dur, (settings.generalPitch||0)+(extraCents||0), quiet, 1, tiredGainMul);
+    if(node) fadeNodes.push(node);
   });
+  return { fadeNodes, ctx };
 }
 // Revision round 11: "root bass con release largo en el primer acorde" +
 // "random bell topline" for the tree's progression (see
@@ -2909,6 +3220,34 @@ function realBendSustainVoices(handle, rawStepShift, rampSec, holdSec){
     }catch(e){ /* already stopped */ }
   });
 }
+// Round 20 perf fix: the 4 "cathedral reverb" functions in this file
+// (realPlayCelestialReverb here, plus realSympatheticNote/realPlayEtherealPad/
+// realPlayZoneCrossPad below) each used to synthesize their own fresh stereo
+// noise impulse buffer from scratch on EVERY call -- real, measurable
+// per-trigger CPU work (a 4.2s stereo buffer at 44.1kHz is ~370k
+// Math.random()+Math.pow calls, and realPlayEtherealPad/realPlayZoneCrossPad
+// in particular can fire fairly often during tree performances/zone
+// crossings). AudioBuffers are safe to share across many ConvolverNode
+// instances (unlike AudioBufferSourceNodes, which truly need a fresh node
+// per playback) -- getCathedralImpulseBuffer below caches one synthesized
+// buffer per distinct (duration, falloff-exponent) shape and reuses it for
+// every subsequent convolver that wants that same character, building it
+// only once lazily on first use. A new ConvolverNode is still created per
+// call (cheap, and needed for independent connect/disconnect lifetimes) --
+// only the expensive noise-buffer SYNTHESIS is now shared/cached.
+const _impulseBufferCache = new Map();
+function getCathedralImpulseBuffer(ctx, dur, exponent){
+  const key = dur+'|'+exponent+'|'+ctx.sampleRate;
+  let buf = _impulseBufferCache.get(key);
+  if(buf) return buf;
+  buf = ctx.createBuffer(2, Math.max(1,Math.floor(ctx.sampleRate*dur)), ctx.sampleRate);
+  for(let ch=0; ch<buf.numberOfChannels; ch++){
+    const data = buf.getChannelData(ch);
+    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, exponent);
+  }
+  _impulseBufferCache.set(key, buf);
+  return buf;
+}
 // "reverb de catedral" -- a big synthesized impulse response fed through a
 // temporary PARALLEL wet send (masterBus stays connected to destination
 // exactly as before; this only ADDS a second, self-removing branch), so nothing
@@ -2920,12 +3259,8 @@ function realPlayCelestialReverb(){
   const now = ctx.currentTime;
   const dur = 3.2;
   let impulse;
-  try{ impulse = ctx.createBuffer(2, Math.max(1,Math.floor(ctx.sampleRate*dur)), ctx.sampleRate); }
+  try{ impulse = getCathedralImpulseBuffer(ctx, dur, 2.2); }
   catch(e){ return; }
-  for(let ch=0; ch<impulse.numberOfChannels; ch++){
-    const data = impulse.getChannelData(ch);
-    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2.2);
-  }
   const convolver = ctx.createConvolver();
   try{ convolver.buffer = impulse; }catch(e){ return; }
   const wetGain = ctx.createGain();
@@ -2964,6 +3299,22 @@ function realStartRain(){
   const buffer = ctx.createBuffer(1, Math.max(1,Math.floor(ctx.sampleRate*bufSec)), ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for(let i=0;i<data.length;i++) data[i] = Math.random()*2-1;
+  // TASK 2: the raw noise buffer's start/end samples are uncorrelated, so
+  // looping it as-is clicks audibly at the seam. Bake a short equal-power
+  // fade in/out directly into the buffer (simplest fix given this is a
+  // one-time buffer generated once per realStartRain call, not a
+  // per-sample streaming source) -- ~30ms at each end, using sin/cos
+  // equal-power curves rather than a plain linear ramp so the perceived
+  // loudness stays constant across the seam instead of dipping.
+  const fadeSec = 0.03;
+  const fadeSamples = Math.min(Math.floor(ctx.sampleRate*fadeSec), Math.floor(data.length/2));
+  for(let i=0;i<fadeSamples;i++){
+    const t = i/fadeSamples; // 0..1
+    const inGain = Math.sin(t*Math.PI/2);           // equal-power fade-in
+    const outGain = Math.sin((1-t)*Math.PI/2);       // equal-power fade-out (mirrored, applied to the tail)
+    data[i] *= inGain;
+    data[data.length-1-i] *= outGain;
+  }
   const src = ctx.createBufferSource(); src.buffer = buffer; src.loop = true;
   const filter = ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=1600;
   const gain = ctx.createGain();
@@ -3127,11 +3478,7 @@ function realSympatheticNote(rawNote, root, durSec){
   let convolver = null;
   try{
     const rdur = 3.6;
-    const impulse = ctx.createBuffer(2, Math.max(1,Math.floor(ctx.sampleRate*rdur)), ctx.sampleRate);
-    for(let ch=0; ch<impulse.numberOfChannels; ch++){
-      const data = impulse.getChannelData(ch);
-      for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 1.6);
-    }
+    const impulse = getCathedralImpulseBuffer(ctx, rdur, 1.6); // round 20 perf fix: cached/shared, see getCathedralImpulseBuffer
     convolver = ctx.createConvolver(); convolver.buffer = impulse;
   }catch(e){ convolver = null; }
   const dryGain = ctx.createGain(); dryGain.gain.value = 0.35;
@@ -3142,9 +3489,129 @@ function realSympatheticNote(rawNote, root, durSec){
   osc.start(now); osc.stop(now+dur+0.15);
   setTimeout(()=>{ try{ panLfo.disconnect(); osc.disconnect(); panner.disconnect(); dryGain.disconnect(); if(convolver){convolver.disconnect(); wetGain.disconnect();} }catch(e){} }, (dur+3.8)*1000);
 }
+// "la segunda repeticion de una progresion en la performance del arbol tenga
+// la voz mas aguda seguida por un sonido que recuerde a un pad con
+// armonicos pero suave y ataque un poco lento y mucho reverb" -- on the
+// SECOND time through a tree performance's progression (see
+// advanceTreePerformance's isSecondRepeat below), the chord's own highest
+// note gets this extra ethereal voice layered an octave above it. New
+// lightweight "soft harmonic pad" timbre: three detuned partials at
+// harmonic ratios (1x/2x/3x the fundamental, a mix of sine+triangle so it
+// has a little more harmonic content than a pure sine but stays soft/round,
+// nothing sharp like the file's 'saw'/'square' timbres), a genuinely slow
+// attack (linearRampToValueAtTime over ~350-450ms, "ataque un poco lento"),
+// and a large reverb send -- reusing the exact same synthesized-impulse
+// cathedral convolver technique as realSympatheticNote just above (its own
+// private convolver instance, same as that function, rather than building a
+// new reverb primitive from scratch).
+function realPlayEtherealPad(rawNote, root, durSec){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const now = ctx.currentTime;
+  const dur = Math.max(1.2, durSec||2.6);
+  const freq = freqForRaw(rawNote, 0);
+  const attackSec = 0.35 + Math.random()*0.1; // "ataque un poco lento" -- 350-450ms
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.linearRampToValueAtTime(0.16, now+attackSec); // soft, slow rise, not exponential -- reads gentler
+  master.gain.setValueAtTime(0.16, now+Math.max(attackSec+0.05, dur*0.55));
+  master.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+  // three harmonic partials (1x/2x/3x), sine+triangle mix, gently detuned so
+  // they beat softly against each other like a real pad instead of phasing
+  // dead-static -- "un sonido que recuerde a un pad con armonicos".
+  const partials = [
+    { ratio:1, type:'sine',     gain:0.55, detune:0   },
+    { ratio:2, type:'triangle', gain:0.28, detune:6   },
+    { ratio:3, type:'sine',     gain:0.15, detune:-5  },
+  ];
+  const oscs = [];
+  partials.forEach(p=>{
+    const osc = ctx.createOscillator(); osc.type = p.type;
+    osc.frequency.value = freq*p.ratio;
+    osc.detune.value = p.detune;
+    const g = ctx.createGain(); g.gain.value = p.gain;
+    osc.connect(g).connect(master);
+    osc.start(now); osc.stop(now+dur+0.2);
+    oscs.push(osc);
+  });
+  // large cathedral-style convolver reverb, same synthesized-impulse
+  // technique as realSympatheticNote above -- "mucho reverb".
+  let convolver = null;
+  try{
+    const rdur = 4.2;
+    const impulse = getCathedralImpulseBuffer(ctx, rdur, 1.8); // round 20 perf fix: cached/shared (same shape as realPlayZoneCrossPad's/realPlayEtherealPad's own convolver -- see getCathedralImpulseBuffer), regenerated only once total instead of once per call for each
+    convolver = ctx.createConvolver(); convolver.buffer = impulse;
+  }catch(e){ convolver = null; }
+  const dryGain = ctx.createGain(); dryGain.gain.value = 0.25;
+  const wetGain = ctx.createGain(); wetGain.gain.value = 0.9; // "mucho reverb" -- even wetter than realSympatheticNote's own 0.85
+  master.connect(dryGain).connect(ctx.destination);
+  if(convolver){ master.connect(convolver); convolver.connect(wetGain); wetGain.connect(ctx.destination); }
+  setTimeout(()=>{ try{ oscs.forEach(o=>o.disconnect()); master.disconnect(); dryGain.disconnect(); if(convolver){convolver.disconnect(); wetGain.disconnect();} }catch(e){} }, (dur+4.4)*1000);
+}
+// TASK 1 (zone-border crossing extra voice): a second soft pad timbre,
+// distinct from realPlayEtherealPad just above but built with the same
+// general technique (harmonic partials + slow linear attack + cathedral
+// convolver reverb send). Differences from realPlayEtherealPad, chosen so
+// the two voices are audibly different instruments rather than the same
+// pad reused: (1) four partials instead of three, at ratios 1x/2x/4x/5x
+// (an open, "hollow" spectrum missing the 3rd harmonic, vs. the ethereal
+// pad's dense 1/2/3 stack) using triangle+sine in a different mix; (2)
+// wider/asymmetric detuning (+9/-11/+4 cents vs. the ethereal pad's
+// +6/-5) for a more noticeable slow beating/chorus; (3) a slower attack,
+// 0.5-0.65s vs. 0.35-0.45s ("un poco lento" but pushed further here since
+// this voice is meant to bloom in gently well after the crossing strum);
+// (4) less reverb wetness (0.7 wet / 0.4 dry vs. 0.9 wet / 0.25 dry) so it
+// sits further back/drier than the tree performance's pad. Reuses the
+// exact same synthesized-impulse cathedral convolver technique (its own
+// private convolver instance per call, same as realPlayEtherealPad /
+// realSympatheticNote) for reverb consistency across the file.
+function realPlayZoneCrossPad(rawNote, root, durSec){
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const now = ctx.currentTime;
+  const dur = Math.max(1.4, durSec||2.8);
+  const freq = freqForRaw(rawNote, 0);
+  const attackSec = 0.5 + Math.random()*0.15; // slower bloom than realPlayEtherealPad's 0.35-0.45s
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.linearRampToValueAtTime(0.14, now+attackSec);
+  master.gain.setValueAtTime(0.14, now+Math.max(attackSec+0.05, dur*0.5));
+  master.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+  // four partials, 1x/2x/4x/5x (skips the 3rd harmonic -> a more "open"/
+  // hollow spectrum than the ethereal pad's dense 1/2/3 stack), wider
+  // asymmetric detuning for a more noticeable slow chorus/beat.
+  const partials = [
+    { ratio:1, type:'sine',     gain:0.5,  detune:0   },
+    { ratio:2, type:'sine',     gain:0.24, detune:9   },
+    { ratio:4, type:'triangle', gain:0.16, detune:-11 },
+    { ratio:5, type:'triangle', gain:0.1,  detune:4   },
+  ];
+  const oscs = [];
+  partials.forEach(p=>{
+    const osc = ctx.createOscillator(); osc.type = p.type;
+    osc.frequency.value = freq*p.ratio;
+    osc.detune.value = p.detune;
+    const g = ctx.createGain(); g.gain.value = p.gain;
+    osc.connect(g).connect(master);
+    osc.start(now); osc.stop(now+dur+0.2);
+    oscs.push(osc);
+  });
+  // same synthesized-impulse cathedral convolver technique as
+  // realPlayEtherealPad/realSympatheticNote, but mixed drier (less wet)
+  // so this voice reads as a separate, more distant instrument.
+  let convolver = null;
+  try{
+    const rdur = 4.2;
+    const impulse = getCathedralImpulseBuffer(ctx, rdur, 1.8); // round 20 perf fix: cached/shared (same shape as realPlayZoneCrossPad's/realPlayEtherealPad's own convolver -- see getCathedralImpulseBuffer), regenerated only once total instead of once per call for each
+    convolver = ctx.createConvolver(); convolver.buffer = impulse;
+  }catch(e){ convolver = null; }
+  const dryGain = ctx.createGain(); dryGain.gain.value = 0.4;
+  const wetGain = ctx.createGain(); wetGain.gain.value = 0.7; // drier than realPlayEtherealPad's 0.9
+  master.connect(dryGain).connect(ctx.destination);
+  if(convolver){ master.connect(convolver); convolver.connect(wetGain); wetGain.connect(ctx.destination); }
+  setTimeout(()=>{ try{ oscs.forEach(o=>o.disconnect()); master.disconnect(); dryGain.disconnect(); if(convolver){convolver.disconnect(); wetGain.disconnect();} }catch(e){} }, (dur+4.4)*1000);
+}
 function createRealDriver(getSettings){
   return {
-    playOneShot(notes, root, timbre, style, extraCents, quiet){ if(getSettings().muted) return; realPlayOneShot(notes, root, timbre, style, extraCents, getSettings(), quiet); },
+    playOneShot(notes, root, timbre, style, extraCents, quiet, releaseMul){ if(getSettings().muted) return null; return realPlayOneShot(notes, root, timbre, style, extraCents, getSettings(), quiet, releaseMul); }, // round 22: now returns the {fadeNodes,ctx} handle so a strum can be ducked/faded early
     playSoloNote(rawNote, root, timbre, durSec, extraCents, quiet, attackMul){ if(getSettings().muted) return; realPlaySoloNote(rawNote, root, timbre, durSec, extraCents, getSettings(), quiet, attackMul); },
     playNoise(){ if(getSettings().muted) return; realPlayNoise(); },
     playWaterTap(){ if(getSettings().muted) return; realPlayWaterTap(); },
@@ -3164,6 +3631,8 @@ function createRealDriver(getSettings){
     stopPillarGlideVoice(){ realStopPillarGlideVoice(); },
     thunderStrike(){ if(getSettings().muted) return; realThunderStrike(); },
     playSympatheticNote(rawNote, root, durSec){ if(getSettings().muted) return; realSympatheticNote(rawNote, root, durSec); },
+    playEtherealPad(rawNote, root, durSec){ if(getSettings().muted) return; realPlayEtherealPad(rawNote, root, durSec); },
+    playZoneCrossPad(rawNote, root, durSec){ if(getSettings().muted) return; realPlayZoneCrossPad(rawNote, root, durSec); },
   };
 }
 
@@ -3216,8 +3685,10 @@ function saveWhitelist(wl){ /* revision round 9: intentionally a no-op -- see co
 // maximo de acordes sea 4").
 // Revision round 12: default changed 4 -> 6 per spec ("haz que la poblacion
 // maxima default sea 6").
+// Revision round 20: default changed 6 -> 4 per spec ("reduce la default max
+// population a 4") -- back to the round-9 value.
 function loadMaxPopulation(){
-  return 6;
+  return 4;
 }
 function saveMaxPopulation(n){ /* revision round 9: intentionally a no-op -- see comment above */ }
 function loadCycleSpeed(){
@@ -3324,7 +3795,7 @@ const OBJECT_DEFS = [
   // user-facing label changes; objectType/function/const names stay
   // 'crystal'/Crystal internally (a pure identifier rename with zero
   // behavior change isn't worth the risk of touching every call site).
-  { objectType:'crystal', xf:0.035, yf:0.66, color:'#0d3d24', hue:150, label:'GREEN OBSIDIAN', skyXf:0.04, skyYf:0.55, radius:21 }, // "haz que green obsidian sea un poquito mas grande" -- was 18, now 21 (+~17%)
+  { objectType:'crystal', xf:0.035, yf:0.66, color:'#0d3d24', hue:150, label:'GREEN OBSIDIAN', skyXf:0.04, skyYf:0.55, radius:24 }, // "haz que green obsidian sea un poco mas grande" -- was 18, then 21 (+~17%), now 24 (+~14%)
 ];
 // Revision round 5: the platform the Gaudi sphere is deliberately spawned
 // onto (see OBJECT_DEFS's xf:0.38 comment) -- once it lands there it's
@@ -3518,12 +3989,33 @@ const ECO = {
   recentBigEvents:[],               // timestamps of recent tornado/quake/rain starts, used to throttle hunting/summon into calmer stretches
   foodParticles:null, foodGrayTimeoutMs:10350, foodBalanceCheckAt:0, // task #8: base gray-timeout raised 9000->10350 (+15%, "que tarden un 15% mas en volverse grises")
   bursts:[],                        // shared transient visual effects: eat flashes, food-particle noms, water splashes
+  highNoteFatigue:{},               // round 19: {rawNoteClass: {streakStartedAt,lastFiredAt}} ear-fatigue tracker for notes >1200Hz, see highNoteFatigueGainMul
+  // Round 22: voice-ducking ("50% de chances de que la que sono primero haga
+  // fade out" when another shape starts sounding). Keyed by chordId ->
+  // {kind:'strum'|'ambient', handle, since, until}. 'strum' entries carry the
+  // {fadeNodes,ctx} handle from realPlayOneShot (see fadeOutVoiceHandle) and
+  // expire on their own (`until`) once the note's natural duration has
+  // passed, since a one-shot strum isn't "sounding" forever; 'ambient'
+  // entries have until:Infinity and are cleared explicitly whenever
+  // stopAmbient/ambientVisual=null happens anywhere (a pad-hold really is
+  // sounding indefinitely until then). See runAction/fadeOutActiveVoice.
+  activeVoices:{},
+  _lastStrumHandle:null,             // round 22: scratch slot wireVoiceCapture stashes each strum's handle into, read back by runAction right after applyActions() fires it
   skyHoles:[], lastMidiSpawnAt:0,   // revision round 11: MIDI-in spawn reveal + runaway-spawn cooldown, see finishMidiCapture
   _shakeX:0, _shakeY:0,              // revision round 11: low-pass-filtered quake screen-shake, see render()
   _celestialDisplayFrac:null, _celestialCatchUpUntil:0, // revision round 11: eased sun/moon catch-up after a tree performance ends, see drawCelestial/endTreePerformance
   // Revision round 4
   cycleSpeedMul:1,                  // astrological cycle speed, God Settings slider, 0.3-3
   dayPhase:null, phaseStartMs:0, dayPhaseRoot:0, // 'morning'|'midday'|'afternoon'|'night' -- see updateDayNight
+  // BUG FIX (round 20): "cuando se acelera el tiempo y luego vuelve a la
+  // normalidad, el sol se teletransporta" -- phaseFracAccum/celestialFracAccum
+  // replace the old anchor-based (nowMs-phaseStartMs)/duration formula. See
+  // the long comment above updateDayNight for the full root-cause writeup;
+  // in short, these are now ACCUMULATED incrementally each frame at whatever
+  // the CURRENT rate is, so a rate change (pillar-event cycleSpeedMul boost,
+  // or its later revert) only affects FUTURE increments, never retroactively
+  // rescales frac already accumulated -- frac literally cannot jump.
+  phaseFracAccum:0, celestialFracAccum:0, _dnLastTickMs:0,
   rootUsage:[], topRoots:[],        // computeRootUsage(progressions) + its top 5, at boot
   rootIntervalUsage:[],             // revision round 6: computeRootIntervalUsage(progressions), at boot -- feeds pickDayPhaseRoot
   sizeTiers:null,                   // computeSizeTiers(species), at boot -- adaptive small/medium/large cutoffs
@@ -4142,8 +4634,22 @@ function triggerVignetteFlash(nowMs){
 }
 function enterDayPhase(phase, nowMs){
   ECO.dayPhase = phase;
-  ECO.phaseStartMs = nowMs;
+  ECO.phaseStartMs = nowMs; // kept for HUD/comment purposes; no longer used by any frac math (see phaseFracAccum)
   ECO.isNight = (phase==='night');
+  ECO.phaseFracAccum = 0; // every new phase always starts fresh at frac 0 -- never jumps
+  if(phase==='morning' || phase==='night'){
+    ECO.celestialFracAccum = 0; // start of a brand-new day arc (morning) or night arc
+  } else if(phase==='midday' && !ECO._dnLastTickMs){
+    // Boot-time default only (updateDayNight's very first call goes straight
+    // to midday, skipping morning, matching the old "always day, root 0"
+    // baseline) -- seed celestialFracAccum as if morning had already fully
+    // elapsed, same baseline the old elapsed=mDur+(nowMs-phaseStartMs) formula
+    // produced for this exact case. A normal morning->midday transition later
+    // in the cycle does NOT hit this branch (dnLastTickMs is already set by
+    // then), so celestialFracAccum correctly keeps accumulating unbroken.
+    const mDur=currentPhaseDurationMs('morning'), midDur=currentPhaseDurationMs('midday'), aDur=currentPhaseDurationMs('afternoon');
+    ECO.celestialFracAccum = mDur/Math.max(1,(mDur+midDur+aDur));
+  }
   if(phase==='midday'){ ECO.dayPhaseRoot = 0; triggerVignetteFlash(nowMs); }
   else if(phase==='morning' || phase==='afternoon') ECO.dayPhaseRoot = pickDayPhaseRoot();
   if(phase==='night'){
@@ -4265,9 +4771,16 @@ function triggerNewMoonDieOff(nowMs){
   alive.forEach((c,i)=>{
     if(i===survivorIdx) return;
     c.dying = true; c.dyingStartedAt = nowMs;
+    // BUG FIX (round 19): tag distinctly from an ordinary gray-starve death
+    // so updateFoodParticles' eat-to-rescue mechanic (search _newMoonDying
+    // there for the full root-cause writeup) can never save a chord the
+    // new-moon die-off deliberately killed, even if it happens to be sitting
+    // on/near a food pellet when the die-off fires or while frozen through a
+    // tree performance.
+    c._newMoonDying = true;
     c.dragging = true; c.gravity = false; c.nurseryPinned = false;
     c.huntUntil = 0; c.huntTargetId = null;
-    if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===c.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; }
+    if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===c.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; if(ECO.activeVoices) delete ECO.activeVoices[c.id]; } // round 22: keep the voice-ducking registry in sync with any ambient stop, not just fadeOutActiveVoice's own
     spawnBurst('splash', c.x, ECO.world.height-ECO.world.cfg.floorThickness, 200);
   });
 }
@@ -4289,9 +4802,43 @@ function forceSpawnIfEmpty(nowMs){
   const sp = pickSpeciesToSpawn();
   if(sp) spawnChord(sp);
 }
+// BUG FIX (round 20): "cuando se acelera el tiempo y luego vuelve a la
+// normalidad, el sol se teletransporta, normalmente hacia atras, me
+// gustaria que siga desde donde estaba, pero a la velocidad normal" --
+// ROOT CAUSE: phaseFrac/currentCelestialFrac used to be computed FRESH every
+// call as (nowMs-ECO.phaseStartMs)/currentPhaseDurationMs(...), i.e. a live
+// ratio anchored to a fixed start timestamp. currentPhaseDurationMs itself
+// divides by ECO.cycleSpeedMul (see that function), and the pillar event
+// (startPillarEvent/updatePillarEvent) temporarily MULTIPLIES cycleSpeedMul
+// way up (shrinking the duration, speeding up the cycle) then snaps it back
+// down to its previous value the instant the event ends. The elapsed-time
+// numerator (nowMs-phaseStartMs) doesn't change at that instant, but the
+// duration DENOMINATOR suddenly jumps back up -- so the SAME numerator now
+// divides into a much bigger number, and frac (the sun/moon's 0..1 arc
+// position) suddenly DROPS. That's exactly "se teletransporta hacia atras".
+// FIX: frac is no longer a live ratio against a fixed anchor. Instead
+// ECO.phaseFracAccum/ECO.celestialFracAccum are ACCUMULATED incrementally
+// every frame, each frame adding (real dt since last tick)/(CURRENT
+// duration at THIS instant) -- see the accumulation below. Because only the
+// increment for the CURRENT frame uses the current duration, a duration
+// change (acceleration starting OR ending) only changes the SIZE of future
+// increments, never rescales the frac already banked from earlier frames.
+// frac can only ever move forward continuously; it cannot jump.
 function updateDayNight(nowMs){
-  if(!ECO.dayPhase){ enterDayPhase('midday', nowMs); return; } // boot default matches the old "always day, always root 0" baseline
-  if(nowMs - ECO.phaseStartMs >= currentPhaseDurationMs(ECO.dayPhase)){
+  if(!ECO.dayPhase){
+    enterDayPhase('midday', nowMs); // boot default matches the old "always day, always root 0" baseline
+    ECO._dnLastTickMs = nowMs;
+    return;
+  }
+  const dtMs = Math.max(0, nowMs - (ECO._dnLastTickMs||nowMs));
+  ECO._dnLastTickMs = nowMs;
+  const curPhaseDur = currentPhaseDurationMs(ECO.dayPhase);
+  if(curPhaseDur>0) ECO.phaseFracAccum = (ECO.phaseFracAccum||0) + dtMs/curPhaseDur;
+  const curTotalDur = ECO.isNight
+    ? currentPhaseDurationMs('night')
+    : currentPhaseDurationMs('morning')+currentPhaseDurationMs('midday')+currentPhaseDurationMs('afternoon');
+  if(curTotalDur>0) ECO.celestialFracAccum = Math.max(0,Math.min(1,(ECO.celestialFracAccum||0) + dtMs/curTotalDur));
+  if(ECO.phaseFracAccum >= 1){
     const idx = PHASE_ORDER.indexOf(ECO.dayPhase);
     enterDayPhase(PHASE_ORDER[(idx+1)%PHASE_ORDER.length], nowMs);
   }
@@ -4323,9 +4870,13 @@ function updateDayNight(nowMs){
 // ECO.moonPhase-only root as before.
 function isNightMidnightWindow(){
   if(!ECO.isNight) return false;
-  const dur = currentPhaseDurationMs('night');
-  if(!dur) return false;
-  const frac = (performance.now() - ECO.phaseStartMs) / dur;
+  // BUG FIX (round 20): now reads the accumulated phase frac (see
+  // updateDayNight) instead of re-deriving (performance.now()-phaseStartMs)/
+  // currentPhaseDurationMs('night') live -- that live formula had the exact
+  // same denominator-jump exposure as phaseFrac/currentCelestialFrac (a
+  // cycleSpeedMul change mid-night would have shifted this window's
+  // boundaries retroactively too).
+  const frac = ECO.phaseFracAccum||0;
   return frac >= (1/3) && frac < (2/3);
 }
 function currentNightSteps(){
@@ -4343,22 +4894,28 @@ function currentDayRootSteps(){ return ECO.isNight ? 0 : (ECO.dayPhaseRoot||0); 
 // 0..1 progress through JUST the current phase (used for the brightness
 // ramp, which is shaped differently per phase -- see dayPhaseBrightness).
 function phaseFrac(nowMs){
-  const dur = currentPhaseDurationMs(ECO.dayPhase);
-  return ECO.phaseStartMs ? Math.max(0,Math.min(1,(nowMs-ECO.phaseStartMs)/dur)) : 0;
+  // BUG FIX (round 20): returns the incrementally-accumulated frac (see
+  // updateDayNight/ECO.phaseFracAccum) instead of recomputing
+  // (nowMs-phaseStartMs)/currentPhaseDurationMs(...) fresh every call -- that
+  // live-ratio form is what let a cycleSpeedMul change (pillar-event
+  // acceleration start/end) retroactively rescale frac and make the
+  // sun/moon jump. `nowMs` is intentionally unused now; kept as a parameter
+  // for call-site compatibility.
+  return ECO.phaseStartMs ? Math.max(0,Math.min(1, ECO.phaseFracAccum||0)) : 0;
 }
 // 0..1 progress across the WHOLE current day (morning+midday+afternoon
 // combined) or the whole current night -- used for the sun/moon's single
 // continuous rise-peak-set arc, so it doesn't visually jump back to the
 // horizon at each of the 3 day-phase boundaries.
 function currentCelestialFrac(nowMs){
-  if(ECO.isNight) return phaseFrac(nowMs);
-  const mDur=currentPhaseDurationMs('morning'), midDur=currentPhaseDurationMs('midday'), aDur=currentPhaseDurationMs('afternoon');
-  const total = mDur+midDur+aDur;
-  let elapsed;
-  if(ECO.dayPhase==='morning') elapsed = nowMs-ECO.phaseStartMs;
-  else if(ECO.dayPhase==='midday') elapsed = mDur + (nowMs-ECO.phaseStartMs);
-  else elapsed = mDur+midDur + (nowMs-ECO.phaseStartMs); // afternoon (or the default-midday boot state)
-  return Math.max(0,Math.min(1, elapsed/Math.max(1,total)));
+  // BUG FIX (round 20): returns the incrementally-accumulated
+  // ECO.celestialFracAccum (see updateDayNight) instead of recomputing an
+  // elapsed/(mDur+midDur+aDur) live ratio every call. The old form divided a
+  // real-time elapsed numerator by a duration total that could suddenly
+  // change size (pillar-event cycleSpeedMul boost/revert), which is exactly
+  // what made the sun/moon "teletransportarse hacia atras" when acceleration
+  // ended. `nowMs` is intentionally unused now; kept for call-site compat.
+  return Math.max(0,Math.min(1, ECO.celestialFracAccum||0));
 }
 // Per-phase brightness curve -- tuned so consecutive phases meet at exactly
 // the same brightness value at their shared boundary (verified in the round-4
@@ -4480,6 +5037,25 @@ function wireActivityTracking(port){
     };
   });
 }
+// Round 22: same wrap-after-creation pattern as wireActivityTracking just
+// above (kept as its own separate function rather than folded into that
+// one, since this is a distinct concern -- voice-ducking bookkeeping, not
+// activity-spike tracking -- even though both wrap 'strum'). Stashes
+// whatever AudioPort.strum returns (now a {fadeNodes,ctx} handle, see the
+// createAudioPort 'strum' method) into ECO._lastStrumHandle so runAction
+// can read it back immediately afterward and register it into
+// ECO.activeVoices. Safe as a shared single scratch slot (not a queue)
+// because dispatchActions/runAction only ever process one action at a time,
+// synchronously, so there's no way for two strums' handles to race here.
+function wireVoiceCapture(port){
+  const origStrum = port.strum;
+  if(typeof origStrum!=='function') return;
+  port.strum = function(rawNotes, ...rest){
+    const handle = origStrum.call(port, rawNotes, ...rest);
+    if(typeof ECO!=='undefined') ECO._lastStrumHandle = handle || null;
+    return handle;
+  };
+}
 
 /* ---------- collision -> director -> audio, wired to physics EVENTS.
    Revision round 2: skips bodies already mid-eat-animation; wires the
@@ -4560,7 +5136,11 @@ function onEatStart(info){
   eater.lastAteAt = performance.now();
   eater.colorful = true;
   eater.wentGrayAt = 0;
-  if(eater.dying){
+  // BUG FIX (round 19): same _newMoonDying exclusion as updateFoodParticles'
+  // matching rescue (search _newMoonDying for the root-cause writeup) --
+  // eating another chord shouldn't be able to save an eater the new-moon
+  // die-off already condemned any more than eating a food pellet can.
+  if(eater.dying && !eater._newMoonDying){
     eater.dying = false; eater.dyingStartedAt = 0; eater.dyingScale = 1;
     eater.dragging = false; eater.gravity = true;
   }
@@ -4634,16 +5214,87 @@ function onShatter(info){
   spawnBurst('eat', cx, cy, burstHue); // reuse the existing burst as an impact flash
   ECO.audioPort.noiseTick();
 }
+// Round 22: "haz que si mientras esta sonando una shape suena otra shape
+// haya 50% de chances de que la que sono primero haga fade out" -- voice
+// ducking. A strum's own natural release only lasts ~1.5-2.2s (see
+// realPlayOneShot's `dur`), so STRUM_VOICE_SOUNDING_MS just needs to cover
+// that same window; a pad-hold ambient has no fixed duration (it plays
+// until explicitly stopped), so its ECO.activeVoices entry uses
+// until:Infinity instead and is only ever cleared by an explicit stop.
+const STRUM_VOICE_SOUNDING_MS = 2300;
+// Drops any 'strum' entries whose natural sounding window has already
+// elapsed -- 'ambient' entries (until:Infinity) are never pruned this way,
+// only by fadeOutActiveVoice or an explicit external stopAmbient elsewhere.
+function pruneActiveVoices(nowMs){
+  if(!ECO.activeVoices) return;
+  Object.keys(ECO.activeVoices).forEach(k=>{
+    const v = ECO.activeVoices[k];
+    if(v.until!==Infinity && nowMs > v.until) delete ECO.activeVoices[k];
+  });
+}
+// Fades out whatever's currently sounding for chordId `id` -- a quick
+// 250ms linear ramp-to-silence for a still-ringing strum (see
+// fadeOutVoiceHandle), or the existing smooth stopAmbient ramp (already
+// ~0.35s/0.09s exponential, see realStopSustain) for a pad-hold ambient.
+// Either way this is a clean fade, never an abrupt cutoff. Also clears the
+// chord's glowUntil in step, so the visual "sounding" glow stops in sync
+// with the audio instead of glowing on after its sound was cut short.
+function fadeOutActiveVoice(id, nowMs){
+  const v = ECO.activeVoices[id];
+  if(!v) return;
+  if(v.kind==='strum'){
+    fadeOutVoiceHandle(v.handle, 250);
+  } else if(v.kind==='ambient'){
+    if(ECO.ambientVisual && String(ECO.ambientVisual.sourceChordId)===String(id)){
+      ECO.audioPort.stopAmbient();
+      ECO.ambientVisual = null;
+    }
+  }
+  delete ECO.activeVoices[id];
+  const body = findBody(ECO.world, id);
+  if(body) body.glowUntil = nowMs;
+}
 function runAction(action, nowMs){
+  const isSoundEvent = action.type==='strum' || action.type==='startAmbient';
+  const newId = isSoundEvent ? (action.chordId || action.sourceChordId) : null;
+  // Judgment call: if more than one OTHER chord happens to still be
+  // "sounding" (rare -- normally at most one strum or the single ambient
+  // slot is active at a time), a single 50% coinflip decides whether to
+  // duck at all, and if it hits, ALL of the other still-sounding chords
+  // fade (not just one), so a brand-new chord starting never has to
+  // compete against a pile of stale earlier voices left over from a busy
+  // moment -- simpler and reads as one clean "who was here first yields"
+  // event rather than picking arbitrarily among several.
+  if(newId!=null){
+    pruneActiveVoices(nowMs);
+    const otherIds = Object.keys(ECO.activeVoices).filter(k => String(k) !== String(newId));
+    if(otherIds.length && Math.random() < 0.5){
+      otherIds.forEach(id => fadeOutActiveVoice(id, nowMs));
+    }
+  }
   applyActions([action], {
     world: ECO.world, physics: { findBody, removeBody },
     audioPort: ECO.audioPort, onDeath: handleDeath, onAmbientStart, onEatStart,
     onFlowerAbsorb, onDissonantFlash, onShatter,
   });
-  if(action.type==='strum' || action.type==='startAmbient'){
-    const id = action.chordId || action.sourceChordId;
+  if(isSoundEvent){
+    const id = newId;
     const c = id ? findBody(ECO.world, id) : null;
     if(c) c.glowUntil = nowMs+650;
+    if(id!=null){
+      // Round 22: register this chord's freshly-started voice so a LATER
+      // chord's runAction call can find+duck it. For 'strum', the handle
+      // is whatever ECO.audioPort.strum just returned, relayed here via
+      // ECO._lastStrumHandle by the wireVoiceCapture wrapper (see boot())
+      // since applyActions itself (tested, generic) doesn't propagate
+      // AudioPort return values back out to its caller.
+      if(action.type==='strum'){
+        const handle = ECO._lastStrumHandle; ECO._lastStrumHandle = null;
+        ECO.activeVoices[id] = { kind:'strum', handle, since: nowMs, until: nowMs + STRUM_VOICE_SOUNDING_MS };
+      } else {
+        ECO.activeVoices[id] = { kind:'ambient', handle:null, since: nowMs, until: Infinity };
+      }
+    }
   }
 }
 function dispatchActions(actions, nowMs){
@@ -4958,7 +5609,7 @@ function updateFish(nowMs){
       target.eatScale = 1;
       target.dragging = true; target.gravity = false; target.nurseryPinned = false;
       target.huntUntil = 0; target.huntTargetId = null;
-      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===target.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; }
+      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===target.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; if(ECO.activeVoices) delete ECO.activeVoices[target.id]; } // round 22: keep the voice-ducking registry in sync
       spawnBurst('eat', target.x, target.y, hueForPc(liveRootRaw(target)));
     } else {
       fish.targetGone = true; // vanished (eaten/died) right before the bite landed -- fish still finishes its swim, just empty-mouthed
@@ -5065,7 +5716,7 @@ function updateBird(nowMs){
       target.eatScale = 1;
       target.dragging = true; target.gravity = false; target.nurseryPinned = false;
       target.huntUntil = 0; target.huntTargetId = null;
-      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===target.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; }
+      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===target.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; if(ECO.activeVoices) delete ECO.activeVoices[target.id]; } // round 22: keep the voice-ducking registry in sync
       spawnBurst('eat', target.x, target.y, hueForPc(liveRootRaw(target)));
     } else {
       bird.targetGone = true; // vanished right before the bite landed -- bird still finishes its sweep, just empty-taloned
@@ -5947,6 +6598,14 @@ function updateBorderAudio(nowMs){
       const notes = computeChordRawNotes(b, ctx);
       ECO.audioPort.strum(notes, notes[0], ECO.settings.timbre, b.pitchVarianceCents||0, quiet);
       b.glowUntil = nowMs+650;
+      // TASK 1: extra high pad voice on every zone crossing -- the chord's
+      // own highest note, through the new realPlayZoneCrossPad soft-pad
+      // timbre (see its definition for how it differs from
+      // realPlayEtherealPad, the tree performance's pad).
+      if(ECO.audioPort.playZoneCrossPad && notes.length){
+        const highest = notes.reduce((a,c)=> c>a?c:a, notes[0]);
+        ECO.audioPort.playZoneCrossPad(highest, notes[0], 2.4);
+      }
     }
     b.borderSide = newSide;
     currentWaterfallCrush = false;
@@ -6107,15 +6766,27 @@ function startTreePerformance(chord, nowMs){
   const prog = list[Math.floor(ECO.rng()*list.length)];
   if(!prog || !prog.chords || !prog.chords.length) return;
   const bpm = Math.max(20, Math.min(300, 60 + ECO.rng()*120));
+  // Task #1 ("progresiones del arbol de 1 a 3 acordes mas lentas y con mas
+  // release"): a short saved progression (1-3 chords total) is judged here,
+  // once, from the progression's OWN chord count -- flagged on tp.shortProg
+  // so advanceTreePerformance can both stretch secPerBeat (tempo) and pass a
+  // longer releaseMul into strum() for every chord of this performance.
+  const isShort = prog.chords.length>=1 && prog.chords.length<=3;
   ECO.treePerformance = {
     active:true, startedAt: nowMs, hue: hueForPc(liveRootRaw(chord)),
     chords: prog.chords, anchor: prog.chords[0].root,
     repeatsTotal: 2, repeatIdx: 0, chordIdx: 0,
-    secPerBeat: 60/bpm, beatsPerChord: 2,
-    timbre: ECO.rng()<0.5 ? 'guitar' : 'sine',
+    secPerBeat: (60/bpm) * (isShort ? 1.5 : 1), // +50% beat duration ("mas lentos") for short progressions
+    beatsPerChord: 2,
+    // TASK 5: was a flat 50/50 ECO.rng()<0.5 ? 'guitar' : 'sine' split.
+    // Shifted so sine is noticeably more common and guitar noticeably less
+    // common for these plain/default (non-platform-forced) tree-performance
+    // strums -- now 35% guitar / 65% sine.
+    timbre: ECO.rng()<0.35 ? 'guitar' : 'sine',
     nextChordAt: nowMs, cooldownUntil: 0,
     chordId: chord.id, // revision round 11: lets drawChord() identify the one body actually attached to the tree right now, so only ITS hexagon stretches toward the tree
     toplineLastIdx: null, // revision round 11: melodic-memory for scheduleTreeTopline, scoped per-performance so a fresh performance always starts its line with a free random leap rather than inheriting the previous performance's last note
+    shortProg: isShort, // Task #1
   };
 }
 // Revision round 13: the dual-progression "sympathetic resonance" tree
@@ -6146,6 +6817,15 @@ function startDualTreePerformance(triggerChord, stuckChord, nowMs){
   const anchorA = progA.chords[0].root;
   const anchorB = validB.chords[0].root;
   const target = 8 + Math.floor(ECO.rng()*5); // 8-12 inclusive, randomized once per performance
+  // Task #1: the dual playlist is a flattened alternation of A/B, but each
+  // chord is still built one-at-a-time from its own source progression here,
+  // so tagging per-chord origin ("short" = its OWN source progression has
+  // only 1-3 chords total) costs nothing extra -- advanceTreePerformance can
+  // then slow tempo/lengthen release only for chords actually sourced from
+  // the short progression, even mid-performance as it interleaves with a
+  // longer one.
+  const shortA = progA.chords.length>=1 && progA.chords.length<=3;
+  const shortB = validB.chords.length>=1 && validB.chords.length<=3;
   const playlist = [];
   let useA = ECO.rng()<0.5;
   let idxA=0, idxB=0;
@@ -6153,10 +6833,11 @@ function startDualTreePerformance(triggerChord, stuckChord, nowMs){
     const groupSize = ECO.rng()<0.5 ? 2 : 4; // "grupos de 2 o de 4", randomized each switch
     const prog = useA ? progA : validB;
     const anchor = useA ? anchorA : anchorB;
+    const short = useA ? shortA : shortB;
     for(let g=0; g<groupSize && playlist.length<target; g++){
       const idx = useA ? (idxA++ % prog.chords.length) : (idxB++ % prog.chords.length);
       const c = prog.chords[idx];
-      playlist.push({ root: c.root-anchor, intervals: c.intervals });
+      playlist.push({ root: c.root-anchor, intervals: c.intervals, short });
     }
     useA = !useA;
   }
@@ -6166,7 +6847,9 @@ function startDualTreePerformance(triggerChord, stuckChord, nowMs){
     chords: playlist, anchor: 0,
     repeatsTotal: 1, repeatIdx: 0, chordIdx: 0, // the playlist already contains every chord to be played, once through
     secPerBeat: 60/bpm, beatsPerChord: 2,
-    timbre: ECO.rng()<0.5 ? 'guitar' : 'sine',
+    // TASK 5: same rebalance as startTreePerformance above -- was flat 50/50,
+    // now 35% guitar / 65% sine.
+    timbre: ECO.rng()<0.35 ? 'guitar' : 'sine',
     nextChordAt: nowMs, cooldownUntil: 0,
     chordId: triggerChord.id,
     toplineLastIdx: null,
@@ -6260,11 +6943,43 @@ function advanceTreePerformance(nowMs){
   if(nowMs < tp.nextChordAt) return; // still holding on the current/last chord
   if(tp.repeatIdx >= tp.repeatsTotal){ endTreePerformance(nowMs); return; }
   const c = tp.chords[tp.chordIdx];
-  const rebaseRoot = c.root - tp.anchor;
+  // "haz que lo que suena del arbol este todo transpuesto segun la hora del
+  // dia" -- the tree performance plays the user's OWN saved progressions,
+  // rebased to their own internal anchor (rebaseRoot below), completely
+  // independent of whatever root the rest of the world is currently
+  // transposed to. To keep it in tune with everything else, fold in the same
+  // "time of day" root shift every other ambient/background element already
+  // uses -- see the identical currentNightSteps()+currentDayRootSteps()
+  // combination at drawZoneWash's `rootShift` (~line 7924) and at
+  // liveRootRaw() itself (~line 3786). Deliberately EXCLUDES a chord's own
+  // zoneRootFor(zone)/transposeOffset component (the tree isn't standing in
+  // any particular zone), so this is "everything liveRootRaw adds for the
+  // CURRENT phase except the per-chord zone offset" -- day phase contributes
+  // currentDayRootSteps() (0 at night), night phase contributes
+  // currentNightSteps() (0 during the day), and the two are already mutually
+  // exclusive so simply adding them gives exactly one active component at a
+  // time, matching the app's existing "time of day root" convention.
+  const timeOfDayRoot = currentNightSteps() + currentDayRootSteps();
+  const rebaseRoot = c.root - tp.anchor + timeOfDayRoot;
   const notes = (c.intervals||[]).map(iv=>rebaseRoot+iv);
-  ECO.audioPort.strum(notes, rebaseRoot, tp.timbre, 0, false, 'tree'); // revision round 10: 'tree' MIDI channel hint
+  // Task #1: "progresiones de 1-3 acordes mas lentas y con mas release" --
+  // for a single-progression performance the whole thing is already flagged
+  // via tp.shortProg (set once in startTreePerformance, from that one
+  // progression's own length). For a dual performance the two interleaved
+  // progressions can differ in length, so each playlist entry carries its
+  // OWN c.short flag (set in startDualTreePerformance) instead -- this chord
+  // is slowed/released-longer only when IT was sourced from the short one.
+  const isShortChord = tp.dual ? !!c.short : !!tp.shortProg;
+  const releaseMul = isShortChord ? 1.6 : 1; // "mas release" -- +60% release length
+  ECO.audioPort.strum(notes, rebaseRoot, tp.timbre, 0, false, 'tree', null, releaseMul); // revision round 10: 'tree' MIDI channel hint
   triggerSympatheticResonance(notes, tp, nowMs); // revision round 13: no-op unless tp.dual
-  const slotMs = tp.beatsPerChord*tp.secPerBeat*1000*EVENT_PACE_MUL;
+  // slotMs (the on-screen/playback hold time for this one chord) gets the
+  // same short-progression slowdown as the tempo baked into tp.secPerBeat
+  // for single performances; for dual performances tp.secPerBeat is one
+  // fixed bpm for the whole interleaved playlist, so the extra 1.5x here is
+  // what actually applies the "mas lentos" slowdown per-chord in that case.
+  const dualSlowMul = (tp.dual && isShortChord) ? 1.5 : 1;
+  const slotMs = tp.beatsPerChord*tp.secPerBeat*1000*EVENT_PACE_MUL*dualSlowMul;
   // Revision round 11: "root bass con release largo en el primer acorde" --
   // only on the first chord of each pass through the progression (chordIdx
   // is back at 0 at the start of every repeat), a low pedal note two octaves
@@ -6278,6 +6993,31 @@ function advanceTreePerformance(nowMs){
     ECO.audioPort.soloNote(rebaseRoot-62, rebaseRoot, tp.timbre, 3.4, 0, false, 'tree');
   }
   scheduleTreeTopline(tp, notes, slotMs);
+  // "la segunda repeticion de una progresion en la performance del arbol
+  // tenga la voz mas aguda seguida por un sonido que recuerde a un pad con
+  // armonicos pero suave y ataque un poco lento y mucho reverb" -- only on
+  // the SECOND time through the progression. For a single-progression
+  // performance that's simply repeatIdx===1 (repeatsTotal:2, 0-indexed
+  // passes -- repeatIdx only increments to 1 once the FIRST full pass has
+  // finished, see the tp.chordIdx>=tp.chords.length check at the bottom of
+  // this function). A dual performance's tp.repeatsTotal is always 1 (its
+  // tp.chords is a single flattened A/B-interleaved playlist built once in
+  // startDualTreePerformance, not literal repeated passes over one
+  // progression), so there's no literal "second repeat" to key off there --
+  // judgment call: adapted to the second HALF of that playlist instead,
+  // the closest equivalent given the current data structure.
+  const isSecondRepeat = tp.dual
+    ? tp.chordIdx >= Math.floor(tp.chords.length/2)
+    : tp.repeatIdx === 1;
+  if(isSecondRepeat && notes.length){
+    // chord's own highest (most acute) voice, doubled an octave up (+31 raw
+    // steps = +1 octave in this 31EDO tuning, same convention as rootBass's
+    // "-62 = -2 octaves" comment above) -- "la voz mas aguda" made more
+    // prominent by playing it higher still, on the new soft pad timbre.
+    const highest = Math.max.apply(null, notes);
+    const padDurSec = Math.max(1.6, (slotMs/1000)*1.7); // lingers past the chord's own ~1.5s hold -- the slow attack + big reverb tail need room to actually be heard
+    ECO.audioPort.etherealPad(highest+31, rebaseRoot, padDurSec, false, 'tree');
+  }
   // revision round 8 pacing: this new event's own rhythm gets the same
   // uniform 10% slowdown as every other timed event in the file (see
   // EVENT_PACE_MUL) -- applied here, once, at the point the logical
@@ -6396,7 +7136,9 @@ function drawTreeNeuralLinks(nowMs){
     const phase = (idx*0.61803398875)%1; // golden-ratio spacing keeps offsets well-distributed across the mesh
     const pulse = 0.65 + 0.35*Math.sin((tSec*2.4) + phase*Math.PI*2);
     const emphasized = dnaIds.has(aid) || dnaIds.has(bid);
-    const emphMul = emphasized ? 1.6 : 1;
+    // Further round: "marca muchisimo mas la zona del arbol" -- emphasis
+    // multiplier pushed again, 1.6 -> 2.2 (+37%), on top of every earlier bump.
+    const emphMul = emphasized ? 2.2 : 1;
     // TASK 5: base alpha multiplier bumped 0.55 -> 0.68 for stronger overall visibility.
     const baseAlpha = Math.min(1, 0.68*distAlpha*ease*pulse*emphMul);
     const glowA = Math.round(baseAlpha*0.6*20)/20; // TASK 5: glow share bumped 0.55 -> 0.6
@@ -6450,11 +7192,16 @@ function drawTreeNeuralLinks(nowMs){
     const zoneX0 = z => z==='A'?0 : (z==='B'?t1:t2);
     const zoneX1 = z => z==='A'?t1 : (z==='B'?t2:w);
     ctx2d.save();
+    // Task #2 ("acentua mucho ese efecto"): base wash alpha pushed 0.10 ->
+    // 0.17 (+70%), well within the requested +50-80% range, same
+    // fade in/out easing (still gated by `ease`) and pulse untouched.
+    // Further round ("marca muchisimo mas la zona del arbol"): pushed again,
+    // 0.17 -> 0.27 (+~59%).
     const glowPulse = 0.7 + 0.3*Math.sin(tSec*1.6);
     dnaZones.forEach(z=>{
       const x0=zoneX0(z), x1=zoneX1(z);
       const grad = ctx2d.createLinearGradient(x0,0,x1,0);
-      const a = 0.10*ease*glowPulse;
+      const a = 0.27*ease*glowPulse;
       grad.addColorStop(0, `rgba(255,70,210,0)`);
       grad.addColorStop(0.5, `rgba(255,70,210,${a.toFixed(3)})`);
       grad.addColorStop(1, `rgba(255,70,210,0)`);
@@ -6478,10 +7225,17 @@ function drawTreeNeuralLinks(nowMs){
     const cx = ECO.islandTree.canopyX, cy = ECO.islandTree.canopyY;
     if(isFinite(cx) && isFinite(cy)){
       ctx2d.save();
+      // Further round ("desmarca lo demas... vignette-style dimming...
+      // strongest at the screen edges"): darkening strengthened again,
+      // 0.32 -> 0.5 (+56%), and the clear inner radius shrunk slightly
+      // (0.16 -> 0.14) so the sharper contrast starts closer to the tree,
+      // making the "near tree = clear, everywhere else = dim" split read
+      // more starkly. Layered additionally on top of (not replacing) the
+      // near-tree saturation boost below.
       const maxR = Math.hypot(w,h)*0.62; // reaches past the farthest corner so the very edges read fully dark
-      const innerR = Math.hypot(w,h)*0.16; // clear, untouched radius right around the tree
+      const innerR = Math.hypot(w,h)*0.14; // clear, untouched radius right around the tree
       const vgrad = ctx2d.createRadialGradient(cx,cy,innerR,cx,cy,maxR);
-      const vAlpha = 0.32*ease; // subtle -- not a hard vignette
+      const vAlpha = 0.5*ease; // no longer "subtle" -- pushed hard per this round's request
       vgrad.addColorStop(0, 'rgba(4,4,10,0)');
       vgrad.addColorStop(1, `rgba(4,4,10,${vAlpha.toFixed(3)})`);
       ctx2d.fillStyle = vgrad;
@@ -6501,16 +7255,40 @@ function drawTreeNeuralLinks(nowMs){
 // TREE_DUAL_DESAT_RANGE_PX radius (kept under its old name so every call
 // site/comment cross-referencing it still points at the right constant).
 const TREE_DUAL_DESAT_RANGE_PX = 650;
-const TREE_DUAL_SAT_BOOST_MAX = 260; // judgment call: near-tree cap of 260% saturation -- "muy muy notablemente" without fully blowing out to pure neon
+// Further round ("marca muchisimo mas la zona del arbol"): near-tree boost
+// pushed again -- boost range above 100% widened by +50% (160 -> 240), so
+// cap goes 260 -> 340. Still a judgment call on the exact ceiling, chosen to
+// read as "muy muy notablemente" intensified without fully blowing to pure
+// neon/clipping.
+const TREE_DUAL_SAT_BOOST_MAX = 340;
+// NEW this round ("desmarca lo demas... vignette-style dimming/desaturation
+// that's strongest at the screen edges and fades to no effect near the
+// tree"): beyond TREE_DUAL_DESAT_RANGE_PX, saturation now eases DOWN below
+// 100% the farther out you go, reaching a floor at TREE_DUAL_FAR_RANGE_PX
+// past that boundary. This is layered ADDITIONALLY alongside the near-tree
+// boost above (both live in the same function/continuous curve, meeting at
+// exactly 100% at the boundary radius) -- it does NOT touch or revert the
+// near-tree "saturate near" behavior, it only adds a complementary far-side
+// desaturation on top, per explicit instruction not to confuse the two.
+const TREE_DUAL_FAR_RANGE_PX = 1500;
+const TREE_DUAL_FAR_SAT_MIN = 52; // judgment call: far/edge floor -- strongly muted but not fully grayscale
 function treeDualSatPercent(x,y){
   const ease = ECO._treeDualEase||0;
   if(ease<=0 || !ECO.islandTree) return 100;
   const tr = ECO.islandTree;
   const dist = Math.hypot(x-tr.canopyX, y-tr.canopyY);
-  let frac = Math.max(0,Math.min(1, dist/TREE_DUAL_DESAT_RANGE_PX));
-  frac = frac*frac*(3-2*frac); // smoothstep -- a gentler near/far falloff than a linear ramp
-  const nearness = 1-frac; // 1 right at the tree, 0 at/beyond the falloff radius
-  return 100 + nearness*ease*(TREE_DUAL_SAT_BOOST_MAX-100);
+  if(dist <= TREE_DUAL_DESAT_RANGE_PX){
+    let frac = Math.max(0,Math.min(1, dist/TREE_DUAL_DESAT_RANGE_PX));
+    frac = frac*frac*(3-2*frac); // smoothstep -- a gentler near/far falloff than a linear ramp
+    const nearness = 1-frac; // 1 right at the tree, 0 at/beyond the falloff radius
+    return 100 + nearness*ease*(TREE_DUAL_SAT_BOOST_MAX-100);
+  }
+  // Far side: continues past the near-boost radius, easing saturation down
+  // below 100% the farther from the tree, hitting TREE_DUAL_FAR_SAT_MIN at
+  // TREE_DUAL_FAR_RANGE_PX beyond the boundary and holding there past that.
+  let ffrac = Math.max(0, Math.min(1, (dist-TREE_DUAL_DESAT_RANGE_PX)/TREE_DUAL_FAR_RANGE_PX));
+  ffrac = ffrac*ffrac*(3-2*ffrac);
+  return 100 - ffrac*ease*(100-TREE_DUAL_FAR_SAT_MIN);
 }
 
 /* ---------- rain weather: an occasional soft shower with a white-noise
@@ -6539,7 +7317,14 @@ function makeRainDrops(strong){
 // CHORD_CHANCE is the odds a strike targets a live chord directly (versus an
 // empty point) whenever at least one eligible chord exists; a direct hit
 // starts that chord's 31-step electric zap (see startLightningZap).
-const LIGHTNING_MIN_GAP_MS = 1400 * EVENT_PACE_MUL, LIGHTNING_MAX_GAP_MS = 4200 * EVENT_PACE_MUL;
+// Task #6 ("haz los rayos menos probables"): read as "lightning happening at
+// all, in general" rather than the separate chord-targeting odds just below
+// (LIGHTNING_STRIKE_CHORD_CHANCE, which only governs where an already-
+// decided strike lands) -- so the fix is here, on the strike-to-strike gap
+// timing that governs how OFTEN a strike fires at all during a storm. Both
+// widened ~35% (1400->1900, 4200->5700), spacing strikes noticeably further
+// apart without touching the chord-hit sub-chance.
+const LIGHTNING_MIN_GAP_MS = 1900 * EVENT_PACE_MUL, LIGHTNING_MAX_GAP_MS = 5700 * EVENT_PACE_MUL;
 const LIGHTNING_STRIKE_CHORD_CHANCE = 0.55;
 const LIGHTNING_ZAP_STEPS = 31, LIGHTNING_ZAP_TOTAL_MS = 8000, LIGHTNING_ZAP_STEP_MS = LIGHTNING_ZAP_TOTAL_MS/LIGHTNING_ZAP_STEPS;
 const LIGHTNING_ZAP_OCTAVES = [-3,-2,-1,0,1,2,3]; // "todas las octavas del espectro audible" -- raw step +-N_STEPS per octave, see freqForRaw
@@ -6877,6 +7662,11 @@ function updateLightningZaps(nowMs){
         LIGHTNING_ZAP_OCTAVES.forEach(oct=>{
           ECO.audioPort.soloNote(n+stepShift+oct*N_STEPS, zap.root+stepShift, 'square', 0.16, 0, false, 'other', body.zone);
         });
+        // "un golpe de luz por cada nota" -- one short-range white flash per
+        // individual note fired (per chord-note per step, not further
+        // multiplied by the octave layers above, which would be too dense to
+        // read as a strobe rather than a solid glow).
+        ECO.zapFlashes.push({ x: body.x, y: body.y, startedAt: nowMs });
       });
       zap.stepsFired++;
     }
@@ -6930,7 +7720,36 @@ function updateFoodParticles(nowMs){
         // anyway, since nothing here ever cleared c.dying itself -- eating
         // visually un-grayed it but couldn't actually save it. Eating now
         // also rescues it: cancels dying and restores normal falling physics.
-        if(c.dying){
+        // BUG FIX (round 19): "la luna nueva no funciona... sobrevivieron
+        // muchos... sospecho que es por que el arbol estaba activo" -- ROOT
+        // CAUSE traced. This liveChords filter above (kind==='chord' &&
+        // !beingEaten) never excluded c.dying, so it always included chords
+        // that triggerNewMoonDieOff (see that function) had just marked for
+        // death, and this rescue block indiscriminately un-dies ANY dying
+        // chord that overlaps a food pellet -- including new-moon victims,
+        // which were never meant to be savable. Normally this was a rare
+        // fluke (one straggler gray-dying next to a pellet by chance). But
+        // during an active tree performance, loop()'s tree-performance branch
+        // calls neither updateFoodParticles nor updateDyingBodies at all (see
+        // loop()), so the whole batch of new-moon victims -- marked dying,
+        // dragging:true, frozen in place -- just sits there UNPROCESSED for
+        // up to MAX_TREE_PERFORMANCE_MS (30s) instead of sinking/being
+        // removed within the normal ~1.4s GRAY_DEATH_SINK_MS window. The
+        // instant the performance ends and the normal branch resumes ("ahora
+        // cuando deja de acelerarse el tiempo"), THIS function (updateFoodParticles)
+        // runs before updateDyingBodies does (see loop()'s call order), so on
+        // that very first catch-up frame every frozen victim still overlapping
+        // a food pellet gets silently rescued right before the removal pass
+        // ever gets a chance to run -- turning "one survivor" into "many
+        // survivors". Two-part fix: (1) new-moon victims are now tagged
+        // _newMoonDying so this rescue explicitly excludes them -- eating
+        // still un-grays/saves an ordinary gray-starve death as designed, but
+        // can never save a chord the new-moon die-off deliberately killed;
+        // (2) updateDyingBodies is now also called from loop()'s
+        // tree-performance branch (see BUG FIX round 19 there) so dying
+        // chords keep sinking/being removed in real time instead of piling up
+        // frozen for the whole performance, closing the race entirely.
+        if(c.dying && !c._newMoonDying){
           c.dying = false; c.dyingStartedAt = 0; c.dyingScale = 1;
           c.dragging = false; c.gravity = true;
         }
@@ -7104,7 +7923,7 @@ function updateGrayDeaths(nowMs){
       c.dyingStartedAt = nowMs;
       c.dragging = true; c.gravity = false; c.nurseryPinned = false;
       c.huntUntil = 0; c.huntTargetId = null;
-      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===c.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; }
+      if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===c.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; if(ECO.activeVoices) delete ECO.activeVoices[c.id]; } // round 22: keep the voice-ducking registry in sync with any ambient stop, not just fadeOutActiveVoice's own
       spawnBurst('splash', c.x, ECO.world.height-ECO.world.cfg.floorThickness, 200);
     }
   });
@@ -7253,7 +8072,7 @@ function updateFlowerAbsorption(nowMs){
     c.dragging = true; c.gravity = false; c.nurseryPinned = false;
     c.huntUntil = 0; c.huntTargetId = null;
     c.flowerAbsorbAt = 0;
-    if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===c.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; }
+    if(ECO.ambientVisual && ECO.ambientVisual.sourceChordId===c.id){ ECO.audioPort.stopAmbient(); ECO.ambientVisual=null; if(ECO.activeVoices) delete ECO.activeVoices[c.id]; } // round 22: keep the voice-ducking registry in sync with any ambient stop, not just fadeOutActiveVoice's own
     spawnBurst('eat', c.x, c.y, hueForPc(liveRootRaw(c)));
     if(holder){ holder.eatPulseUntil = nowMs+280; holder.holdingChordId = null; }
   });
@@ -7373,7 +8192,8 @@ function drawBackground(w,h,nowMs){
   gC.addColorStop(0, hsl(hueC,78,60,0.40)); gC.addColorStop(1, hsl(hueC,78,60,0.11));
   ctx2d.fillStyle=gC; ctx2d.fillRect(t2,-SHAKE_SAFE_PAD,w-t2+SHAKE_SAFE_PAD,h+SHAKE_SAFE_PAD*2);
 }
-function drawSun(x,y,nowMs){
+function drawSun(x,y,nowMs,midpointBoost){
+  const mb = midpointBoost||1; // arc-midpoint brightness boost (see drawCelestial), 1 = no boost
   const R=44; // revision round 10: bigger again (was 36 in round 8, 30 in round 7, 21 in round 5, 15 before that)
   ctx2d.save();
   ctx2d.translate(x,y);
@@ -7404,20 +8224,20 @@ function drawSun(x,y,nowMs){
   // Revision round 4: a large, soft halo illuminating the surroundings --
   // the sun's halo is always at full strength (only the moon's scales with
   // phase, per spec), well beyond the existing small corona below.
-  const bigHalo = ctx2d.createRadialGradient(0,0,0,0,0,R*11);
-  bigHalo.addColorStop(0,'rgba(255,'+lerpC(238,120)+','+lerpC(190,55)+','+(0.16+0.10*dawnT).toFixed(3)+')');
-  bigHalo.addColorStop(0.4,'rgba(255,'+lerpC(220,110)+','+lerpC(140,50)+','+(0.07+0.035*dawnT).toFixed(3)+')');
+  const bigHalo = ctx2d.createRadialGradient(0,0,0,0,0,R*11*mb);
+  bigHalo.addColorStop(0,'rgba(255,'+lerpC(238,120)+','+lerpC(190,55)+','+Math.min(1,(0.16+0.10*dawnT)*mb).toFixed(3)+')');
+  bigHalo.addColorStop(0.4,'rgba(255,'+lerpC(220,110)+','+lerpC(140,50)+','+Math.min(1,(0.07+0.035*dawnT)*mb).toFixed(3)+')');
   bigHalo.addColorStop(1,'rgba(255,200,100,0)');
-  ctx2d.fillStyle=bigHalo; ctx2d.beginPath(); ctx2d.arc(0,0,R*11,0,Math.PI*2); ctx2d.fill();
-  const outerGlow = ctx2d.createRadialGradient(0,0,R*0.5,0,0,R*3.2);
-  outerGlow.addColorStop(0,'rgba(255,'+lerpC(241,125)+','+lerpC(199,55)+','+(0.35+0.12*dawnT).toFixed(3)+')');
+  ctx2d.fillStyle=bigHalo; ctx2d.beginPath(); ctx2d.arc(0,0,R*11*mb,0,Math.PI*2); ctx2d.fill();
+  const outerGlow = ctx2d.createRadialGradient(0,0,R*0.5,0,0,R*3.2*mb);
+  outerGlow.addColorStop(0,'rgba(255,'+lerpC(241,125)+','+lerpC(199,55)+','+Math.min(1,(0.35+0.12*dawnT)*mb).toFixed(3)+')');
   outerGlow.addColorStop(1,'rgba(255,207,92,0)');
-  ctx2d.fillStyle=outerGlow; ctx2d.beginPath(); ctx2d.arc(0,0,R*3.2,0,Math.PI*2); ctx2d.fill();
+  ctx2d.fillStyle=outerGlow; ctx2d.beginPath(); ctx2d.arc(0,0,R*3.2*mb,0,Math.PI*2); ctx2d.fill();
   const rays=14;
   for(let i=0;i<rays;i++){
     const a = (i/rays)*Math.PI*2 + nowMs*0.00025;
     const len = R*(1.55+0.35*Math.sin(nowMs*0.0016+i*1.3));
-    ctx2d.strokeStyle = 'rgba(255,'+lerpC(223,110)+','+lerpC(150,45)+','+(0.6+0.18*dawnT).toFixed(3)+')'; ctx2d.lineWidth=2.4; ctx2d.lineCap='round';
+    ctx2d.strokeStyle = 'rgba(255,'+lerpC(223,110)+','+lerpC(150,45)+','+Math.min(1,(0.6+0.18*dawnT)*mb).toFixed(3)+')'; ctx2d.lineWidth=2.4; ctx2d.lineCap='round';
     ctx2d.beginPath();
     ctx2d.moveTo(Math.cos(a)*R*1.2, Math.sin(a)*R*1.2);
     ctx2d.lineTo(Math.cos(a)*len, Math.sin(a)*len);
@@ -7452,11 +8272,14 @@ function drawSun(x,y,nowMs){
 // already peaks at illum~1 every full-moon-adjacent night) so the exact
 // full-moon night reads as a genuinely distinct spike, not just the top of
 // the usual gradual curve every near-full night already reaches.
-function drawMoonPhase(cx,cy,r,phase31,boosted){
+function drawMoonPhase(cx,cy,r,phase31,boosted,midpointBoost){
   const t = phase31/31;
   const illum = (1-Math.cos(t*2*Math.PI))/2; // 0 new -> 1 full -> 0
   const waxing = t < 0.5;
-  const boostMul = boosted ? 1.55 : 1;
+  // Arc-midpoint brightness boost (see drawCelestial) stacks multiplicatively
+  // with the existing full-moon-night boost, so a full moon exactly at its
+  // zenith reads as brighter still than a full moon low near the horizon.
+  const boostMul = (boosted ? 1.55 : 1) * (midpointBoost||1);
   // Revision round 4: halo scales with illumination -- essentially absent at
   // new moon ("si es luna nueva que no tenga [halo]"); applyBrightnessOverlay
   // separately darkens the whole scene further at new moon too.
@@ -7578,12 +8401,32 @@ function drawCelestial(w,h,nowMs){
     frac = trueFrac;
   }
   const pos = celestialArcPosition(frac, w, h);
+  // "haz que cuando el sol o la luna pasan por la mitad de su ciclo emitan
+  // mas luz y claridad, menos en luna nueva" -- a smooth bell-curve boost to
+  // the sun/moon's own brightness/halo, peaking exactly at frac=0.5 (the
+  // literal midpoint of currentCelestialFrac's arc -- directly overhead,
+  // halfway between rise and set) and tapering to +0 right at the horizon
+  // (frac=0 or 1). `shape` is a triangle wave 0..1..0 across the arc;
+  // squaring it gives a rounder, more bell-like peak than the bare triangle
+  // (same "raise to a power for a nicer peak" idea called out in the spec)
+  // without needing a full Gaussian. Capped at a +32% boost at the very
+  // peak, comfortably inside the requested +20-40% range.
+  // CRITICALLY suppressed during new-moon night: drawNewMoonBlackout's
+  // near-total blackout overlay is the deliberate visual for that night (see
+  // its own comments), and a brightness boost here would directly fight it --
+  // same precedent as triggerVignetteFlash's `if(ECO.isNewMoonNight) return;`
+  // guard above.
+  let celestialMidpointBoost = 1;
+  if(!ECO.isNewMoonNight){
+    const shape = Math.max(0, 1 - Math.abs(frac-0.5)*2);
+    celestialMidpointBoost = 1 + 0.32*(shape*shape);
+  }
   // Revision round 11: "luna llena aumenta el tamaño de la luna... un monton"
   // -- the disc itself (not just its halo, see drawMoonPhase's boostMul)
   // grows on the exact full-moon night(s), on top of round 10's already-
   // bigger base size.
-  if(ECO.isNight) drawMoonPhase(pos.x,pos.y, ECO.isFullMoonNight?56*1.6:56, ECO.moonPhase, ECO.isFullMoonNight);
-  else drawSun(pos.x,pos.y,nowMs);
+  if(ECO.isNight) drawMoonPhase(pos.x,pos.y, ECO.isFullMoonNight?56*1.6:56, ECO.moonPhase, ECO.isFullMoonNight, celestialMidpointBoost);
+  else drawSun(pos.x,pos.y,nowMs,celestialMidpointBoost);
 }
 // Revision round 2: a full-canvas wash driven by the brightness curve, so the
 // whole scene visibly brightens toward solar noon and dims toward the
@@ -8267,7 +9110,16 @@ function drawGaudiChimneyOrnament(cx, cy, r, inverse, seed, platHue, edgeThick){
   // colorful shard" language as the Gaudi pillar event's mosaic flecks.
   ctx2d.save();
   ctx2d.clip(); // confine flecks to the trunk silhouette just traced
-  const fleckN = 14;
+  // Perf pass (new angle, round 5): fleckN used to be a flat constant
+  // regardless of how large the chimney actually renders on screen. A
+  // shrunk/distant-feeling platform (small r) still paid for all 14
+  // fillRect+save/restore calls even though most of those flecks are
+  // sub-pixel and invisible at that size. Scale the fleck count down for
+  // small r (never below 5, so it never looks visibly sparser at any size
+  // that was already legible) -- purely a computational-path change, the
+  // full 14 still render at normal/large sizes so nothing looks different
+  // there.
+  const fleckN = Math.max(5, Math.round(14 * Math.min(1, r/34)));
   for(let i=0;i<fleckN;i++){
     const fs = (seed*7.13 + i*2.63) % 1;
     const f = fs;
@@ -10000,6 +10852,36 @@ function drawLightningZaps(nowMs){
     if(b.kind==='chord' && b.lightningZapUntil && nowMs<b.lightningZapUntil) drawTeslaCoilZap(b,nowMs);
   });
 }
+// "que emitan fuertisima luz blanca de corto alcance, un golpe de luz por
+// cada nota" -- each entry in ECO.zapFlashes (pushed once per individual
+// note fired inside updateLightningZaps) is a quick, intense, SHORT-RANGE
+// white radial burst: small radius, high starting alpha, fast decay, total
+// lifetime ZAP_FLASH_MS so a rapid barrage of notes reads visually as a
+// strobe of white flashes rather than a steady glow. Expired flashes are
+// pruned here every frame, so no separate cleanup pass is needed.
+const ZAP_FLASH_MS = 110; // short: 80-150ms total per the request
+const ZAP_FLASH_RADIUS = 46; // short-range
+function drawZapFlashes(nowMs){
+  if(!ECO.zapFlashes || !ECO.zapFlashes.length) return;
+  ECO.zapFlashes = ECO.zapFlashes.filter(fl=> nowMs - fl.startedAt < ZAP_FLASH_MS);
+  if(!ECO.zapFlashes.length) return;
+  ctx2d.save();
+  ctx2d.globalCompositeOperation = 'lighter';
+  ECO.zapFlashes.forEach(fl=>{
+    const f = (nowMs - fl.startedAt)/ZAP_FLASH_MS; // 0..1
+    const alpha = Math.max(0, 1-f); // fast linear decay
+    const r = ZAP_FLASH_RADIUS*(0.55+0.45*f); // slight outward pop as it fades
+    const grad = ctx2d.createRadialGradient(fl.x,fl.y,0, fl.x,fl.y,r);
+    grad.addColorStop(0, 'rgba(255,255,255,'+(0.95*alpha).toFixed(3)+')');
+    grad.addColorStop(0.4, 'rgba(255,255,255,'+(0.6*alpha).toFixed(3)+')');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx2d.fillStyle = grad;
+    ctx2d.beginPath();
+    ctx2d.arc(fl.x, fl.y, r, 0, Math.PI*2);
+    ctx2d.fill();
+  });
+  ctx2d.restore();
+}
 // Revision round 3: a shallow strip of water along the bottom edge, sized to
 // exactly match the physics floor's collision plane (world.cfg.floorThickness)
 // so a resting chord's bottom edge lands exactly at the water's surface --
@@ -10204,11 +11086,21 @@ function drawClassicHead(R,t,hue,sat,dragging,xseed){
   ctx2d.closePath(); ctx2d.fillStyle=grad; ctx2d.fill();
   ctx2d.shadowBlur=0;
 }
+// Revision round 12 ("haz que todos los que son circulares pasen a ser
+// hexagonales manteniendo su diseño"): this hexagon loop already existed
+// here (Gaudi was hexagonal from the start); pulled out into a shared
+// hexPath() helper below so every OTHER body style's outer silhouette that
+// used to be a plain ctx2d.arc() circle can reuse the exact same geometry
+// instead of each variant rolling its own hexagon math.
+function hexPath(R, rot){
+  rot = rot||0;
+  ctx2d.beginPath();
+  for(let k=0;k<6;k++){ const ang=rot+Math.PI/180*(60*k-90); const px=R*Math.cos(ang), py=R*Math.sin(ang); if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py); }
+  ctx2d.closePath();
+}
 function drawGaudiHead(R,t,hue,sat){
   ctx2d.shadowColor=hsl(hue,sat(85),60,0.85); ctx2d.shadowBlur=16;
-  ctx2d.beginPath();
-  for(let k=0;k<6;k++){ const ang=Math.PI/180*(60*k-90); const px=R*Math.cos(ang), py=R*Math.sin(ang); if(k===0) ctx2d.moveTo(px,py); else ctx2d.lineTo(px,py); }
-  ctx2d.closePath();
+  hexPath(R);
   const grad = ctx2d.createRadialGradient(0,-R*0.2,R*0.1,0,0,R*1.1);
   grad.addColorStop(0,hsl(hue,sat(90),82,0.95)); grad.addColorStop(1,hsl(hue,sat(80),42,0.9));
   ctx2d.fillStyle=grad; ctx2d.fill();
@@ -10228,7 +11120,11 @@ function drawGaudiHead(R,t,hue,sat){
 function drawMicroorganismHead(R,t,hue,sat){
   const grad = ctx2d.createRadialGradient(0,0,0,0,0,R*1.1);
   grad.addColorStop(0,hsl(hue,sat(70),75,0.55)); grad.addColorStop(1,hsl(hue,sat(75),45,0.25));
-  ctx2d.beginPath(); ctx2d.arc(0,0,R,0,Math.PI*2); ctx2d.fillStyle=grad; ctx2d.fill();
+  // Revision round 12: outer body silhouette was a plain ctx2d.arc() circle
+  // -- exactly the "todo modo celula" (cell-like) look the user is asking to
+  // move away from -- swapped for the shared hexPath() body outline; cilia
+  // and the 3 internal organelle dots below are untouched.
+  hexPath(R); ctx2d.fillStyle=grad; ctx2d.fill();
   ctx2d.strokeStyle=hsl(hue,sat(80),70,0.5); ctx2d.lineWidth=1; ctx2d.stroke();
   const cilia=16;
   for(let i=0;i<cilia;i++){
@@ -10247,7 +11143,10 @@ function drawPokemonHead(R,t,hue,sat,dragging){
   ctx2d.shadowColor=hsl(hue,sat(85),62,0.9); ctx2d.shadowBlur=dragging? 26 : 16;
   const grad = ctx2d.createRadialGradient(-R*0.25,-R*0.3,R*0.1,0,0,R*1.08);
   grad.addColorStop(0,hsl(hue,sat(85),82,0.98)); grad.addColorStop(0.6,hsl(hue,sat(80),60,0.92)); grad.addColorStop(1,hsl(hue,sat(75),42,0.4));
-  ctx2d.beginPath(); ctx2d.arc(0,0,R,0,Math.PI*2); ctx2d.fillStyle=grad; ctx2d.fill();
+  // Revision round 12: outer body silhouette converted from a plain
+  // ctx2d.arc() circle to the shared hexPath() body outline; the ear/blush
+  // ellipses right below are untouched.
+  hexPath(R); ctx2d.fillStyle=grad; ctx2d.fill();
   ctx2d.shadowBlur=0;
   ctx2d.beginPath(); ctx2d.ellipse(0,R*0.32,R*0.55,R*0.38,0,0,Math.PI*2);
   ctx2d.fillStyle=hsl(hue,sat(40),88,0.55); ctx2d.fill();
@@ -10717,8 +11616,20 @@ function updateMotionTracers(nowMs){
 }
 // Drawn just before the normal object/roothex/chord passes so the real body
 // always renders on top of its own faded past selves.
+// PERF (3rd optimization pass): this used to build a brand-new object
+// literal via `{...b}` for EVERY tracer point of EVERY moving body EVERY
+// frame while dragging (a body with a full MOTION_TRAIL_MAX history trailing
+// several bodies at once could easily mean dozens of throwaway object
+// allocations per frame, pure GC pressure with nothing else to show for it).
+// Fixed by reusing one pooled scratch object across the whole function
+// (module-scoped, created once) and writing into it with Object.assign
+// instead of spreading into a fresh object each iteration -- same fields end
+// up set on it either way (drawChord/drawObject only ever read the specific
+// properties they know about), just without the repeated allocation.
+const __motionTracerScratch = {};
 function drawMotionTracers(nowMs){
   if(!pointerState.celestialDragging) return;
+  const scratch = __motionTracerScratch;
   ECO.world.bodies.forEach(b=>{
     if(!b._trailHist || b._trailHist.length<2) return;
     const speed = Math.hypot(b.vx||0, b.vy||0);
@@ -10740,9 +11651,11 @@ function drawMotionTracers(nowMs){
       ctx2d.globalAlpha = alpha;
       ctx2d.translate(p.x, p.y);
       if(b.kind==='chord'){
-        drawChord({...b, x:0, y:0, glowUntil:0}, nowMs); // reuse the real shape renderer, offset via translate above
+        Object.assign(scratch, b); scratch.x=0; scratch.y=0; scratch.glowUntil=0;
+        drawChord(scratch, nowMs); // reuse the real shape renderer, offset via translate above
       } else if(b.kind==='object'){
-        drawObject({...b, x:0, y:0}, nowMs);
+        Object.assign(scratch, b); scratch.x=0; scratch.y=0;
+        drawObject(scratch, nowMs);
       }
       ctx2d.restore();
     }
@@ -10966,12 +11879,21 @@ function drawChord(b,t){
     // still -- darker/thicker/more-shadowed silhouette ring, and a brighter,
     // more saturated accent ring, for meaningfully more separation from the
     // background than the round-14 pass. Both still route through sat().
+    // Revision round 12 ("haz que todos los que son circulares pasen a ser
+    // hexagonales manteniendo su diseño"): this pair of rings is the shared
+    // outer-body silhouette drawn for EVERY non-fusion/non-siamese chord
+    // regardless of creatureStyle, so switching it from arc() to hexPath()
+    // is what makes the "cell-like" round read go away across the whole
+    // default population at once, on top of the per-style body fixes above
+    // (drawGaudiHead was already hexagonal; drawMicroorganismHead and
+    // drawPokemonHead's own body fills were just converted too). Nothing
+    // else here changes -- same shadow, same colors, same two-ring design.
     ctx2d.save();
     ctx2d.shadowColor='rgba(0,0,0,0.65)'; ctx2d.shadowBlur=7;
-    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius*1.02,0,Math.PI*2);
+    hexPath(b.radius*1.02);
     ctx2d.strokeStyle='rgba(4,5,7,0.85)'; ctx2d.lineWidth=3.3; ctx2d.stroke();
     ctx2d.restore();
-    ctx2d.beginPath(); ctx2d.arc(0,0,b.radius*0.97,0,Math.PI*2);
+    hexPath(b.radius*0.97);
     ctx2d.strokeStyle=hsl(headHue,sat(98),82,0.85); ctx2d.lineWidth=1.3; ctx2d.stroke();
   }
 
@@ -11168,6 +12090,7 @@ function render(nowMs){
     // have a future edge-case throw given how much they've changed recently.
     safeDraw('drawTreeNeuralLinks', ()=>drawTreeNeuralLinks(nowMs)); // TASK 2 -- pink neural-net mesh between living chords while a tree performance plays, on top of the chords themselves
     drawLightningZaps(nowMs); // revision round 12 -- tesla-coil aura on top of any chord currently mid electric-zap
+    safeDraw('drawZapFlashes', ()=>drawZapFlashes(nowMs)); // per-note white strobe flashes during a lightning zap barrage
     drawFish(nowMs); // revision round 7 -- on top of the chords so the bite reads clearly
     drawIslandBase(); // revision round 12 -- redrawn here so the island's own landmass occludes the fish when it swims behind it, see drawIslandBase's comment
     drawBird(nowMs); // revision round 10 -- same reason
@@ -12157,7 +13080,12 @@ function updateHudText(nowMs){
   const el = document.getElementById('dayNightReadout');
   if(!el) return;
   const dur = currentPhaseDurationMs(ECO.dayPhase);
-  const secLeft = Math.max(0, Math.ceil((dur-(nowMs-ECO.phaseStartMs))/1000));
+  // BUG FIX (round 20): reads ECO.phaseFracAccum instead of the old
+  // (nowMs-phaseStartMs) live elapsed calc, consistent with phaseFrac/
+  // currentCelestialFrac's fix above -- this is just a text countdown so it
+  // was never the actual teleport bug, but kept consistent so it doesn't
+  // show a jump/flicker of its own when the cycle speed changes.
+  const secLeft = Math.max(0, Math.ceil(dur*(1-(ECO.phaseFracAccum||0))/1000));
   const phaseGlyph = {morning:'🌅 morning', midday:'☀ midday', afternoon:'🌇 afternoon', night:'🌙 night'}[ECO.dayPhase] || '☀ day';
   const rootInfo = ECO.isNight ? ('lunar phase <b>'+ECO.moonPhase+'/31</b>') : ('root <b>'+((ECO.dayPhaseRoot>=0?'+':'')+ECO.dayPhaseRoot)+'</b>');
   el.innerHTML = phaseGlyph+' · '+rootInfo+'  <span style="opacity:.55">'+secLeft+'s</span>';
@@ -12340,6 +13268,7 @@ function boot(){
   ECO.isFullMoonNight = false; ECO.isNewMoonNight = false;
   ECO.isNight = false;
   ECO.dayPhase = null; ECO.phaseStartMs = 0; ECO.dayPhaseRoot = 0; // revision round 4: replaces the old flat dayNightStartMs
+  ECO.phaseFracAccum = 0; ECO.celestialFracAccum = 0; ECO._dnLastTickMs = 0; // round 20 fix: reset the frac accumulators alongside dayPhase on (re)boot
   ECO.commonTonesGateOn = true; ECO.commonTonesGateUntil = 0;
   ECO.lastQuakeAt = 0;
   ECO.quakeShakeUntil = 0;
@@ -12360,6 +13289,11 @@ function boot(){
   ECO.lightningBolts = [];
   ECO.lightningFlashUntil = 0;
   ECO.lightningZaps = [];
+  // Revision round: per-note white strobe flashes fired during a lightning
+  // zap's 31-step barrage (see updateLightningZaps/drawZapFlashes) --
+  // "golpe de luz por cada nota" -- short-range, short-lived {x,y,startedAt}
+  // entries, pruned automatically once expired.
+  ECO.zapFlashes = [];
   ECO.infoPanelOpenChordId = null;
   ECO.showShapeLabels = false;
   ECO.recentBigEvents = [];
@@ -12403,6 +13337,7 @@ function boot(){
   const driver = createRealDriver(()=>ECO.settings);
   ECO.audioPort = createAudioPort(driver);
   wireActivityTracking(ECO.audioPort); // revision round 8: feeds updateActivitySpikeFractal
+  wireVoiceCapture(ECO.audioPort); // round 22: feeds ECO.activeVoices for the voice-ducking feature, see runAction
   wireEventLog(ECO.audioPort); // revision round 12: feeds scrubEventLogBackward (drag-the-sun/moon-backward rewind)
   wireEchoDoubling(ECO.audioPort); // revision round 13: rolling top-5-fired-notes quiet echo-doubling, see wireEchoDoubling's own comment
 
@@ -12488,6 +13423,23 @@ function __loopFrameBody(t){
   // unchanged.
   if(ECO.treePerformance && ECO.treePerformance.active){
     updateDayNight(t);
+    // BUG FIX (round 19): "la luna nueva no funciona... sospecho que es por
+    // que el arbol estaba activo" -- companion fix to the _newMoonDying tag
+    // in triggerNewMoonDieOff/updateFoodParticles (search _newMoonDying for
+    // the full root-cause writeup). updateDyingBodies used to be entirely
+    // skipped in this branch along with the rest of the paused-timer
+    // systems, so a batch of new-moon die-off victims marked dying right as
+    // (or just before) a performance started would sit frozen in place,
+    // un-sunk and un-removed, for up to the full MAX_TREE_PERFORMANCE_MS
+    // (30s) instead of the normal ~1.4s GRAY_DEATH_SINK_MS window -- a long
+    // stationary window that made it far more likely one would still be
+    // overlapping a food pellet by the time normal processing resumed. Its
+    // math is pure real-time (nowMs - c.dyingStartedAt), same as
+    // updateDayNight above, so it's exempted from the freeze the same way:
+    // dying chords now keep sinking and get removeBody'd on schedule even
+    // mid-performance, closing the race instead of just papering over its
+    // symptom.
+    updateDyingBodies(t);
     updateTreePerformance(t);
     computeTreeDualEase(t); // TASK 11
     computeTreeNeuralEase(t); // TASK 2
@@ -12614,6 +13566,49 @@ document.getElementById('startOverlay').addEventListener('click', function start
   getAudioCtx();
   boot();
 }, { once:true });
+
+// Native cursor active-state toggler. Replaces the old JS-driven
+// #cursorReticle (see the `cursor:url(...)` rules in the CSS above for the
+// actual cursor shape/skin now -- a real native OS-composited cursor, not a
+// DOM element). The only job left for JS is swapping which native cursor
+// image is active by toggling a class on <body>, and it does so ONLY in
+// response to real discrete events (mouseover/mouseout/mousedown/mouseup),
+// never on a per-frame timer or a mousemove-driven rAF loop -- so this
+// cannot reintroduce the position-tracking lag the user complained about.
+// The in-canvas drag cases (dragging a chord/object, multi-select, the
+// celestial sun/moon scrub) are already covered for free: canvasEl's own
+// 'dragging' class (toggled directly inside onPointerDown/onPointerMove/
+// onPointerUp further below, on real user actions, not polled) drives the
+// canvas#c.dragging cursor rule in the CSS above, independent of this
+// function.
+(function initCursorActiveState(){
+  const body = document.body;
+  // Real DOM UI clickables in this file: the menu/help/fullscreen/close
+  // buttons (plain <button>), everything tagged .eco-btn (God Settings/MIDI/
+  // What's happening/Mute/Spawn/info-panel-close/View in Armodex), and any
+  // generic <a>/[role=button] that might appear in dynamically-built panel
+  // HTML (info panel, God settings, etc.).
+  const CLICKABLE_SELECTOR = 'button, a[href], .eco-btn, input, select, textarea, label, [onclick], [role="button"]';
+  let mouseIsDown = false;
+  document.addEventListener('mouseover', (e)=>{
+    if(e.target && e.target.closest && e.target.closest(CLICKABLE_SELECTOR)) body.classList.add('cursor-active');
+  }, {passive:true});
+  document.addEventListener('mouseout', (e)=>{
+    const to = e.relatedTarget;
+    const stillOverClickable = !!(to && to.closest && to.closest(CLICKABLE_SELECTOR));
+    if(!stillOverClickable && !mouseIsDown && !canvasEl.classList.contains('dragging')){
+      body.classList.remove('cursor-active');
+    }
+  }, {passive:true});
+  document.addEventListener('mousedown', ()=>{
+    mouseIsDown = true;
+    body.classList.add('cursor-active');
+  }, {passive:true});
+  document.addEventListener('mouseup', ()=>{
+    mouseIsDown = false;
+    if(!canvasEl.classList.contains('dragging')) body.classList.remove('cursor-active');
+  }, {passive:true});
+})();
 </script>
 </body>
 </html>
