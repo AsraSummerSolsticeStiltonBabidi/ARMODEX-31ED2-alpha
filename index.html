@@ -17,9 +17,31 @@
     --danger:#d6635a; --radius:10px;
   }
   *{box-sizing:border-box;}
+  button, a[href], input, textarea, select, label, [onclick], [role="button"], .btn, .species-card, .prog-card, .match-item, .chord-chip, .mini-chip, .tag, .prime-btn, .step-num, .occ-group-head, .help-continue-btn{
+    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'%3E%3Ccircle cx='17' cy='17' r='13' fill='%23ffcf3f' stroke='%23000000' stroke-width='2.8'/%3E%3C/svg%3E") 17 17, pointer !important;
+  }
   html{ color-scheme:dark; }
-  html,body{margin:0;padding:0;background:transparent;color:var(--text); cursor:none;}
-  *, *::before, *::after{ cursor:none !important; }
+  /* Switched from a JS/DOM-tracked custom cursor to a real native CSS cursor image. A DOM element
+     driven by mousemove + requestAnimationFrame is architecturally always at least one frame
+     behind the actual OS cursor (which the browser/GPU composites completely outside of page JS,
+     at the display's native rate, independent of anything the page is doing) -- no amount of
+     batching or paint optimization closes that gap, only narrows it. Since moving *exactly* like
+     the normal system cursor is now the explicit, non-negotiable requirement, the only way to
+     truly guarantee that on every browser/OS is to hand cursor rendering back to the browser/OS
+     itself via `cursor: url(...)`, which is what this does. Trade-off: the color-cycling
+     animation is gone (a static image can't animate reliably the same way across browsers), but
+     movement is now bit-for-bit identical to the default arrow cursor's behavior.
+  */
+  html,body{margin:0;padding:0;background:transparent;color:var(--text);
+    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Ccircle cx='15' cy='15' r='10' fill='%23e0334d' stroke='%23000000' stroke-width='2.4'/%3E%3C/svg%3E") 15 15, auto !important;
+  }
+  /* The actual live colors are swapped in periodically by #cursorHueStyle below (see
+     startCursorColorCycle in the script) -- these two rules just supply the very first look and
+     a safe fallback. Swapping happens far too slowly (every ~650ms, a whole <style> tag rewrite,
+     never per-frame or on mousemove) to reintroduce any of the JS-driven position lag the native
+     cursor pivot was specifically meant to eliminate -- the cursor's *position* is still 100%
+     native the whole time; only which pre-rendered image is currently assigned to `cursor:` ever
+     changes. */
   /* Custom scrollbar design, applied everywhere (not just inside floating windows/modals) so the
      scrollbar always matches the app's dark theme instead of falling back to the OS default. */
   *{ scrollbar-width:thin; scrollbar-color:var(--border-strong) var(--panel-alt); }
@@ -49,7 +71,7 @@
   .splash-screen{
     position:fixed; inset:0; z-index:99999; background:#f4efe2; color:#14181f;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
-    text-align:center; padding:24px; cursor:pointer;
+    text-align:center; padding:24px;
   }
   .splash-screen.hidden{ display:none; }
   .splash-logo{ width:min(46vw, 220px); height:auto; margin-bottom:4px; }
@@ -77,10 +99,22 @@
   @keyframes kaleidoSpin{ 0%{transform:rotate(0deg) scale(0.55);} 70%{transform:rotate(210deg) scale(1.02);} 100%{transform:rotate(260deg) scale(1.08); opacity:0;} }
   @keyframes kaleidoPulse{ 0%,100%{filter:brightness(1) saturate(1);} 50%{filter:brightness(1.08) saturate(1.12);} }
   @media (prefers-reduced-motion: reduce){ .kaleido-spin{animation:none;} }
+  /* This is a FULL-VIEWPORT background layer -- it was running filter:hue-rotate (via
+     pupilHueComplement) continuously, forever, completely independent of anything else on the
+     page. Animated filters on a full-screen element are extremely expensive (they generally
+     defeat cheap GPU compositing and force a full-screen repaint/raster every animation step),
+     and this is very likely the single biggest cause of the reported stutter -- it was running
+     the whole time on every page, everywhere, competing for frame budget with literally
+     everything else including cursor tracking. Animating background-color directly (a plain
+     paint property) gives the same slow color-cycle with none of that cost. */
   .bg-cycle{
     position:fixed; inset:0; z-index:-1;
-    background:hsl(0 42% 7%);
-    animation:pupilHueComplement 7s linear infinite;
+    animation:bgColorCycle 7s linear infinite;
+  }
+  @keyframes bgColorCycle{
+    0%{background:hsl(0 42% 7%);} 16.66%{background:hsl(60 42% 7%);} 33.33%{background:hsl(120 42% 7%);}
+    50%{background:hsl(180 42% 7%);} 66.66%{background:hsl(240 42% 7%);} 83.33%{background:hsl(300 42% 7%);}
+    100%{background:hsl(360 42% 7%);}
   }
   .click-flash{
     position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -90,23 +124,35 @@
     position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;
   }
   .note-hex-bg svg{ width:100%; height:100%; display:block; }
-  .note-hex-bg polygon{ transition:opacity .5s ease; }
+  .note-hex-bg polygon{ transition:opacity .09s ease-out; }
+  /* Epilepsy safe mode: same pulsing effect, just eased much more gently -- this is the
+     "fade in y fade out más lento" the safe-mode toggle controls, without removing the effect
+     itself, per explicit request. */
+  .note-hex-bg.safe-mode polygon{ transition:opacity 1.6s ease; }
   .harmonic-waves-holder{
     position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none;
-    color:hsl(174 55% 55%); animation:pupilHue 55s linear infinite;
+    animation:waveColorCycle 55s linear infinite;
+  }
+  @keyframes waveColorCycle{
+    0%{color:hsl(174 55% 55%);} 16.66%{color:hsl(234 55% 55%);} 33.33%{color:hsl(294 55% 55%);}
+    50%{color:hsl(354 55% 55%);} 66.66%{color:hsl(54 55% 55%);} 83.33%{color:hsl(114 55% 55%);}
+    100%{color:hsl(174 55% 55%);}
   }
   .harmonic-waves-holder svg{ width:100%; height:100%; display:block; }
   @keyframes waveDrift{ from{transform:translateX(0);} to{transform:translateX(var(--drift));} }
-  .cursor-reticle{
-    position:fixed; top:0; left:0; width:22px; height:22px; margin:-11px 0 0 -11px;
-    pointer-events:none; z-index:999999; opacity:0;
-    transition:opacity .25s ease; will-change:transform;
-    filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));
-  }
+  /* Fully disabled now that a native CSS cursor image is used instead (see html,body above) --
+     display:none removes any remaining paint/compositing cost (will-change alone still reserves
+     a GPU layer even for an invisible, opacity:0 element). */
+  .cursor-reticle{ display:none; }
   .cursor-reticle.visible{opacity:1;}
   .cursor-reticle svg{width:100%; height:100%; display:block; transition:transform .12s ease;}
   .cursor-reticle.clicking svg{ transform:scale(1.5); }
-  .cursor-reticle-fill{ fill:hsl(0 70% 55%); animation:pupilHue 7s linear infinite; }
+  .cursor-reticle-fill{ animation:cursorHueCycle 7s linear infinite; }
+  @keyframes cursorHueCycle{
+    0%{fill:hsl(0 70% 55%);} 16.66%{fill:hsl(60 70% 55%);} 33.33%{fill:hsl(120 70% 55%);}
+    50%{fill:hsl(180 70% 55%);} 66.66%{fill:hsl(240 70% 55%);} 83.33%{fill:hsl(300 70% 55%);}
+    100%{fill:hsl(360 70% 55%);}
+  }
   @media (prefers-reduced-motion: reduce){ .cursor-reticle{animation:none;} }
   @media (prefers-reduced-motion: reduce){ .harmonic-waves-holder, .harmonic-waves-holder *{animation:none !important;} }
   .wrap{max-width:1120px;margin:0 auto; width:100%; box-sizing:border-box;}
@@ -127,6 +173,14 @@
   @keyframes pupilHue{ from{filter:hue-rotate(0deg);} to{filter:hue-rotate(360deg);} }
   @keyframes pupilHueComplement{ from{filter:hue-rotate(180deg);} to{filter:hue-rotate(540deg);} }
   @media (prefers-reduced-motion: reduce){ .pupil-hex{animation:none;} }
+  /* Same size for both "back to progressions" and "show all shapes" (they're the same kind of
+     action: leave a detail view, go back to an overview), and made much more visible -- pure
+     white background, black text, standing out hard against the app's dark UI, as requested. */
+  .btn.nav-standout{
+    background:#ffffff; color:#0d0f11; border:1.5px solid #ffffff; font-weight:800;
+    font-size:14px; padding:11px 20px; box-shadow:0 4px 14px rgba(255,255,255,.18);
+  }
+  .btn.nav-standout:hover{ background:#f0f0f0; border-color:#f0f0f0; }
   .btn.ecosystem-launch-btn{
     border:1px solid #e4ded0; font-weight:900; letter-spacing:.03em;
     background:#ffffff;
@@ -274,7 +328,7 @@
   .prog-detail-middle{ display:flex; flex-direction:column; gap:8px; position:sticky; top:16px; }
   .prog-detail-map{ height:calc(100vh - 40px); position:sticky; top:16px; }
   .prog-detail-map .hex-frame{ margin-bottom:0; height:100%; display:flex; flex-direction:column; }
-  .prog-detail-map .big-prog-map{ flex:1; min-height:0; overflow:visible; display:flex; align-items:center; justify-content:center; }
+  .prog-detail-map .big-prog-map{ flex:1; min-height:0; overflow:visible; display:flex; align-items:flex-start; justify-content:center; margin-top:30px; }
   /* Constrained on BOTH axes at once (letterbox-fit): the map grows as large as the available
      frame allows without ever exceeding it in either direction, so it can render bigger than it
      did before the layout rework without risking being clipped by the viewport's overflow:hidden. */
@@ -332,7 +386,7 @@
   .hex-frame{ background:var(--panel-alt); border:1px solid var(--border); border-radius:var(--radius); padding:14px; position:relative; box-shadow:0 8px 22px rgba(0,0,0,.35); }
   .hex-frame .plate-label{ position:absolute; top:10px; left:14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .hex-frame .zoom-hint{ position:absolute; top:10px; right:14px; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--muted); opacity:.85; user-select:none; }
-  .octave-caption{ position:absolute; top:32px; left:14px; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--muted); opacity:.9; user-select:none; }
+  .octave-caption{ position:absolute; top:32px; left:14px; font-family:'JetBrains Mono',monospace; font-size:7.5px; line-height:1.2; max-width:150px; color:var(--muted); opacity:.85; user-select:none; }
   .hex-frame .zoom-hint:hover{color:var(--accent2);}
   .hex-viewport{ overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
   svg.hexsvg{width:100%; height:auto; max-height:min(68vh, 720px); display:block; margin:6px auto 0;}
@@ -353,11 +407,10 @@
 
   .builder-grid{display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start;}
   @media (max-width:1000px){.builder-grid{grid-template-columns:1fr;}}
-  .builder-right{display:grid; grid-template-columns:1fr 1fr; grid-template-areas:"search name" "shapes shapes"; gap:20px;}
+  .builder-right{display:grid; grid-template-columns:1fr 1fr; grid-template-areas:"search shapes"; gap:20px;}
   .builder-search-panel{grid-area:search;}
-  .builder-name-panel{grid-area:name;}
   .builder-shapes-panel{grid-area:shapes;}
-  @media (max-width:700px){.builder-right{grid-template-columns:1fr; grid-template-areas:"search" "shapes" "name";}}
+  @media (max-width:700px){.builder-right{grid-template-columns:1fr; grid-template-areas:"search" "shapes";}}
   label.field-label.builder-section-label, .hex-frame .plate-label.builder-section-label, .builder-section-label{font-family:'Chakra Petch',sans-serif; font-size:17px; font-weight:800; color:#ffffff; letter-spacing:.01em; white-space:nowrap; text-transform:none;}
   .selection-strip{display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;}
   .sel-note{ font-family:'JetBrains Mono',monospace; font-size:11px; display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:4px 6px 4px 9px; }
@@ -525,6 +578,55 @@
   /* Pink glow on the Help button itself, standing in for the removed pointing arrow -- ties the
      floating bubble to its target even on layouts where the bubble doesn't land right above it. */
   .help-hint-glow{ background:#ff3b6b !important; border-color:#ff3b6b !important; color:#fff !important; animation:helpHintPulse 1.4s ease-in-out infinite; box-shadow:0 0 0 2px rgba(255,59,107,.35), 0 4px 14px rgba(255,59,107,.5); }
+  /* First-time builder mini-tutorial: maximum-contrast banner + a matching pulse on whichever
+     button is the next real action, so it can't be missed and can't be dismissed except by
+     actually doing that action. */
+  .builder-tutorial-banner{
+    background:#ff2fb0; color:#fff; font-family:'Chakra Petch',sans-serif; font-weight:800;
+    font-size:15px; letter-spacing:.01em; padding:14px 18px; border-radius:12px; margin-bottom:16px;
+    box-shadow:0 0 0 3px rgba(255,47,176,.3), 0 6px 20px rgba(255,47,176,.5);
+    animation:tutorialBannerPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes tutorialBannerPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.015); } }
+  .tutorial-highlight{
+    background:#ff2fb0 !important; border-color:#ff2fb0 !important; color:#fff !important;
+    animation:tutorialBannerPulse 1.1s ease-in-out infinite;
+    box-shadow:0 0 0 3px rgba(255,47,176,.4), 0 6px 20px rgba(255,47,176,.6) !important;
+  }
+  @media (prefers-reduced-motion: reduce){ .builder-tutorial-banner, .tutorial-highlight{ animation:none; } }
+  /* One-time auto-playing demo: a ghost cursor "clicks" 3 hexagons in sequence to form an
+     audible major chord, then the whole thing fades out on its own -- purely illustrative, not
+     interactive, so it can't be clicked or dragged. */
+  .tut-demo{ position:relative; width:100%; max-width:280px; height:76px; margin-top:10px; animation:tutDemoFadeOut 4.4s ease forwards; }
+  .tut-demo-hexes{ width:100%; height:100%; display:block; }
+  .tut-demo-hex{ stroke:#fff; stroke-width:2; fill:#3a3f4a; }
+  .tut-demo-hex.h1{ animation:tutHexLight1 4.4s steps(1) forwards; }
+  .tut-demo-hex.h2{ animation:tutHexLight2 4.4s steps(1) forwards; }
+  .tut-demo-hex.h3{ animation:tutHexLight3 4.4s steps(1) forwards; }
+  @keyframes tutHexLight1{ 0%,17%{fill:#3a3f4a;} 18%,100%{fill:#ff2fb0;} }
+  @keyframes tutHexLight2{ 0%,42%{fill:#3a3f4a;} 43%,100%{fill:#ff9d2f;} }
+  @keyframes tutHexLight3{ 0%,67%{fill:#3a3f4a;} 68%,100%{fill:#2fd2ff;} }
+  @keyframes tutDemoFadeOut{ 0%,88%{opacity:1;} 100%{opacity:0;} }
+  .tut-demo-cursor{
+    position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px;
+    border-radius:50%; background:#fff; box-shadow:0 0 0 2px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.5);
+    animation:tutCursorMove 4.4s ease forwards;
+  }
+  @keyframes tutCursorMove{
+    0%{ left:15.9%; top:-15%; opacity:0; }
+    8%{ opacity:1; }
+    14%{ left:15.9%; top:38.9%; transform:scale(1); }
+    18%{ transform:scale(.75); }
+    22%{ transform:scale(1); }
+    39%{ left:50%; top:38.9%; }
+    43%{ transform:scale(.75); }
+    47%{ transform:scale(1); }
+    60%{ left:84.1%; top:38.9%; }
+    64%{ transform:scale(.75); }
+    68%{ transform:scale(1); }
+    100%{ left:84.1%; top:38.9%; opacity:1; }
+  }
+  @media (prefers-reduced-motion: reduce){ .tut-demo, .tut-demo-hex, .tut-demo-cursor{ animation:none; } .tut-demo-hex{ fill:#ff2fb0; } }
   @keyframes helpHintPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.06); } }
   @media (prefers-reduced-motion: reduce){ .help-hint-bubble{ animation:none; } }
   .modal-backdrop{
@@ -538,6 +640,9 @@
   }
   .modal-panel h3{font-family:'Chakra Petch',sans-serif; font-size:16px; margin:22px 0 4px; color:var(--accent2); letter-spacing:.02em;}
   .modal-panel h3:first-of-type{margin-top:18px;}
+  .modal-panel h3.sw-section-toggle{ cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none; padding:6px 8px; margin-left:-8px; margin-right:-8px; border-radius:8px; transition:background .12s ease; }
+  .modal-panel h3.sw-section-toggle:hover{ background:var(--panel-raised); }
+  .sw-caret{ display:inline-block; width:1em; color:var(--muted); font-size:13px; }
   .modal-panel ul{margin:4px 0 10px; padding-left:19px;}
   .modal-panel li{font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:6px;}
   .modal-panel li b{color:var(--text);}
@@ -607,7 +712,26 @@
   @keyframes pkmnPop{ 0%{ transform:scale(.2) rotate(-8deg); opacity:0; } 60%{ transform:scale(1.14) rotate(2deg); opacity:1; } 80%{ transform:scale(.96) rotate(-1deg); } 100%{ transform:scale(1) rotate(0deg); } }
   @keyframes pkmnHue{ from{ filter:hue-rotate(0deg); } to{ filter:hue-rotate(360deg); } }
   @keyframes pkmnWiggle{ 0%,100%{ transform:scale(1) rotate(0deg); } 50%{ transform:scale(1.05) rotate(1.3deg); } }
+  #cursorHueStyle{}
+  /* Nudges attention to "+ Add shape" whenever there's something tapped on the map that hasn't
+     been committed yet -- a gentle scale + glow, not a rapid flash, so it stays comfortable even
+     with reduced-motion/photosensitivity in mind. */
+  .btn.add-shape-pending{ background:#a9e8e0 !important; border-color:#5cc4ba !important; color:#0a2b28 !important; box-shadow:0 0 0 3px rgba(92,196,186,.6), 0 6px 20px rgba(92,196,186,.7) !important; transition:background .18s ease, box-shadow .18s ease; }
+  /* The card for a progression that was just saved: a strong, high-contrast glow that eases
+     itself out smoothly over the full 5 seconds rather than holding then cutting off abruptly. */
+  @keyframes justSavedGlow{
+    0%{ box-shadow:0 0 0 4px #ff2fb0, 0 0 46px 12px rgba(255,47,176,.85); border-color:#ff2fb0; }
+    100%{ box-shadow:0 0 0 0 rgba(255,47,176,0); border-color:var(--border-card); }
+  }
+  .prog-card.just-saved{ animation:justSavedGlow 5s ease-out forwards; }
+  @media (prefers-reduced-motion: reduce){ .prog-card.just-saved{ animation:none; box-shadow:0 0 0 4px #ff2fb0; } }
+  /* Steady glow, no flashing/pulsing -- deliberately calm so it can't run afoul of the
+     photosensitivity precautions taken elsewhere in the app (this is a slow CSS transition,
+     never a rapid repeat). */
+  .built-chord.now-playing{ outline:3px solid var(--accent2); outline-offset:1px; box-shadow:0 0 14px var(--accent2-soft); transition:outline-color .2s ease, box-shadow .2s ease; }
+  .hex-frame.now-playing-map{ box-shadow:0 0 0 3px var(--accent2), 0 0 22px 2px var(--accent2-soft); border-radius:var(--radius); transition:box-shadow .2s ease; }
 </style>
+<style id="cursorHueStyle"></style>
 </head>
 <body>
 <div class="help-hint-layer hidden" id="helpHintLayer" onclick="dismissHelpHint()">
@@ -761,7 +885,7 @@ function buildHexSVG(opts){
   svg.setAttribute('class','hexsvg');
   const vbW = maxX-minX+2*pad, vbH = maxY-minY+2*pad;
   svg.setAttribute('viewBox', `${(minX-pad).toFixed(1)} ${(minY-pad).toFixed(1)} ${vbW.toFixed(1)} ${vbH.toFixed(1)}`);
-  if(allowHScroll){ svg.setAttribute('width', Math.round(vbW)); svg.setAttribute('height', Math.round(vbH)); svg.setAttribute('class','hexsvg hexsvg-hscroll'); }
+  if(allowHScroll){ svg.setAttribute('width', Math.round(vbW)); svg.setAttribute('height', Math.round(vbH)); svg.setAttribute('class','hexsvg hexsvg-hscroll'); svg.setAttribute('preserveAspectRatio','xMidYMin meet'); }
   const markedCells = []; // { raw, poly } — only populated when showCents is on, used for the cents tooltip afterward
   // Every rendered cell, in order, plus a (q,r)->poly map. The drag system MUST include every
   // cell: the isomorphic layout repeats each value many times, and first occurrences cluster in
@@ -775,7 +899,7 @@ function buildHexSVG(opts){
   // unmarked hex landing later in that traversal could visually cover part of an already-drawn
   // marked hex's thicker stroke/root ring. Collecting into layers and appending unmarked cells
   // first, marked cells last, guarantees marked cells always render on top.
-  const plainLayer = [], markedLayer = [];
+  const plainLayer = [], toneLayer = [], rootLayer = [];
   positioned.forEach(c=>{
     const g=document.createElementNS(svgns,'g');
     const poly=document.createElementNS(svgns,'polygon');
@@ -792,11 +916,19 @@ function buildHexSVG(opts){
       || (fallbackRaws!=null && fallbackRaws.has(c.raw) && c.raw!==highlightRoot)
     );
     const hue = Math.round(c.pc*(360/31));
-    const isOctaveEcho = (octaveHighlightPc!=null && c.pc===octaveHighlightPc && !isRoot && !isTone) || (echoPcs!=null && echoPcs.has(c.pc) && !isRoot && !isTone) || (echoRaws!=null && echoRaws.has(c.raw) && !isRoot && !isTone);
+    // Two different echo strengths, previously all rendered identically:
+    // - "key echo" (octaveHighlightPc) just marks octaves of whichever key you most recently
+    //   pressed -- a transient, informational cue, not something actually in the shape -- so it
+    //   stays subtler.
+    // - "real echo" (echoPcs/echoRaws) marks octaves of notes that ARE actually marked/selected
+    //   right now, so it reads a bit stronger, closer in weight to the marked notes themselves.
+    const isKeyEcho = (octaveHighlightPc!=null && c.pc===octaveHighlightPc && !isRoot && !isTone);
+    const isRealEcho = (!isKeyEcho) && (((echoPcs!=null && echoPcs.has(c.pc)) || (echoRaws!=null && echoRaws.has(c.raw))) && !isRoot && !isTone);
     let fill, stroke, sw;
     if(isRoot){ fill = vividMarks ? `hsl(${hue} 88% 55%)` : `hsl(${hue} ${dim?55:68}% ${dim?32:44}%)`; stroke='var(--accent)'; sw=3; }
     else if(isTone){ fill = vividMarks ? `hsl(${hue} 88% 50%)` : `hsl(${hue} ${dim?46:58}% ${dim?27:36}%)`; stroke='var(--accent2)'; sw=2.4; }
-    else if(isOctaveEcho){ fill=`hsl(${hue} ${dim?34:44}% ${dim?26:33}%)`; stroke='var(--border-strong)'; sw=1.6; }
+    else if(isRealEcho){ fill=`hsl(${hue} ${dim?34:44}% ${dim?25:32}%)`; stroke='var(--border-strong)'; sw=1.6; }
+    else if(isKeyEcho){ fill=`hsl(${hue} ${dim?22:29}% ${dim?21:26}%)`; stroke='var(--border)'; sw=1.1; }
     else { fill=`hsl(${hue} ${dim?18:32}% ${dim?15:20}%)`; stroke='var(--border)'; sw=1; }
     poly.setAttribute('fill', fill);
     poly.setAttribute('stroke', stroke);
@@ -836,10 +968,13 @@ function buildHexSVG(opts){
       g.appendChild(t);
     }
     if(showCents && (isRoot || isTone)) markedCells.push({ raw:c.raw, poly, isRoot });
-    ((isRoot||isTone) ? markedLayer : plainLayer).push(g);
+    (isRoot ? rootLayer : isTone ? toneLayer : plainLayer).push(g);
   });
   plainLayer.forEach(g=>svg.appendChild(g));
-  markedLayer.forEach(g=>svg.appendChild(g));
+  // Root cells append last (drawn on top) so the root's outline ring never gets covered by a
+  // neighboring marked-tone cell that happened to be generated later in iteration order.
+  toneLayer.forEach(g=>svg.appendChild(g));
+  rootLayer.forEach(g=>svg.appendChild(g));
   if(showCents && markedCells.length>1){
     const sorted = markedCells.slice().sort((a,b)=>a.raw-b.raw);
     const centsPerStep = 1200/31;
@@ -928,12 +1063,9 @@ const REF_FREQ = 220; // frequency assigned to raw step 0
 function freqForRaw(raw){ return REF_FREQ * Math.pow(2, raw/31) * Math.pow(2, (state.generalPitch||0)/1200); }
 let waveSpeedActive = 0;
 function setWaveSpeed(rate){
-  const holder = document.getElementById('harmonicWavesHolder');
-  if(!holder) return;
-  holder.querySelectorAll('path[data-base-dur]').forEach(p=>{
-    const base = parseFloat(p.dataset.baseDur);
-    if(!isNaN(base)) p.style.animationDuration = (base/rate).toFixed(2)+'s';
-  });
+  // Sets the EASED target only -- waveTick() above smoothly approaches it every frame, so this
+  // never causes the jump a direct animation-duration swap did.
+  waveSpeedTarget = rate;
 }
 const noteHexPcGroups = {}; // pc -> array of polygon elements across the whole background grid
 function buildNoteHexBackground(){
@@ -959,12 +1091,40 @@ function buildNoteHexBackground(){
   return svg;
 }
 let currentlyLitPcs = new Set();
+// Fast notes (small durSec) get a LONGER opacity transition -- more blending, less on/off
+// flicker -- while slower notes keep a snappy, closely-synced fade. Safe mode multiplies this
+// further on top, same as before.
+function noteHexTransitionMs(durSec){
+  const d = Math.max(0.04, durSec||1);
+  const base = d>=0.45 ? 90 : 90 + (0.45-d)*820; // ramps up to ~420ms as notes get very short/fast
+  const capped = Math.max(90, Math.min(420, base));
+  return state.epilepsySafeMode ? capped*3.5 : capped;
+}
+// WCAG 2.3.1 ("Three Flashes or Below Threshold") requires nothing on screen to flash more than
+// 3 times in any 1-second window, unless it's below the general/red flash luminance thresholds.
+// The eased, longer transitions in safe mode already make each individual pulse gentle, but at
+// very fast tempos/polyrhythms new pulses could still be *triggered* faster than 3/sec, which is
+// the thing that actually matters for this rule (repeated on/off cycling), regardless of how
+// smooth each one looks in isolation. This hard floor guarantees compliance directly rather than
+// relying on the easing alone: in safe mode, a fresh flash cycle can start at most roughly every
+// 360ms (a bit under the 333ms/3-per-second boundary, for margin), no matter how fast the music
+// actually is -- calls that land inside that window are simply skipped rather than queued, so this
+// never adds latency/delay to the ones that do go through.
+let lastPulseTime = 0;
+const SAFE_MODE_MIN_PULSE_GAP_MS = 360;
 function pulseNoteColor(rawNotes, durSec){
+  if(state.epilepsySafeMode){
+    const now = (typeof performance!=='undefined' ? performance.now() : Date.now());
+    if(now - lastPulseTime < SAFE_MODE_MIN_PULSE_GAP_MS) return;
+    lastPulseTime = now;
+  }
   const opacity = 0.25;
-  // Start the (now slower, .5s) fade well before the note's nominal duration ends, so by the time
-  // the next chord in a progression starts (e.g. ~1.1s apart at 100bpm) this one has fully faded.
-  const fadeMs = Math.max(150, (durSec||1)*1000*0.35);
+  const transMs = noteHexTransitionMs(durSec);
+  // Start the fade well before the note's nominal duration ends, so by the time the next chord in
+  // a progression starts (e.g. ~1.1s apart at 100bpm) this one has fully faded.
+  const fadeMs = Math.max(transMs+60, (durSec||1)*1000*0.35);
   const newPcs = new Set(rawNotes.map(mod31));
+  const applyTransition = polys => polys.forEach(poly=>{ poly.style.transitionDuration = transMs+'ms'; });
   // A new chord starting: any pitch class from the previous one that isn't part of this chord
   // stops influencing the background right away, instead of fading out slowly on its own timer.
   currentlyLitPcs.forEach(pc=>{
@@ -972,16 +1132,28 @@ function pulseNoteColor(rawNotes, durSec){
   });
   currentlyLitPcs = newPcs;
   newPcs.forEach(pc=>{
-    (noteHexPcGroups[pc]||[]).forEach(poly=>{ poly.style.opacity = String(opacity); });
+    const polys = noteHexPcGroups[pc]||[];
+    applyTransition(polys);
+    polys.forEach(poly=>{ poly.style.opacity = String(opacity); });
     setTimeout(()=>{
+      applyTransition(noteHexPcGroups[pc]||[]);
       (noteHexPcGroups[pc]||[]).forEach(poly=>{ poly.style.opacity = '0'; });
       currentlyLitPcs.delete(pc);
     }, fadeMs);
   });
 }
+// Forces the wave speed back to resting immediately, bypassing bumpWaveSpeed's own timers --
+// needed because those timers only know the note's SCHEDULED length, not whether playback was
+// actually stopped early (mouse leaving a hover, a loop being stopped, etc). Without this, wave
+// speed stayed elevated until the last stale timer happened to expire on its own, well after the
+// music had actually already stopped.
+function resetWaveSpeed(){
+  waveSpeedActive = 0;
+  setWaveSpeed(1);
+}
 function bumpWaveSpeed(durSec){
   waveSpeedActive++;
-  setWaveSpeed(1.5);
+  setWaveSpeed(7); // 7x resting speed, as explicitly requested -- eased by waveTick(), not instant
   setTimeout(()=>{
     waveSpeedActive = Math.max(0, waveSpeedActive-1);
     if(waveSpeedActive===0) setWaveSpeed(1);
@@ -1164,15 +1336,33 @@ function playChordsAudio(chords, timbre){
   });
   registerProgressionSession(allNodes, now + chords.length*beatsPerChord*secPerBeat + 0.1);
 }
+// Play progression, in the builder, always includes whatever shape is currently being tapped out
+// on the map -- even though it hasn't been committed with "Add shape to progression" yet -- as an
+// extra slot appended at the end, so you can preview how a whole progression will actually sound
+// including the one you're still working on. If nothing at all is currently selected, that slot
+// is simply silent for the same duration a real chord would take, rather than being skipped
+// entirely (skipping it would make the loop length keep changing depending on what's selected).
+function builderChordsForPlayback(){
+  const b = state.builder;
+  const extra = b.selectedOrder.length>0
+    ? { root: b.selectedOrder[0], intervals: canonicalIntervals(b.selectedOrder[0], b.selectedOrder), label:'' }
+    : { root: b.chords.length ? b.chords[0].root : 0, intervals: [], label:'' };
+  return b.chords.concat([extra]);
+}
 let builderProgLoopActive = false;
 let builderProgLoopTimer = null;
+let builderPlayingIdx = null;
+let builderPlayingTimers = [];
 function builderProgressionDurationMs(){
   const bpm = Math.max(20, Math.min(300, state.playBpm||100));
   const secPerBeat = 60/bpm, beatsPerChord = 2;
-  return state.builder.chords.length * beatsPerChord * secPerBeat * 1000;
+  return builderChordsForPlayback().length * beatsPerChord * secPerBeat * 1000;
 }
 function startBuilderProgressionPlay(){
-  if(!state.builder.chords || state.builder.chords.length===0) return;
+  const playback = builderChordsForPlayback();
+  // Still require *something* real (either a committed shape or notes currently on the map) --
+  // an entirely empty builder has nothing meaningful to preview.
+  if(state.builder.chords.length===0 && state.builder.selectedOrder.length===0) return;
   stopBuilderProgressionPlay();
   if(builderShapePlayActive){ stopHoverPlay(); builderShapePlayActive=false; }
   builderProgLoopActive = true;
@@ -1180,7 +1370,18 @@ function startBuilderProgressionPlay(){
   const durMs = builderProgressionDurationMs();
   const tick = ()=>{
     if(!builderProgLoopActive) return;
-    playChordsAudio(state.builder.chords, timbre);
+    const slots = builderChordsForPlayback();
+    playChordsAudio(slots, timbre);
+    // Mark, in real time, which slot is currently sounding -- the committed shape chips light up
+    // one at a time, and the still-in-progress shape (the extra slot playChordsAudio always
+    // appends) gets its own visible cue on the map instead of looking identical whether or not
+    // it's actually its turn.
+    const bpm = Math.max(20, Math.min(300, state.playBpm||100));
+    const secPerBeat = 60/bpm, beatsPerChord = 2;
+    slots.forEach((_,i)=>{
+      const th = setTimeout(()=>{ builderPlayingIdx = i; render(); }, i*beatsPerChord*secPerBeat*1000);
+      builderPlayingTimers.push(th);
+    });
     builderProgLoopTimer = setTimeout(tick, durMs);
   };
   tick();
@@ -1190,6 +1391,9 @@ function stopBuilderProgressionPlay(){
   builderProgLoopActive = false;
   if(builderProgLoopTimer) clearTimeout(builderProgLoopTimer);
   builderProgLoopTimer = null;
+  builderPlayingTimers.forEach(th=>clearTimeout(th));
+  builderPlayingTimers = [];
+  builderPlayingIdx = null;
   activeProgressionSessions.forEach(s=>stopAudioSession(s));
   activeProgressionSessions = [];
 }
@@ -1251,6 +1455,56 @@ function clearPrimePreviewTimers(){
 }
 // Plays raw 0, then — a beat later — raw `step2`, with a long release on both notes so they
 // ring into each other. Loops for as long as the mouse stays over the trigger.
+let edoScaleToken = 0;
+let edoScaleTimers = [];
+function clearEdoScaleTimers(){ edoScaleTimers.forEach(t=>clearTimeout(t)); edoScaleTimers = []; }
+// Plays every degree of an N-equal-division scale, root to octave, 0.25s apart, looping while
+// hovered. 31ED2 lands on exact integer raw steps (0..31); 12ED2 (or any other N) uses fractional
+// raw steps -- freqForRaw(raw) is a continuous exponent, so non-integer values still produce the
+// exact right pitch, they just don't correspond to a real key on the hex map (fine here, since
+// this is audio-only, not a map highlight).
+function startEdoScalePreview(edoSteps){
+  stopHoverPlay();
+  clearEdoScaleTimers();
+  const myToken = ++edoScaleToken;
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const timbre = state.chordsTabTimbre || 'sine';
+  const GAP = 250;
+  const cycle = ()=>{
+    if(myToken !== edoScaleToken) return;
+    for(let i=0; i<=edoSteps; i++){
+      const raw = i * (31/edoSteps);
+      edoScaleTimers.push(setTimeout(()=>{
+        if(myToken !== edoScaleToken) return;
+        scheduleChordAudio([raw], timbre, ctx.currentTime, 0.4, raw, false, true);
+      }, i*GAP));
+    }
+    edoScaleTimers.push(setTimeout(cycle, (edoSteps+1)*GAP + 900));
+  };
+  cycle();
+}
+function stopEdoScalePreview(){ edoScaleToken++; clearEdoScaleTimers(); }
+let ratioPreviewToken = 0;
+let ratioPreviewTimers = [];
+function clearRatioPreviewTimers(){ ratioPreviewTimers.forEach(t=>clearTimeout(t)); ratioPreviewTimers = []; }
+// Plays both notes of a ratio together, strummed (a small offset, not simultaneous-flat), with a
+// long release -- unlike startPrimeIntervalPreview below, which plays its two notes one after the
+// other, this is meant to actually sound like the interval as a single sonority.
+function startRatioIntervalPreview(secondRaw){
+  stopHoverPlay();
+  clearRatioPreviewTimers();
+  const myToken = ++ratioPreviewToken;
+  const ctx = getAudioCtx(); if(!ctx) return;
+  const timbre = state.chordsTabTimbre || 'sine';
+  const CYCLE = 2800;
+  const cycle = ()=>{
+    if(myToken !== ratioPreviewToken) return;
+    scheduleChordAudio([0, secondRaw], timbre, ctx.currentTime, 1.6, 0, false, true, 2.6);
+    ratioPreviewTimers.push(setTimeout(cycle, CYCLE));
+  };
+  cycle();
+}
+function stopRatioIntervalPreview(){ ratioPreviewToken++; clearRatioPreviewTimers(); }
 function startPrimeIntervalPreview(step2){
   stopHoverPlay();
   clearPrimePreviewTimers();
@@ -1293,6 +1547,7 @@ function stopHoverPlay(){
   if(hoverPlayTimeout){ clearTimeout(hoverPlayTimeout); hoverPlayTimeout=null; }
   if(hoverPlayInterval){ clearInterval(hoverPlayInterval); hoverPlayInterval=null; }
   stopChordHoverAudio();
+  resetWaveSpeed();
   // Progression-card hover-play (playProgressionAudio/playChordsAudio) tracks its own nodes in
   // activeProgressionSessions, separate from the chord-hover session stopChordHoverAudio()
   // handles above -- this loop was never actually stopping it on mouseleave, only preventing the
@@ -2206,7 +2461,7 @@ function exactBigMapConfig(pointsByRaw, root, tonesArr){
   const cols = 2*nSafe+1, rows = 2*Math.ceil(nSafe*0.65)+1;
   return { cols, rows, focusRoot: points[0], focusTones: points.slice(1) };
 }
-function renderBigProgressionMap(root, tonesArr){
+function renderBigProgressionMap(root, tonesArr, forceRaw){
   const holder = document.getElementById('bigProgMap');
   if(!holder) return;
   const exact = exactBigMapConfig(state.bigMapExactPoints, root, tonesArr);
@@ -2227,11 +2482,15 @@ function renderBigProgressionMap(root, tonesArr){
   const cols = state.bigMapFixedSize ? state.bigMapFixedSize.cols : (exact ? exact.cols : clustered.cols);
   const rows = state.bigMapFixedSize ? state.bigMapFixedSize.rows : (exact ? exact.rows : clustered.rows);
   holder.innerHTML = '';
-  const mode = state.octaveEquivalence ? 'pc' : 'raw';
-  const hlRoot = state.octaveEquivalence ? mod31(root) : root;
-  const hlTones = state.octaveEquivalence ? new Set(tonesArr.map(mod31)) : new Set(tonesArr);
-  const focusRoot = state.octaveEquivalence ? null : (exact ? exact.focusRoot : clustered.focusRoot);
-  const focusTones = state.octaveEquivalence ? null : (exact ? exact.focusTones : clustered.focusTones);
+  // "Show all notes at once" (forceRaw) always plots every note at its real, fixed position
+  // relative to the progression's root=0 -- exactly where it was written -- no matter what the
+  // octave-equivalence setting does to per-chord maps elsewhere in the app.
+  const foldPositions = state.octaveEquivalence && !forceRaw;
+  const mode = foldPositions ? 'pc' : 'raw';
+  const hlRoot = foldPositions ? mod31(root) : root;
+  const hlTones = foldPositions ? new Set(tonesArr.map(mod31)) : new Set(tonesArr);
+  const focusRoot = foldPositions ? null : (exact ? exact.focusRoot : clustered.focusRoot);
+  const focusTones = foldPositions ? null : (exact ? exact.focusTones : clustered.focusTones);
   const echoPcs = state.octaveEquivalence ? new Set([root, ...tonesArr].map(mod31)) : null;
   holder.appendChild(buildHexSVG({ shape:'rect-centered', cols, rows, size:26, autoFit:false, highlightRoot:hlRoot, tones:hlTones, mode, focusRoot, focusTones, echoPcs, interactive:true, onHexClick:playBigMapNote, allowHScroll:true }));
 }
@@ -2261,7 +2520,7 @@ function highlightBigMapForAll(progId){
   state.bigMapFixedSize = { cols: exact ? exact.cols : clustered.cols, rows: exact ? exact.rows : clustered.rows };
   const label = document.getElementById('bigMapLabel');
   if(label) label.textContent = t('map.allnotes.plate');
-  renderBigProgressionMap(0, tonesArr);
+  renderBigProgressionMap(0, tonesArr, true);
 }
 // Plays the progression AND advances the big map's highlight chord-by-chord in sync.
 function playProgressionWithVisual(progId, timbre){
@@ -2301,6 +2560,7 @@ function clearPlayLoopState(){
   }
   state.loopingProgId = null;
   state.loopingTimbre = null;
+  resetWaveSpeed();
 }
 function stopLoopIfPlaying(){ if(state.loopingProgId) stopPlayLoop(); }
 function togglePlayLoop(progId, timbre){
@@ -2813,6 +3073,26 @@ const I18N = {
     "en": "Yes, delete everything",
     "es": "Sí, borrar todo"
   },
+  "savemodal.h2": {
+    "en": "Name your progression",
+    "es": "Nombra tu progresión"
+  },
+  "builder.midiwrite": {
+    "en": "🎹 Write shape with MIDI controller",
+    "es": "🎹 Escribe la forma con tu controlador MIDI"
+  },
+  "builder.midiwrite.title": {
+    "en": "When on, playing your MIDI controller toggles notes in/out of this chord, just like tapping the hex map. When off, MIDI just plays sound.",
+    "es": "Si está activado, tocar tu controlador MIDI activa/desactiva notas de esta forma, igual que tocar el mapa hexagonal. Si está desactivado, el MIDI solo reproduce sonido."
+  },
+  "tun.row.neutral3": {
+    "en": "Neutral third",
+    "es": "Tercera neutra"
+  },
+  "word.ok": {
+    "en": "OK",
+    "es": "Vale"
+  },
   "word.cancel": {
     "en": "Cancel",
     "es": "Cancelar"
@@ -2943,7 +3223,7 @@ const I18N = {
   },
   "sw.progs.li2": {
     "en": "Or write with your MIDI controller (<b>🎹 Write shape with MIDI controller</b>), or import a <b>MIDI file</b> to auto-convert it into a progression.",
-    "es": "O escribe con tu controlador MIDI (<b>🎹 Write shape with MIDI controller</b>), o importa un <b>archivo MIDI</b> para convertirlo directamente en una progresión."
+    "es": "O escribe con tu controlador MIDI (<b>🎹 Escribe la forma con tu controlador MIDI</b>), o importa un <b>archivo MIDI</b> para convertirlo directamente en una progresión."
   },
   "sw.progs.li3": {
     "en": "<b>+ Add shape</b>, drag ⠿ to reorder, ✎ to edit, ✕ to remove.",
@@ -3031,7 +3311,7 @@ const I18N = {
   },
   "sw.midi.li1": {
     "en": "<b>Connect MIDI</b> → <b>Calibrate root</b> (play any note to set it as step 0). On the Hex map your controller acts just like tapping the board, live, no separate toggle needed. In the progression builder, turn on <b>🎹 Write shape with MIDI controller</b> first.",
-    "es": "<b>Connect MIDI</b> → <b>Calibrate root</b> (toca cualquier nota para fijarla como el step 0). En el mapa hexagonal, tu controlador funciona igual que tocar el tablero, en vivo, sin necesidad de ningún interruptor aparte. En el editor de progresiones, activa antes <b>🎹 Write shape with MIDI controller</b>."
+    "es": "<b>Connect MIDI</b> → <b>Calibrate root</b> (toca cualquier nota para fijarla como el step 0). En el mapa hexagonal, tu controlador funciona igual que tocar el tablero, en vivo, sin necesidad de ningún interruptor aparte. En el editor de progresiones, activa antes <b>🎹 Escribe la forma con tu controlador MIDI</b>."
   },
   "sw.midi.li2": {
     "en": "Works with any MIDI keyboard, not just an isomorphic one, as long as one physical semitone = one <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> step.",
@@ -3114,20 +3394,20 @@ const I18N = {
     "es": "¿Cómo puedo usar este sistema de afinación?"
   },
   "tun.p1": {
-    "en": "31ED2 is a <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> tuning system that divides the <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octave<span class=\"jargon-q\">?</span></span> into 31 equidistant notes called steps.",
-    "es": "31ED2 es un sistema de afinación <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divide la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notas equidistantes llamadas steps."
+    "en": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> is a <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> tuning system that divides the <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octave<span class=\"jargon-q\">?</span></span> into 31 equidistant notes called steps. You can use it by playing whichever pitches sound the way you want.",
+    "es": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> es un sistema de afinación <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divide la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notas equidistantes llamadas steps. Puedes usarlo tocando las alturas que te suenen como quieras."
   },
   "tun.p2": {
-    "en": "Generally, it is a more accurate approximation to <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">just intonation<span class=\"jargon-q\">?</span></span> than 12ED2, the Western standard tuning system adopted just a few centuries ago. Just intonation intervals are sometimes approximated by tuning systems like these, in an attempt to reduce the amount of notes needed to compose.",
-    "es": "En general, es una aproximación más precisa a la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> que 12ED2, el sistema de afinación estándar occidental adoptado hace apenas unos siglos. Los intervalos de afinación justa a veces se aproximan mediante sistemas de afinación como estos en un intento de reducir la cantidad de notas necesarias para componer."
+    "en": "Generally, it is a more accurate approximation to <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">just intonation<span class=\"jargon-q\">?</span></span> than <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, the Western standard tuning system adopted just a few centuries ago. Just intonation intervals are sometimes approximated by tuning systems like these, in an attempt to reduce the amount of notes needed to compose.",
+    "es": "En general, es una aproximación más precisa a la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> que <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, el sistema de afinación estándar occidental adoptado hace apenas unos siglos. Los intervalos de afinación justa a veces se aproximan mediante sistemas de afinación como estos en un intento de reducir la cantidad de notas necesarias para componer."
   },
   "tun.p3": {
     "en": "31ED2 also allows us to play low-complexity <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">just intonation<span class=\"jargon-q\">?</span></span> intervals that aren't accessible in 12ED2. 12ED2 approximates just-intonation intervals that include the primes 2, 3, and 5 relatively well, but the same can't be said for primes 7, 11, 13, and so on. 31ED2 approximates, relatively well, many more intervals — including ones built from primes such as",
     "es": "31ED2 también nos permite tocar intervalos de <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> de baja complejidad que no son accesibles en 12ED2. 12ED2 aproxima relativamente bien los intervalos de afinación justa que incluyen los primos 2, 3 y 5, pero no puede decirse lo mismo de los primos 7, 11, 13, etcétera. 31ED2 aproxima relativamente bien muchos más intervalos — incluyendo algunos construidos a partir de primos como"
   },
   "tun.p3b": {
-    "en": "and beyond. This gives you access to simple intervals that are forbidden by 12ED2, such as 7/4 (called the harmonic seventh) and 7/6 (the subminor third)... and so on.",
-    "es": "y más allá. Esto te da acceso a intervalos simples que están prohibidos en 12ED2, como 7/4 (llamado séptima armónica) y 7/6 (la tercera submenor)... y así sucesivamente."
+    "en": "and beyond. This gives you access to simple intervals that are forbidden by 12ED2, such as <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(25)\" onmouseleave=\"stopRatioIntervalPreview()\">7/4</span> (called the harmonic seventh), <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(7)\" onmouseleave=\"stopRatioIntervalPreview()\">7/6</span> (the subminor third), and <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(9)\" onmouseleave=\"stopRatioIntervalPreview()\">11/9</span> (the neutral third)... and so on.",
+    "es": "y más allá. Esto te da acceso a intervalos simples que están prohibidos en 12ED2, como <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(25)\" onmouseleave=\"stopRatioIntervalPreview()\">7/4</span> (llamado séptima armónica), <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(7)\" onmouseleave=\"stopRatioIntervalPreview()\">7/6</span> (la tercera submenor), y <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(9)\" onmouseleave=\"stopRatioIntervalPreview()\">11/9</span> (la tercera neutra)... y así sucesivamente."
   },
   "tun.p4": {
     "en": "We can still translate anything from 12ED2 quite well. But since 31ED2 is generally a closer approximation to just intonation, each interval is more unique — for example, stacking 3 major thirds doesn't get you to an octave. This can be treated as a limitation, or as an implicit expressive device in harmonic progressions: if you move by major thirds in a progression, for example, you end up at a new pitch microtonally close to where you started.",
@@ -3862,8 +4142,8 @@ const I18N = {
     "es": "Nada seleccionado aún."
   },
   "word.noshapesselected": {
-    "en": "No shapes selected yet.",
-    "es": "Aún no hay formas seleccionadas."
+    "en": "Shift + click to select shapes.",
+    "es": "Shift + clic para seleccionar formas."
   },
   "builder.noshapesyet": {
     "en": "No shapes yet. Build them with the hex map on the left.",
@@ -4096,6 +4376,86 @@ const I18N = {
   "fullscreen.exit": {
     "en": "⛶ Exit full screen",
     "es": "⛶ Salir de pantalla completa"
+  },
+  "epilepsy.h2": {
+    "en": "⚠️ Photosensitivity notice",
+    "es": "⚠️ Aviso de fotosensibilidad"
+  },
+  "epilepsy.p1": {
+    "en": "This app uses moving backgrounds and pulsing color highlights tied to the music, which can grow fast and intense at high tempos or complex polyrhythms. If you're sensitive to flashing or fast-moving visuals, or have photosensitive epilepsy, please turn on safe mode below before continuing.",
+    "es": "Esta app usa fondos en movimiento y destellos de color ligados a la música, que pueden volverse rápidos e intensos con tempos altos o poliritmos complejos. Si eres sensible a destellos o movimiento rápido, o tienes epilepsia fotosensible, activa el modo seguro de abajo antes de continuar."
+  },
+  "epilepsy.toggle": {
+    "en": "⚕️ Photosensitivity safe mode",
+    "es": "⚕️ Modo seguro para fotosensibilidad"
+  },
+  "epilepsy.toggle.title": {
+    "en": "Slows down the pulsing background highlights",
+    "es": "Ralentiza los destellos del fondo"
+  },
+  "epilepsy.p2": {
+    "en": "Safe mode keeps the same background effects, just eased much more slowly — it doesn't turn them off. You can change this anytime in Settings.",
+    "es": "El modo seguro mantiene los mismos efectos de fondo, solo que mucho más suaves — no los desactiva. Puedes cambiarlo cuando quieras en Ajustes."
+  },
+  "epilepsy.continue": {
+    "en": "Got it",
+    "es": "Entendido"
+  },
+  "tut.step1": {
+    "en": "Tap hexagons above to pick notes. Your first note becomes the root, fixed at 0.",
+    "es": "Toca hexágonos arriba para elegir notas. Tu primera nota será la raíz, fija en 0."
+  },
+  "tut.step2": {
+    "en": "Then press \"+ Add shape to progression\".",
+    "es": "Luego pulsa \"+ Añadir forma a la progresión\"."
+  },
+  "tut.step3": {
+    "en": "Nice! Now tap a second shape.",
+    "es": "¡Bien! Ahora toca una segunda forma."
+  },
+  "tut.step4": {
+    "en": "Press \"+ Add shape to progression\" again.",
+    "es": "Pulsa \"+ Añadir forma a la progresión\" otra vez."
+  },
+  "tut.step5": {
+    "en": "Press ▶ Play progression to hear both, then \"Save progression\".",
+    "es": "Pulsa ▶ Play progression para escuchar ambas, y luego \"Save progression\"."
+  },
+  "word.backtoprogressions": {
+    "en": "← Back to progressions",
+    "es": "← Volver a progresiones"
+  },
+  "tut.title.write": {
+    "en": "✍️ Build a shape",
+    "es": "✍️ Crea una forma"
+  },
+  "tut.demo.caption": {
+    "en": "Example — tapping out a chord:",
+    "es": "Ejemplo — tocando un acorde:"
+  },
+  "tut.tip.playshape": {
+    "en": "🔊 Press \"▶ Play shape\" anytime to hear it.",
+    "es": "🔊 Pulsa \"▶ Play shape\" cuando quieras para escucharlo."
+  },
+  "tut.tip.hoverlist": {
+    "en": "🖱️ Hover a shape below to hear it.",
+    "es": "🖱️ Pasa el ratón por una forma para escucharla."
+  },
+  "tut.tip.addmore": {
+    "en": "Add more shapes anytime before saving.",
+    "es": "Añade más formas cuando quieras antes de guardar."
+  },
+  "tut.savemsg": {
+    "en": "🎉 Saved! You're back in Progressions — its shapes are now in Shapes too.",
+    "es": "🎉 ¡Guardada! Estás de vuelta en Progressions — sus formas ya están también en Shapes."
+  },
+  "tut.restart": {
+    "en": "Tutorial",
+    "es": "Tutorial"
+  },
+  "tut.restart.title": {
+    "en": "Replay the mini-tutorial",
+    "es": "Repetir el mini tutorial"
   }
 };
 function t(key){ const d = I18N[key]; if(!d) return key; return d[state.lang] || d.en || key; }
@@ -4103,7 +4463,7 @@ const state = {
   tab:'catalog', view:'list',
   progressions: [], nicknames: {}, octaveEquivalence: false,
   selectedProgId:null, selectedChordKey:null, chordSeqSelection:[],
-  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false,
+  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false,
   lang: 'en', // default; a saved preference (if any) overrides this once loadData() resolves
   mapMode:'write', playModeNotes:[], mapTimbre:'guitar', chordsTabTimbre:'guitar', strumMode:true,
   progressionsTabTimbre:'guitar', hexExpandLevel:0, emergentHighlight:null, bigMapBoardSize:null, bigMapExactPoints:null,
@@ -4160,6 +4520,10 @@ async function loadData(){
   try{ const r = await storageGet('midiCalibration'); if(r){ const d=JSON.parse(r.value); if(typeof d.baseNote==='number') state.midi.baseNote=d.baseNote; } }catch(e){}
   try{ const r = await storageGet('lang'); if(r && (JSON.parse(r.value)==='en' || JSON.parse(r.value)==='es')) state.lang = JSON.parse(r.value); }catch(e){}
   try{ const r = await storageGet('seenHelpHint'); if(!r || JSON.parse(r.value)!==true) state.showHelpHint = true; }catch(e){ state.showHelpHint = true; }
+  try{ const r = await storageGet('epilepsySafeMode'); if(r) state.epilepsySafeMode = JSON.parse(r.value); }catch(e){}
+  try{ const r = await storageGet('seenBuilderTutorial'); if(r) state.seenBuilderTutorial = JSON.parse(r.value)===true; }catch(e){}
+  applyEpilepsySafeModeClass();
+  try{ const r = await storageGet('seenEpilepsyWarning'); state.__seenEpilepsyWarning = !!(r && JSON.parse(r.value)===true); }catch(e){ state.__seenEpilepsyWarning = false; }
   try{
     const r = await storageGet('interpretationSettings');
     if(r){
@@ -4240,7 +4604,11 @@ function newProgression(){
 // (map, hints, and the action buttons below it) then fits within reach with no manual scrolling.
 function scrollBuilderIntoView(){
   try{
-    const go = ()=>{ const el = document.getElementById('builderViewTop'); if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' }); };
+    const go = ()=>{
+      const tutorialActive = !state.seenBuilderTutorial;
+      const el = document.getElementById(tutorialActive ? 'builderTutorialBanner' : 'builderViewTop');
+      if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
     if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(go); else setTimeout(go, 0);
   }catch(e){}
 }
@@ -4317,7 +4685,11 @@ function builderCancelEditChord(){
 function refreshBuilderShapePlayIfActive(){
   if(!builderShapePlayActive) return;
   const notes = state.builder.selectedOrder;
-  if(!notes || notes.length===0){ stopHoverPlay(); builderShapePlayActive = false; return; }
+  // Silence, but stay "active" -- Play shape now tracks whatever's currently marked on the map
+  // rather than switching itself off the moment the map goes empty (e.g. right after "Add shape
+  // to progression" clears the selection). The next note tapped starts sounding immediately,
+  // with no need to press Play again.
+  if(!notes || notes.length===0){ stopHoverPlay(); return; }
   stopHoverPlay();
   const ctx = getAudioCtx();
   if(!ctx) return;
@@ -4346,7 +4718,7 @@ function builderHexClick(raw, e, q, r){
     render(); return;
   }
   const i = findSelectionMatchIndex(arr, raw);
-  if(i>=0){ arr.splice(i,1); if(state.builder.lastClicked===raw) state.builder.lastClicked = null; }
+  if(i>=0){ arr.splice(i,1); if(state.builder.lastClicked===raw) state.builder.lastClicked = null; delete state.builder.selectedOrderQr[raw]; }
   else { arr.push(raw); state.builder.lastClicked = raw; }
   refreshBuilderShapePlayIfActive();
   render();
@@ -4360,12 +4732,11 @@ function builderSetRoot(raw){
 }
 function builderRemoveNote(raw){
   if(firstChordLocked() && raw===0) return;
-  const arr=state.builder.selectedOrder; const i=findSelectionMatchIndex(arr, raw); if(i>=0) arr.splice(i,1); render();
+  const arr=state.builder.selectedOrder; const i=findSelectionMatchIndex(arr, raw); if(i>=0){ arr.splice(i,1); delete state.builder.selectedOrderQr[raw]; } render();
 }
 function builderClearSelection(){ state.builder.selectedOrder = firstChordLocked() ? [0] : []; state.builder.selectedOrderQr = firstChordLocked() ? {0:{q:0,r:0}} : {}; render(); }
 function builderAddChord(){
   stopHoverPlay();
-  builderShapePlayActive = false;
   const arr = state.builder.selectedOrder;
   if(arr.length===0){ state.builder.error = 'Tap at least one note on the hex map before adding.'; render(); return; }
   const root = arr[0];
@@ -4381,16 +4752,27 @@ function builderAddChord(){
   }
   state.builder.chords.push({ id:uid(), root, intervals, label:'', qrOffsets });
   try{ const ctx = getAudioCtx(); if(ctx) scheduleChordAudio(intervals.map(iv=>root+iv), state.progressionsTabTimbre, ctx.currentTime, 0.8, root, false, false); }catch(e){} // quick audible confirmation of what just got added
-  state.builder.selectedOrder = []; state.builder.selectedOrderQr = {}; state.builder.error = '';
+  // lastClicked drives the octave-echo highlight on the minimap -- it must be cleared here too,
+  // not just selectedOrder, otherwise it keeps pointing at a note from the chord that was just
+  // committed, and the map shows an "octave of X" echo mark for a note that isn't actually
+  // selected anymore (nothing is selected at this point).
+  state.builder.selectedOrder = []; state.builder.selectedOrderQr = {}; state.builder.error = ''; state.builder.lastClicked = null;
+  render();
+}
+function builderDuplicateChord(idx){
+  const c = state.builder.chords[idx]; if(!c) return;
+  const copy = { id:uid(), root:c.root, intervals:c.intervals.slice(), label:c.label||'', qrOffsets: c.qrOffsets ? c.qrOffsets.map(o=>o?{...o}:null) : null };
+  state.builder.chords.splice(idx+1, 0, copy);
+  try{ const ctx = getAudioCtx(); if(ctx) scheduleChordAudio(copy.intervals.map(iv=>copy.root+iv), state.progressionsTabTimbre, ctx.currentTime, 0.8, copy.root, false, false); }catch(e){}
   render();
 }
 function builderRemoveChord(idx){
   stopHoverPlay();
   state.builder.chords.splice(idx,1);
-  if(state.builder.chords.length===0) state.builder.selectedOrder = [0]; // back to first-chord rules
+  if(state.builder.chords.length===0){ state.builder.selectedOrder = [0]; state.builder.lastClicked = 0; } // back to first-chord rules
   render();
 }
-function builderClearAllChords(){ state.builder.chords = []; state.builder.selectedOrder = [0]; state.builder.selectedOrderQr = {0:{q:0,r:0}}; render(); }
+function builderClearAllChords(){ state.builder.chords = []; state.builder.selectedOrder = [0]; state.builder.selectedOrderQr = {0:{q:0,r:0}}; state.builder.lastClicked = 0; render(); }
 function builderMoveChord(idx, dir){
   const arr = state.builder.chords; const j = idx+dir; if(j<0 || j>=arr.length) return;
   [arr[idx], arr[j]] = [arr[j], arr[idx]]; render();
@@ -4424,39 +4806,82 @@ function nextAutoProgressionName(){
   while(taken.has(`${base} ${n}`) || taken.has(`Progression ${n}`)) n++;
   return `${base} ${n}`;
 }
-async function saveProgressionAs(){
-  stopHoverPlay();
-  const b = state.builder;
-  if(b.chords.length===0){ b.error = 'Add at least one chord before saving.'; render(); return; }
-  b.error = '';
-  const name = b.name.trim() || nextAutoProgressionName();
-  const tags = b.tags.split(',').map(s=>s.trim()).filter(Boolean);
-  const p = { id:uid(), name, tags, notes:b.notesText.trim(), chords:b.chords, createdAt:Date.now() };
-  state.progressions.push(p); state.selectedProgId = p.id;
-  playExternalAudio(SAVE_SOUND_SOURCES, 0.8);
-  await persistProgressions();
-  state.view='detail'; state.chordSeqSelection=[]; render();
-  scrollProgDetailIntoView();
+function saveProgressionAs(){ openSaveNameModal('saveas'); }
+function markBuilderTutorialComplete(b){
+  if(!state.seenBuilderTutorial && b.chords.length>=2){
+    state.seenBuilderTutorial = true;
+    state.showTutorialSaveMessage = true;
+    storageSet('seenBuilderTutorial', JSON.stringify(true)).catch(()=>{});
+  }
 }
-async function saveProgression(){
-  stopHoverPlay();
+function dismissTutorialSaveMessage(){ state.showTutorialSaveMessage = false; render(); }
+function restartBuilderTutorial(){
+  // Acts as a toggle: pressing it while the tutorial is showing turns it OFF (same as finishing
+  // it normally), so the builder immediately goes back to its regular, non-tutorial auto-scroll
+  // behavior. Pressing it while off turns it back on, from the very first step.
+  const turningOff = !state.seenBuilderTutorial;
+  state.seenBuilderTutorial = turningOff;
+  storageSet('seenBuilderTutorial', JSON.stringify(turningOff)).catch(()=>{});
+  if(!turningOff) tutorialDemoState = 'pending';
+  render();
+  scrollBuilderIntoView();
+}
+function toggleSeqSearchHint(){ state.showSeqSearchHint = !state.showSeqSearchHint; if(state.tab==='catalog' && state.view==='detail') renderCatalogDetail(document.getElementById('tabContent')); }
+function saveProgression(){ openSaveNameModal('save'); }
+// The progression's name/tags/notes used to be edited live inside the builder itself. Moved into
+// a dedicated confirm step instead -- opened only once you actually press Save -- so the builder
+// screen stays focused purely on the notes/shapes themselves, one thing at a time.
+function openSaveNameModal(mode){
+  // stopHoverPlay() alone doesn't touch the looping "Play shape" / "Play progression" toggles --
+  // if either was left running, it kept sounding right through the save-name modal and past the
+  // save itself. Saving is a good, unambiguous moment to silence everything.
+  stopAllAudioActivity();
   const b = state.builder;
   if(b.chords.length===0){ b.error = 'Add at least one chord before saving.'; render(); return; }
   b.error = '';
+  // Pre-fill the actual name field (not just a placeholder) with the auto-generated
+  // "Progression N" so there's always a real, visible name ready to go -- the user can just
+  // press OK/R immediately, or edit it first if they want something more specific.
+  if(!b.name.trim()) b.name = nextAutoProgressionName();
+  state.saveNameModalMode = mode;
+  state.showSaveNameModal = true;
+  render();
+  requestAnimationFrame(()=>{ const el = document.getElementById('saveNameModalInput'); if(el){ el.focus(); el.select(); } });
+}
+function closeSaveNameModal(){ state.showSaveNameModal = false; state.saveNameModalMode = null; render(); }
+let newlySavedProgTimer = null;
+// Rather than landing on the progression you just saved, this now always returns you to the
+// general Progressions list -- and marks the new/updated card with a strong, unmissable glow
+// that eases itself out completely over 5 seconds, so it's obvious at a glance which one just
+// got added without permanently changing the list's layout or requiring a click-through.
+function flagNewlySavedProgression(id){
+  state.newlySavedProgId = id;
+  if(newlySavedProgTimer) clearTimeout(newlySavedProgTimer);
+  newlySavedProgTimer = setTimeout(()=>{ state.newlySavedProgId = null; newlySavedProgTimer = null; render(); }, 5200);
+}
+async function confirmSaveProgression(){
+  const b = state.builder;
+  const mode = state.saveNameModalMode;
   const name = b.name.trim() || nextAutoProgressionName();
   const tags = b.tags.split(',').map(s=>s.trim()).filter(Boolean);
-  if(b.editingId){
+  let savedId;
+  if(mode==='save' && b.editingId){
     const p = state.progressions.find(x=>x.id===b.editingId);
     p.name=name; p.tags=tags; p.notes=b.notesText.trim(); p.chords=b.chords;
-    state.selectedProgId = p.id;
+    savedId = p.id;
   } else {
     const p = { id:uid(), name, tags, notes:b.notesText.trim(), chords:b.chords, createdAt:Date.now() };
-    state.progressions.push(p); state.selectedProgId = p.id;
+    state.progressions.push(p); savedId = p.id;
   }
+  state.selectedProgId = savedId;
   playExternalAudio(SAVE_SOUND_SOURCES, 0.8);
+  markBuilderTutorialComplete(b);
   await persistProgressions();
-  state.view='detail'; state.chordSeqSelection=[]; render();
-  scrollProgDetailIntoView();
+  state.showSaveNameModal = false;
+  state.saveNameModalMode = null;
+  state.tab = 'catalog'; state.view = 'list'; state.chordSeqSelection = [];
+  flagNewlySavedProgression(savedId);
+  render();
 }
 // Scrolls so the progression detail view's top row (← Back to progressions) sits at the very top
 // of the screen, matching the same behavior the builder already has.
@@ -5076,6 +5501,8 @@ function render(){
             <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
             <button class="btn small" onclick="toggleFullscreen()">${document.fullscreenElement ? t('fullscreen.exit') : t('fullscreen.enter')}</button>
             <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
+            <button class="eq-toggle ${state.epilepsySafeMode?'on':''}" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">${t('epilepsy.toggle')}: ${state.epilepsySafeMode ? t('word.on') : t('word.off')}</button>
+            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
             <button class="btn small ${state.muted?'primary':''}" onclick="toggleMuted()" title="${t('mute.title')}">${state.muted?t('mute.muted'):t('mute.mute')}</button>
           </div>
         ` : ''}
@@ -5121,6 +5548,8 @@ function render(){
     ${state.showInfoTuning ? renderTuningInfoModal() : ''}
     ${state.showInfoHexagons ? renderHexagonsInfoModal() : ''}
     ${state.showInfoShortcuts ? renderShortcutsInfoModal() : ''}
+    ${state.showEpilepsyWarning ? renderEpilepsyWarningModal() : ''}
+    ${state.showSaveNameModal ? renderSaveNameModal() : ''}
   `;
   const content = document.getElementById('tabContent');
   if(state.tab==='catalog'){
@@ -5130,6 +5559,7 @@ function render(){
   } else if(state.tab==='species'){ renderSpecies(content); }
   else if(state.tab==='map'){ renderMap(content); }
   else if(state.tab==='connect'){ renderConnect(content); }
+  if(!(state.tab==='catalog' && state.view==='builder')) hideBuiltChordMinimap();
   pushNavHistory();
   updateNavHistoryButtons();
   updateSoundButton();
@@ -5303,7 +5733,12 @@ document.addEventListener('keydown', (e)=>{
     if(state.tab==='catalog' && state.view==='builder') builderAddChord();
   }
   else if(e.key==='r' || e.key==='R'){
-    if(state.tab==='catalog' && state.view==='builder') saveProgression();
+    // The save-name modal takes priority over the ordinary R bindings while it's open -- pressing
+    // R there confirms the save (same as clicking OK) instead of re-triggering "New progression"
+    // or "Save progression" underneath it, which would be confusing since that modal already
+    // *is* the result of having pressed Save.
+    if(state.showSaveNameModal) confirmSaveProgression();
+    else if(state.tab==='catalog' && state.view==='builder') saveProgression();
     else if(state.tab==='catalog' && state.view==='list') newProgression();
   }
   else if(e.key==='c' || e.key==='C'){
@@ -5368,6 +5803,60 @@ function helpContinueReadingHtml(currentKey){
     </div>
   `;
 }
+function applyEpilepsySafeModeClass(){
+  const holder = document.getElementById('noteHexBg');
+  if(holder) holder.classList.toggle('safe-mode', !!state.epilepsySafeMode);
+}
+function toggleEpilepsySafeMode(){
+  state.epilepsySafeMode = !state.epilepsySafeMode;
+  storageSet('epilepsySafeMode', JSON.stringify(state.epilepsySafeMode)).catch(()=>{});
+  applyEpilepsySafeModeClass();
+  render();
+}
+function dismissEpilepsyWarning(){
+  state.showEpilepsyWarning = false;
+  storageSet('seenEpilepsyWarning', JSON.stringify(true)).catch(()=>{});
+  render();
+}
+function renderSaveNameModal(){
+  const b = state.builder;
+  return `
+  <div class="modal-backdrop">
+    <div class="modal-panel" style="max-width:440px;">
+      <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="font-family:'Chakra Petch',sans-serif; margin:0; font-size:20px;">${t('savemodal.h2')}</h2>
+      </div>
+      <div class="field" style="margin-top:6px;"><label class="field-label">${t('builder.progname.label')}</label>
+        <input type="text" id="saveNameModalInput" value="${escapeHtml(b.name)}" oninput="builderSetName(this.value)" onkeydown="if(event.key==='Enter') confirmSaveProgression();" placeholder="${t('builder.progname.placeholder')}"></div>
+      <div class="field"><label class="field-label">${t('builder.tags.label')}</label>
+        <input type="text" value="${escapeHtml(b.tags)}" oninput="builderSetTags(this.value)" onkeydown="handleTagAutocomplete(event)" placeholder="${t('builder.tags.placeholder')}"></div>
+      <div class="field"><label class="field-label">${t('builder.notes.label')}</label>
+        <textarea oninput="builderSetNotes(this.value)" placeholder="${t('builder.notes.placeholder')}">${escapeHtml(b.notesText)}</textarea></div>
+      <div class="row" style="justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn ghost" onclick="closeSaveNameModal()">${t('word.cancel')}</button>
+        <button class="btn primary" style="font-size:16px; padding:12px 26px;" data-hotkey="R" onclick="confirmSaveProgression()">${t('word.ok')}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderEpilepsyWarningModal(){
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) dismissEpilepsyWarning()">
+    <div class="modal-panel" style="max-width:480px;">
+      <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="font-family:'Chakra Petch',sans-serif; margin:0; font-size:20px;">${t('epilepsy.h2')}</h2>
+      </div>
+      <p class="sub" style="max-width:none;">${t('epilepsy.p1')}</p>
+      <label class="row" style="gap:10px; align-items:center; margin:14px 0; cursor:pointer;" onclick="toggleEpilepsySafeMode()">
+        <button class="eq-toggle ${state.epilepsySafeMode?'on':''}" onclick="event.stopPropagation(); toggleEpilepsySafeMode();">${t('epilepsy.toggle')}: ${state.epilepsySafeMode ? t('word.on') : t('word.off')}</button>
+      </label>
+      <p class="sub" style="max-width:none; font-size:11px;">${t('epilepsy.p2')}</p>
+      <div class="row" style="justify-content:flex-end; margin-top:16px;">
+        <button class="btn primary" onclick="dismissEpilepsyWarning()">${t('epilepsy.continue')}</button>
+      </div>
+    </div>
+  </div>`;
+}
 function renderShortcutsInfoModal(){
   return `
   <div class="modal-backdrop" onclick="if(event.target===this) toggleInfoShortcuts()">
@@ -5398,6 +5887,23 @@ function toggleJargonPopup(e, popupId){
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.jargon-popup.show').forEach(popup=>popup.classList.remove('show'));
 });
+function toggleSwSection(id){
+  state.swSectionOpen = state.swSectionOpen || {};
+  state.swSectionOpen[id] = !state.swSectionOpen[id];
+  render();
+}
+// Collapsed by default -- this help modal covers a lot of ground, and showing all of it at once
+// was the exact "overwhelming" complaint. Each h3 becomes its own clickable toggle; only the
+// section(s) the person actually asked to see expand.
+function swSectionHtml(id, titleKey, bodyHtml){
+  const open = !!(state.swSectionOpen && state.swSectionOpen[id]);
+  return `
+      <h3 class="sw-section-toggle" onclick="toggleSwSection('${id}')">
+        <span class="sw-caret">${open ? '▾' : '▸'}</span>${t(titleKey)}
+      </h3>
+      ${open ? bodyHtml : ''}
+  `;
+}
 function renderSoftwareInfoModal(){
   return `
   <div class="modal-backdrop" onclick="if(event.target===this) toggleInfoSoftware()">
@@ -5408,11 +5914,12 @@ function renderSoftwareInfoModal(){
       </div>
       <p class="sub" style="max-width:none;">${t('sw.intro')}</p>
 
-      <h3>${t('sw.goodfor.h3')}</h3>
+      ${swSectionHtml('goodfor', 'sw.goodfor.h3', `
       <p class="sub" style="max-width:none;">${t('sw.goodfor.p1')}</p>
       <p class="sub" style="max-width:none;">${t('sw.goodfor.p2')}</p>
+      `)}
 
-      <h3>${t('sw.progs.h3')}</h3>
+      ${swSectionHtml('progs', 'sw.progs.h3', `
       <ul>
         <li>${t('sw.progs.li1')}</li>
         <li>${t('sw.progs.li2')}</li>
@@ -5425,55 +5932,64 @@ function renderSoftwareInfoModal(){
         <li>${t('sw.progs.li9')}</li>
         <li>${t('sw.progs.li10')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.shapes.h3')}</h3>
+      ${swSectionHtml('shapes', 'sw.shapes.h3', `
       <ul>
         <li>${t('sw.shapes.li1')}</li>
         <li>${t('sw.shapes.li2')}</li>
         <li>${t('sw.shapes.li3')}</li>
         <li>${t('sw.shapes.li4')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.hexmap.h3')}</h3>
+      ${swSectionHtml('hexmap', 'sw.hexmap.h3', `
       <ul>
         <li>${t('sw.hexmap.li1')}</li>
         <li>${t('sw.hexmap.li3')}</li>
         <li>${t('sw.hexmap.li4')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.eq.h3')}</h3>
+      ${swSectionHtml('eq', 'sw.eq.h3', `
       <ul><li>${t('sw.eq.li1')}</li></ul>
+      `)}
 
-      <h3>${t('sw.midi.h3')}</h3>
+      ${swSectionHtml('midi', 'sw.midi.h3', `
       <ul>
         <li>${t('sw.midi.li1')}</li>
         <li>${t('sw.midi.li2')}</li>
         <li>${t('sw.midi.li3')}</li>
         <li>${t('sw.midi.li4')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.sound.h3')}</h3>
+      ${swSectionHtml('sound', 'sw.sound.h3', `
       <ul>
         <li>${t('sw.sound.li1')}</li>
         <li>${t('sw.sound.li2')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.io.h3')}</h3>
+      ${swSectionHtml('io', 'sw.io.h3', `
       <ul>
         <li>${t('sw.io.li1')}</li>
         <li>${t('sw.io.li2')}</li>
         <li>${t('sw.io.li3')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.colors.h3')}</h3>
+      ${swSectionHtml('colors', 'sw.colors.h3', `
       <ul>
         <li>${t('sw.colors.li1')}</li>
         <li>${t('sw.colors.li2')}</li>
       </ul>
+      `)}
 
-      <h3>${t('sw.badfor.h3')}</h3>
+      ${swSectionHtml('badfor', 'sw.badfor.h3', `
       <p class="sub" style="max-width:none;">${t('sw.badfor.p1')}</p>
       <p class="sub" style="max-width:none;">${t('sw.badfor.p2')}</p>
+      `)}
       ${helpContinueReadingHtml('software')}
     </div>
   </div>
@@ -5513,6 +6029,7 @@ function renderTuningInfoModal(){
             <tr class="err-high"><td>${t('tun.row.p4')}</td><td>13</td><td>503.23</td><td>4:3</td><td>498.04</td><td>+5.19</td></tr>
             <tr class="err-high"><td>${t('tun.row.sepmaj3')}</td><td>11</td><td>425.81</td><td>9:7</td><td>435.08</td><td>-9.27</td></tr>
             <tr><td>${t('tun.row.maj3')}</td><td>10</td><td>387.10</td><td>5:4</td><td>386.31</td><td>+0.79</td></tr>
+            <tr><td>${t('tun.row.neutral3')}</td><td>9</td><td>348.39</td><td>11:9</td><td>347.41</td><td>+0.98</td></tr>
             <tr class="err-high"><td>${t('tun.row.min3')}</td><td>8</td><td>309.68</td><td>6:5</td><td>315.64</td><td>-5.96</td></tr>
             <tr><td>${t('tun.row.sepmin3')}</td><td>7</td><td>270.97</td><td>7:6</td><td>266.87</td><td>+4.10</td></tr>
             <tr><td>${t('tun.row.sepwt')}</td><td>6</td><td>232.26</td><td>8:7</td><td>231.17</td><td>+1.09</td></tr>
@@ -5652,6 +6169,7 @@ function renderCatalogList(content){
     list = list.slice().sort((a,b)=> a.chords.length - b.chords.length);
   }
   content.innerHTML = `
+    ${state.showTutorialSaveMessage ? `<div class="builder-tutorial-banner" style="display:flex; justify-content:space-between; align-items:center; gap:12px;"><span>${t('tut.savemsg')}</span><button class="btn small ghost" style="flex-shrink:0; background:transparent; border-color:#fff; color:#fff;" onclick="dismissTutorialSaveMessage()">${t('epilepsy.continue')}</button></div>` : ''}
     <div class="list-toolbar">
       <button class="btn primary" id="newProgressionBtn" data-hotkey="R" onclick="newProgression(); flashBackground(0.5);">${t('cat.newprog')}</button>
       <span class="help-dropdown-wrap">
@@ -5702,7 +6220,7 @@ function renderCatalogList(content){
     ` : `
       <div class="prog-grid">
         ${list.map(p=>`
-          <div class="prog-card" style="--prog-color:${progressionColor(p.id)};" onclick="openProgression('${p.id}')" onmouseenter="hoverPlayProgression('${p.id}')" onmouseleave="stopHoverPlay()" draggable="true" ondragstart="dragProgressionStart(event, '${p.id}')">
+          <div class="prog-card${p.id===state.newlySavedProgId?' just-saved':''}" style="--prog-color:${progressionColor(p.id)};" onclick="openProgression('${p.id}')" onmouseenter="hoverPlayProgression('${p.id}')" onmouseleave="stopHoverPlay()" draggable="true" ondragstart="dragProgressionStart(event, '${p.id}')">
             <div class="prog-card-head">
               <h3 style="margin:0;"><span class="prog-dot" style="background:${progressionColor(p.id)};"></span>${escapeHtml(p.name)}</h3>
               <div class="prog-mini-map" id="progMiniMap-${p.id}"></div>
@@ -5743,8 +6261,17 @@ function mountProgMiniMap(p){
   const allTones = new Set();
   p.chords.forEach((c,idx)=>{ const ad=anchoredDisplay(p,idx); allTones.add(ad.root); ad.tones.forEach(t=>allTones.add(t)); });
   allTones.delete(0);
-  const cfg = chordHexConfig([0, ...allTones]);
-  holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:8, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs }));
+  const tonesArr = [...allTones];
+  // Use the progression's real recorded (q,r) click positions when available, so every note in
+  // the card's mini-map sits at its true, fixed spot relative to root=0 -- exactly where it was
+  // written -- instead of a freshly-guessed compact cluster that can (correctly, pitch-wise, but
+  // visually) land notes somewhere else entirely.
+  const exactPoints = progressionExactPoints(p);
+  const exact = exactBigMapConfig(exactPoints, 0, tonesArr);
+  const cfg = exact
+    ? { shape:'rect-centered', cols:exact.cols, rows:exact.rows, root:0, tones:new Set(tonesArr), mode:'raw', focusRoot:exact.focusRoot, focusTones:exact.focusTones, echoPcs:null }
+    : chordHexConfig([0, ...tonesArr]);
+  holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:8, highlightRoot:cfg.root, tones:cfg.tones, mode:'raw', showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs }));
 }
 function preserveFocusRerender(renderFn){
   const active = document.activeElement;
@@ -5769,7 +6296,7 @@ function renderCatalogDetail(content){
   const species = computeSpecies(state.progressions);
   content.innerHTML = `
     <div class="row" id="progDetailTop" style="justify-content:space-between; margin-bottom:14px;">
-      <button class="btn ghost small" onclick="backToList()">← Back to progressions</button>
+      <button class="btn nav-standout" onclick="backToList()">${t('word.backtoprogressions')}</button>
       <div class="row">
         <span class="midi-export-group">
           <button class="btn mini" data-hotkey="F" style="border-radius:999px 0 0 999px; border-right:none;" onclick="exportProgressionMidi('${p.id}', document.getElementById('midiArtCheck-${p.id}').checked)">⬇ MIDI</button>
@@ -5818,7 +6345,6 @@ function renderCatalogDetail(content){
               </div>`;
             }).join('')}
           </div>
-          <p class="sub" style="margin-top:16px; max-width:none;">${t('prog.clickchord')}</p>
         </div>
         <div class="prog-detail-middle">
           <button class="btn primary" style="font-size:16px; padding:12px 26px; width:100%;" data-hotkey="W" onclick="togglePlayLoop('${p.id}', state.progressionsTabTimbre)">${state.loopingProgId===p.id ? t('word.stop') : t('word.play')}</button>
@@ -5849,6 +6375,7 @@ function renderCatalogDetail(content){
             ` : ''}
           </span>
           ${renderChordSequencePanel(p)}
+          ${renderProgSimilarityHtml(p)}
         </div>
         <div class="prog-detail-map">
           <div class="hex-frame big-map-frame">
@@ -5858,7 +6385,6 @@ function renderCatalogDetail(content){
         </div>
       </div>
     </div>
-    ${renderProgSimilarityHtml(p)}
   `;
   highlightBigMapForAll(p.id);
   p.chords.forEach((c,idx)=>{
@@ -5887,8 +6413,8 @@ function renderChordSequencePanel(p){
   `).join('');
   return `
     <div class="match-panel">
-      <label class="field-label" style="color:var(--accent2); font-weight:800; font-size:13px; letter-spacing:.02em;">${t('prog.searchseq')}</label>
-      <p class="sub" style="max-width:none;">${t('prog.searchseq.hint')}</p>
+      <label class="field-label" style="color:var(--accent2); font-weight:800; font-size:13px; letter-spacing:.02em; cursor:pointer;" onclick="toggleSeqSearchHint()" title="${t('prog.searchseq.hint')}">${t('prog.searchseq')}</label>
+      ${state.showSeqSearchHint ? `<p class="sub" style="max-width:none;">${t('prog.searchseq.hint')}</p>` : ''}
       <div class="selection-strip">
         ${sel.length===0 ? `<span class="sub" style="margin:0;">${t('word.noshapesselected')}</span>` :
           sel.map((idx,i)=>`<span class="sel-note"><span class="idx">${i+1}</span>shape ${idx+1}<button title="remove" onclick="toggleChordSeq(${idx})">✕</button></span>`).join('')
@@ -5933,28 +6459,103 @@ function builderPlaceChordFromSearch(sig){
   const sp = species.map[sig]; if(!sp) return;
   const root = state.builder.selectedOrder.length>0 ? state.builder.selectedOrder[0] : 0;
   state.builder.selectedOrder = [root, ...sp.intervals.filter(i=>i!==0).map(iv=>root+iv)];
+  state.builder.selectedOrderQr = {};
   renderBuilder(document.getElementById('tabContent'));
 }
 function renderBuilderSearchOnly(){ preserveFocusRerender(()=>renderBuilder(document.getElementById('tabContent'))); }
+// First-time mandatory mini-tutorial: guides adding two shapes to a progression and saving it,
+// driven entirely by real builder state (not a click-through the user could accidentally skip) --
+// each step only disappears once the actual described action has happened, and permanently once
+// the progression is actually saved with 2+ shapes.
+// Session-only (not persisted): whether the auto-playing "here's an example" demo has already run
+// once this time the builder was opened. Reset each fresh entry into an empty, unstarted builder.
+let tutorialDemoState = 'pending'; // 'pending' -> 'playing' -> 'done'
+function resetTutorialDemoIfFreshBuilder(b){
+  if(state.seenBuilderTutorial) return;
+  if(b.chords.length===0 && b.selectedOrder.length===0 && tutorialDemoState==='done'){
+    // Only actually re-arm it if we're not already mid-flow -- avoids replaying the demo every
+    // single render while the user is legitimately sitting at zero notes deciding what to do.
+  }
+}
+function playTutorialDemo(){
+  // IMPORTANT: this only flips the state flag and schedules deferred timers -- it must NOT call
+  // render() synchronously, since it's invoked from inside builderTutorialStepHtml(), which is
+  // itself called *while* renderBuilder() is already mid-way through building the current
+  // render()'s output. A synchronous render() here would be a reentrant re-render triggered from
+  // inside another render, fighting the innerHTML string it's still in the middle of building.
+  if(tutorialDemoState!=='pending') return;
+  tutorialDemoState = 'playing';
+  // Timed to land right as the 3rd ghost-cursor "click" in the CSS animation lands (see
+  // .tut-demo-cursor keyframes below) -- an audible major chord (root, +10, +18 raw steps, the
+  // same 4:5:6-ish shape used elsewhere in the app's own hexagons help section).
+  setTimeout(()=>{
+    const ctx = getAudioCtx();
+    if(ctx) scheduleChordAudio([0,10,18], 'sine', ctx.currentTime, 1.6, 0, true);
+  }, 2650);
+  setTimeout(()=>{ tutorialDemoState = 'done'; render(); }, 4400);
+}
+function builderTutorialDemoHtml(){
+  return `
+    <div class="tut-demo">
+      <svg class="tut-demo-hexes" viewBox="0 0 220 90">
+        <polygon class="tut-demo-hex h1" points="35,5 60,20 60,50 35,65 10,50 10,20"/>
+        <polygon class="tut-demo-hex h2" points="110,5 135,20 135,50 110,65 85,50 85,20"/>
+        <polygon class="tut-demo-hex h3" points="185,5 210,20 210,50 185,65 160,50 160,20"/>
+      </svg>
+      <div class="tut-demo-cursor"></div>
+    </div>
+  `;
+}
+function builderTutorialStepHtml(b){
+  if(state.seenBuilderTutorial) return '';
+  if(b.chords.length===0 && b.selectedOrder.length===0){
+    if(tutorialDemoState==='pending') playTutorialDemo();
+    if(tutorialDemoState==='playing'){
+      return `<div class="builder-tutorial-banner" id="builderTutorialBanner"><b>${t('tut.title.write')}</b><br>${t('tut.demo.caption')}${builderTutorialDemoHtml()}</div>`;
+    }
+    return `<div class="builder-tutorial-banner" id="builderTutorialBanner"><b>${t('tut.title.write')}</b><br>${t('tut.step1')}</div>`;
+  }
+  let msg;
+  if(b.chords.length===0 && b.selectedOrder.length>0) msg = `${t('tut.tip.playshape')}<br>${t('tut.step2')}`;
+  else if(b.chords.length===1 && b.selectedOrder.length===0) msg = t('tut.step3');
+  else if(b.chords.length===1 && b.selectedOrder.length>0) msg = t('tut.step4');
+  else msg = `${t('tut.tip.hoverlist')}<br>${t('tut.step5')}<br>${t('tut.tip.addmore')}`;
+  return `<div class="builder-tutorial-banner" id="builderTutorialBanner">${msg}</div>`;
+}
+function builderTutorialHighlight(b, target){
+  if(state.seenBuilderTutorial) return '';
+  const addStep = (b.chords.length<2 && b.selectedOrder.length>0);
+  const saveStep = (b.chords.length>=2);
+  if(target==='add' && addStep) return ' tutorial-highlight';
+  if(target==='save' && saveStep) return ' tutorial-highlight';
+  return '';
+}
 function renderBuilder(content){
   const b = state.builder;
   const assoc = findBuilderSelectionMatch();
   const recognitionPanel = builderRecognitionSnippet(assoc);
+  // Both "use registered shapes" (search existing catalog to place one) and "Identify shape"
+  // (which just reports how the current selection relates to that same catalog) are meaningless
+  // with nothing registered yet -- showing them to a brand new user just adds two more things on
+  // screen that do nothing useful yet, right when simplicity matters most.
+  const hasRegisteredShapes = computeSpecies(state.progressions).list.length>0;
   content.innerHTML = `
     <div class="row" id="builderViewTop" style="justify-content:space-between; margin-bottom:14px;">
-      <button class="btn ghost small" onclick="cancelBuilder()">← Cancel</button>
+      <button class="btn nav-standout" onclick="cancelBuilder()">← Cancel</button>
       <span class="sub" style="margin:0;">${b.editingId ? 'Editing progression' : 'New progression'}</span>
     </div>
+    ${builderTutorialStepHtml(b)}
     <div class="builder-grid">
       <div style="${state.hexExpandLevel===1 ? 'grid-column:1 / -1;' : ''}">
-        <div class="hex-frame">
+        <div class="hex-frame${builderPlayingIdx===b.chords.length?' now-playing-map':''}">
           <div class="row tap-keys-row" style="align-items:center; flex-wrap:wrap; gap:10px 14px; margin-right:64px;">
             <span class="builder-section-label tap-keys-label">${t('builder.tapkeys')}</span>
             <div class="row" style="flex-wrap:wrap; gap:6px; flex:1;">
-              <button class="btn mini ${state.builderMidiWrite?'primary':''}" onclick="toggleBuilderMidiWrite()" title="When on, playing your MIDI controller toggles notes in/out of this chord, just like tapping the hex map. When off, MIDI just plays sound.">🎹 Write shape with MIDI controller</button>
+              <button class="btn mini ${state.builderMidiWrite?'primary':''}" onclick="toggleBuilderMidiWrite()" title="${t('builder.midiwrite.title')}">${t('builder.midiwrite')}</button>
               <button class="btn mini" onclick="document.getElementById('importMidiFileInput').click()" title="Import a MIDI file and turn it into a progression: notes are grouped into chords by their start time, at a regular rhythm — a chord that lasts much longer than the rest is just repeated instead of preserved at length. MIDI note numbers are read directly as 31ED2 steps. You can also just drag a MIDI file anywhere onto the app.">⬆ Import MIDI file</button>
               <input type="file" id="importMidiFileInput" accept=".mid,.midi,audio/midi" style="display:none" onchange="handleImportMidiFile(this)">
               <button class="btn mini ${state.builderFreePlay?'':'accent-white'}" onclick="toggleBuilderFreePlay()" title="Toggle between just hearing keys as you tap them, and having them added to the shape you're building.">${state.builderFreePlay ? '✓ Select key when clicking it' : '○ Play keys without selecting them'}</button>
+              ${hasRegisteredShapes ? `
               <span class="help-dropdown-wrap">
                 <button class="btn mini ${state.showBuilderIdentify?'primary':''}" onclick="toggleBuilderIdentify()" title="${t('builder.identify.title')}">${t('builder.identify')}</button>
                 ${state.showBuilderIdentify ? `
@@ -5963,17 +6564,21 @@ function renderBuilder(content){
                   </div>
                 ` : ''}
               </span>
+              ` : ''}
+              <button class="btn mini" style="background:#ff2fb0; border-color:#ff2fb0; color:#fff; font-size:10.5px; padding:5px 9px;" onclick="restartBuilderTutorial()" title="${t('tut.restart.title')}">${t('tut.restart')}</button>
             </div>
           </div>
           <span class="zoom-hint" style="cursor:pointer;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
           <span id="builderOctaveCaptionText" class="octave-caption" style="top:30px; left:auto; right:14px;"></span>
           <div class="hex-viewport builder-map-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="builderHexHolder" style="margin-top:14px;"></div>
-          <p class="sub" style="max-width:none; margin-top:6px; margin-bottom:2px;">${firstChordLocked() ? t('builder.rootlocked') : t('builder.ctrlclickroot')}</p>
-          <p class="sub" style="max-width:none; margin-top:0;">${firstChordLocked() ? t('builder.dragfirst') : t('builder.dragother')}</p>
+          ${firstChordLocked() ? '' : `
+          <p class="sub" style="max-width:none; margin-top:6px; margin-bottom:2px;">${t('builder.ctrlclickroot')}</p>
+          <p class="sub" style="max-width:none; margin-top:0;">${t('builder.dragother')}</p>
+          `}
           <div class="row" style="margin-top:10px;">
-            <button class="btn accent-blue" style="font-size:16px; padding:14px 22px;" data-hotkey="E" onclick="builderAddChord()" ${state.builder.editingChordIdx!=null?'disabled':''}>${t('builder.addshape')}</button>
+            <button class="btn accent-blue${builderTutorialHighlight(b,'add')}${b.selectedOrder.length>0?' add-shape-pending':''}" style="font-size:16px; padding:14px 22px;" data-hotkey="E" onclick="builderAddChord()" ${(state.builder.editingChordIdx!=null || b.selectedOrder.length===0)?'disabled':''}>${t('builder.addshape')}</button>
             <button class="btn accent-blue" style="font-size:16px; padding:14px 24px;" data-hotkey="W" onclick="toggleBuilderShapePlay()">${builderShapePlayActive ? t('word.stop') : t('word.playshape')}</button>
-            <button class="btn primary" style="font-size:16px; padding:14px 24px;" data-hotkey="Q" onclick="toggleBuilderProgressionPlay()" ${state.builder.chords.length===0?'disabled':''}>${builderProgLoopActive ? t('word.stop') : t('word.playprog')}</button>
+            <button class="btn primary" style="font-size:16px; padding:14px 24px;" data-hotkey="Q" onclick="toggleBuilderProgressionPlay()" ${(state.builder.chords.length===0 && state.builder.selectedOrder.length===0)?'disabled':''}>${builderProgLoopActive ? t('word.stop') : t('word.playprog')}</button>
             <span class="help-dropdown-wrap">
               <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
               ${state.showHearMenu ? `
@@ -6009,7 +6614,8 @@ function renderBuilder(content){
           ${recognitionPanel}
         </div>
       </div>
-      <div class="builder-right">
+      <div class="builder-right" style="${hasRegisteredShapes ? '' : 'grid-template-columns:1fr; grid-template-areas:\"shapes\";'}">
+          ${hasRegisteredShapes ? `
           <div class="panel builder-search-panel">
             <div class="field" style="margin-top:0;">
               <label class="field-label builder-section-label">${t('builder.useregistered')}</label>
@@ -6025,16 +6631,9 @@ function renderBuilder(content){
               </div>
             </div>
           </div>
-          <div class="panel builder-name-panel">
-            <div class="field" style="margin-top:0;"><label class="field-label builder-section-label">${t('builder.progname.label')}</label>
-              <input type="text" value="${escapeHtml(b.name)}" oninput="builderSetName(this.value)" placeholder="${t('builder.progname.placeholder')}"></div>
-            <div class="field"><label class="field-label">${t('builder.tags.label')}</label>
-              <input type="text" value="${escapeHtml(b.tags)}" oninput="builderSetTags(this.value)" onkeydown="handleTagAutocomplete(event)" placeholder="${t('builder.tags.placeholder')}"></div>
-            <div class="field"><label class="field-label">${t('builder.notes.label')}</label>
-              <textarea oninput="builderSetNotes(this.value)" placeholder="${t('builder.notes.placeholder')}">${escapeHtml(b.notesText)}</textarea></div>
-            ${b.error ? `<p class="sub" style="max-width:none; color:var(--danger); margin-top:-4px;">${escapeHtml(b.error)}</p>` : ''}
-          </div>
+          ` : ''}
         <div class="panel builder-shapes-panel">
+          ${b.error ? `<p class="sub" style="max-width:none; color:var(--danger); margin-top:0;">${escapeHtml(b.error)}</p>` : ''}
           <div class="row" style="justify-content:space-between; margin-bottom:0;">
             <label class="field-label builder-section-label" style="margin:0;">${t('builder.progression.label')} (${b.chords.length})</label>
             ${b.chords.length>0 ? `<button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>` : ''}
@@ -6048,7 +6647,7 @@ function renderBuilder(content){
                   const sp = species.map[signatureOf(eff)];
                   const nick = sp ? state.nicknames[sp.signature] : null;
                   return `
-                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="stopHoverPlay(); hideBuiltChordMinimap();" ondragover="builderDragChordOver(event)" ondrop="builderDropChord(event, ${idx})">
+                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="stopHoverPlay(); hideBuiltChordMinimap();" ondragover="builderDragChordOver(event)" ondrop="builderDropChord(event, ${idx})">
                       ${idx===0 ? `<span class="drag-handle locked" title="The first shape is always rooted at 0 and can't be moved">🔒</span>` : `<span class="drag-handle" draggable="true" ondragstart="builderDragChordStart(event, ${idx})" title="Drag to reorder">⠿</span>`}
                       <span class="root">${c.root}</span>
                       <span class="ivs">${formatIvs(eff)}</span>
@@ -6059,6 +6658,7 @@ function renderBuilder(content){
                           <button title="save changes" onclick="builderSaveEditChord()">✓</button>
                           <button title="discard changes" onclick="builderCancelEditChord()">✕</button>
                         ` : `
+                          <button title="duplicate this shape" onclick="event.stopPropagation(); builderDuplicateChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>⧉</button>
                           <button title="edit this shape on the hex map" onclick="builderStartEditChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>✎</button>
                           <button title="remove" onclick="builderRemoveChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>✕</button>
                         `}
@@ -6070,7 +6670,7 @@ function renderBuilder(content){
             }
           </div>
           <div class="row" style="margin-top:18px;">
-            <button class="btn primary" style="font-size:17px; padding:16px 28px;" data-hotkey="R" onclick="saveProgression()">${t('word.saveprogression')}</button>
+            <button class="btn primary${builderTutorialHighlight(b,'save')}" style="font-size:17px; padding:16px 28px;" data-hotkey="R" onclick="saveProgression()">${t('word.saveprogression')}</button>
             ${b.editingId ? `<button class="btn" style="font-size:15px; padding:16px 22px;" onclick="saveProgressionAs()" title="${t('word.saveasnewprogression.title')}">${t('word.saveasnewprogression')}</button>` : ''}
           </div>
         </div>
@@ -6277,7 +6877,7 @@ function renderSpecies(content){
     const partOf = findSpeciesPartialOf(focusSp, species.list);
     content.innerHTML = `
       ${toolbar}
-      <button class="btn small ghost" style="margin-bottom:16px;" onclick="clearChordFocus()">${t('word.showallchords')}</button>
+      <button class="btn nav-standout" style="margin-bottom:16px;" onclick="clearChordFocus()">${t('word.showallchords')}</button>
       <div class="chord-focus-layout">
         <div class="focus-col">
           <div class="focus-col-title">${t('word.includes')}</div>
@@ -6699,6 +7299,7 @@ function shapeDropByQrDisplacement(target, drag){
   b.selectedOrder = newOrder;
   b.selectedOrderQr = newQr;
   if(b.lastClicked!=null) b.lastClicked += delta;
+  refreshBuilderShapePlayIfActive();
   render();
 }
 function shapeDropOnCell(targetRaw){
@@ -6734,6 +7335,7 @@ function shapeDropOnCell(targetRaw){
   b.selectedOrder = newOrder;
   b.selectedOrderQr = newQr;
   if(b.lastClicked!=null) b.lastClicked += delta;
+  refreshBuilderShapePlayIfActive();
   render();
 }
 function findNearestShapeDragCell(cellList, clientX, clientY){
@@ -6797,7 +7399,15 @@ function showCentsTooltip(e, html){
   box.classList.add('visible');
   positionCentsTooltip(e.clientX, e.clientY);
 }
-function moveCentsTooltip(e){ positionCentsTooltip(e.clientX, e.clientY); }
+let centsTooltipRafScheduled = false, centsTooltipPendingX = 0, centsTooltipPendingY = 0;
+function moveCentsTooltip(e){
+  // Same forced-layout-per-raw-event issue as the hover preview above (positionCentsTooltip reads
+  // offsetWidth/offsetHeight) -- batched to one update per frame for the same reason.
+  centsTooltipPendingX = e.clientX; centsTooltipPendingY = e.clientY;
+  if(centsTooltipRafScheduled) return;
+  centsTooltipRafScheduled = true;
+  requestAnimationFrame(()=>{ centsTooltipRafScheduled = false; positionCentsTooltip(centsTooltipPendingX, centsTooltipPendingY); });
+}
 function hideCentsTooltip(){
   const box = document.getElementById('centsTooltip');
   if(box) box.classList.remove('visible');
@@ -6848,15 +7458,22 @@ document.addEventListener('mouseover', (e)=>{
   if(el) showHoverPreview(el, e.clientX, e.clientY);
 });
 let lastMouseClientX = -1, lastMouseClientY = -1;
+let hoverPreviewRafScheduled = false;
 document.addEventListener('mousemove', (e)=>{
   lastMouseClientX = e.clientX; lastMouseClientY = e.clientY;
-  const box = document.getElementById('hoverPreview');
-  if(box && box.classList.contains('visible')) positionHoverPreview(e.clientX, e.clientY);
+  if(hoverPreviewRafScheduled) return;
+  hoverPreviewRafScheduled = true;
+  requestAnimationFrame(()=>{
+    hoverPreviewRafScheduled = false;
+    const box = document.getElementById('hoverPreview');
+    if(box && box.classList.contains('visible')) positionHoverPreview(lastMouseClientX, lastMouseClientY);
+  });
 });
 // After any full re-render, double-check that the mouse is still actually over something that's
 // supposed to be showing a floating preview -- catches the DOM-removal-mid-hover case above,
 // which no mouseout/mouseleave event ever fires for.
 function dismissStaleFloatingPreviews(){
+  revalidateHotkeyTooltip(lastMouseClientX, lastMouseClientY);
   if(lastMouseClientX<0) return;
   try{
     const atPoint = document.elementFromPoint(lastMouseClientX, lastMouseClientY);
@@ -7041,7 +7658,13 @@ function dismissSplash(){
       t.classList.remove('hidden');
       t.innerHTML = '';
       t.appendChild(buildKaleidoscopeSVG());
-      setTimeout(()=>{ t.classList.add('hidden'); positionHelpHint(); }, 3400);
+      setTimeout(()=>{
+        t.classList.add('hidden'); positionHelpHint();
+        // Shown every time the app opens, right after the spinning kaleidoscope intro finishes and
+        // the main window is up -- the earliest point it's safe to interrupt with a warning without
+        // it getting lost behind the splash sequence itself.
+        state.showEpilepsyWarning = true; render();
+      }, 3400);
     }
     playIntroChord();
   });
@@ -7049,28 +7672,36 @@ function dismissSplash(){
 document.addEventListener('click', tryPlayIntro, {capture:true});
 // Tiny "which key does this?" tooltip for anything tagged data-hotkey. Delegated on document so it
 // keeps working after every re-render without needing to be rewired to newly-created buttons.
+// Rewritten to re-check, by actual coordinates, what's under the cursor -- rather than trusting a
+// remembered DOM node reference -- because render() fully replaces the page's innerHTML on every
+// state change (including the new per-beat updates during builder progression playback). A full
+// re-render can silently swap the hovered element out from under the cursor without ever firing a
+// real mouseout/mouseover, which left the old element-identity-based version stuck showing a stale
+// (and sometimes now-detached) hotkey label until the mouse happened to move again.
+let hotkeyTooltipCurrent = null;
+function revalidateHotkeyTooltip(x, y){
+  const tip = document.getElementById('hotkeyTooltip');
+  if(!tip || x==null || x<0) return;
+  let el = null;
+  try{ el = document.elementFromPoint(x, y); }catch(e){}
+  el = el && el.closest ? el.closest('[data-hotkey]') : null;
+  if(el === hotkeyTooltipCurrent) return;
+  hotkeyTooltipCurrent = el;
+  if(el){
+    tip.textContent = el.dataset.hotkey;
+    tip.style.left = (x + 14) + 'px';
+    tip.style.top = (y + 16) + 'px';
+    tip.classList.add('visible');
+  } else {
+    tip.classList.remove('visible');
+  }
+}
 (function setupHotkeyTooltips(){
   const tip = document.getElementById('hotkeyTooltip');
   if(!tip) return;
-  let current = null;
-  document.addEventListener('mouseover', (e)=>{
-    const el = e.target.closest && e.target.closest('[data-hotkey]');
-    if(!el || el===current) return;
-    current = el;
-    tip.textContent = el.dataset.hotkey;
-    tip.classList.add('visible');
-  });
   document.addEventListener('mousemove', (e)=>{
-    if(!current) return;
-    tip.style.left = (e.clientX + 14) + 'px';
-    tip.style.top = (e.clientY + 16) + 'px';
-  });
-  document.addEventListener('mouseout', (e)=>{
-    const el = e.target.closest && e.target.closest('[data-hotkey]');
-    if(!el || el!==current) return;
-    if(e.relatedTarget && el.contains(e.relatedTarget)) return;
-    current = null;
-    tip.classList.remove('visible');
+    if(hotkeyTooltipCurrent){ tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; }
+    revalidateHotkeyTooltip(e.clientX, e.clientY);
   });
 })();
 let __lastFlashTime = 0;
@@ -7118,19 +7749,81 @@ function buildHarmonicWavesSVG(){
       d += (i===0?'M':'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
     }
     const path = document.createElementNS(svgns,'path');
+    path.style.willChange = 'transform'; // hint the browser to give each wave its own compositor layer up front
     path.setAttribute('d', d.trim());
     path.setAttribute('fill','none');
     path.setAttribute('stroke','currentColor');
     path.setAttribute('stroke-width', Math.max(0.5, 1.3/Math.sqrt(n)).toFixed(2));
     path.setAttribute('opacity', Math.min(0.34, 0.9/n).toFixed(3));
-    path.style.setProperty('--drift', `${(-period).toFixed(2)}px`);
     const baseDur = (48/Math.sqrt(n));
-    path.dataset.baseDur = baseDur.toFixed(2);
-    path.style.animation = `waveDrift ${baseDur.toFixed(1)}s linear infinite`;
+    wavePathState.push({ path, period, baseDur, phase:0 });
     svg.appendChild(path);
   }
   return svg;
 }
+// Shared, eased speed multiplier driving every wave's phase-advance rate in lockstep (all waves
+// speed up/slow down together, as requested) -- replaces the old per-path CSS animation-duration
+// swap, which caused a visible position jump ("teleport") every time it changed mid-cycle.
+const wavePathState = [];
+let waveSpeedLevel = 1, waveSpeedTarget = 1, waveTickLast = null;
+const prefersReducedMotion = typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let waveLastPaint = 0;
+function waveTick(now){
+  if(prefersReducedMotion){ requestAnimationFrame(waveTick); return; } // the old CSS-animation:none rule no longer applies to this JS-driven loop -- replicate it here
+  if(waveTickLast==null) waveTickLast = now;
+  const dtSec = Math.min(0.1, (now-waveTickLast)/1000);
+  waveTickLast = now;
+  // Fast attack toward a boost, slower release back down to normal -- "aumento fuerte... y luego
+  // vuelvan a la normalidad, con cierto attack y release, bastante rápido" -- both legs are quick
+  // (well under half a second) but the release is deliberately a bit gentler than the attack so
+  // the slow-down itself doesn't also read as a jump.
+  const rate = waveSpeedTarget > waveSpeedLevel ? 9 : 4.5;
+  waveSpeedLevel += (waveSpeedTarget - waveSpeedLevel) * Math.min(1, dtSec*rate);
+  wavePathState.forEach(ws=>{ ws.phase = (ws.phase + dtSec*waveSpeedLevel/ws.baseDur) % 1; });
+  if(now - waveLastPaint >= 32){ // ~30fps ceiling on the actual DOM writes, see comment above
+    waveLastPaint = now;
+    wavePathState.forEach(ws=>{ ws.path.style.transform = `translateX(${(ws.phase*-ws.period).toFixed(2)}px)`; });
+  }
+  requestAnimationFrame(waveTick);
+}
+requestAnimationFrame(waveTick);
+// Restores a color-cycling look to the custom cursor without reintroducing the position lag that
+// the native `cursor:url(...)` pivot was specifically done to eliminate. Instead of tracking the
+// mouse in JS (the thing that caused the original lag), this just rewrites which pre-rendered
+// cursor image is currently assigned via CSS every ~650ms -- a whole tuning cycle slower than a
+// single animation frame, and completely decoupled from mousemove. The OS/browser still positions
+// the cursor natively on every single frame; only the *picture* it's showing changes, occasionally.
+const CURSOR_HUES = [
+  { def:'e0334d', hover:'ffcf3f' },
+  { def:'e08f33', hover:'e4ff3f' },
+  { def:'a8e033', hover:'8fff6a' },
+  { def:'33cde0', hover:'6ad4ff' },
+  { def:'5c6ae0', hover:'a98fff' },
+  { def:'c233e0', hover:'ff8fe0' },
+];
+let cursorHueIdx = 0;
+function cursorSvgUrl(fill, size, r, strokeW){
+  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'%3E%3Ccircle cx='${size/2}' cy='${size/2}' r='${r}' fill='%23${fill}' stroke='%23000000' stroke-width='${strokeW}'/%3E%3C/svg%3E")`;
+}
+function applyCursorHue(){
+  const styleEl = document.getElementById('cursorHueStyle');
+  if(!styleEl) return;
+  const { def, hover } = CURSOR_HUES[cursorHueIdx];
+  const hoverUrl = cursorSvgUrl(hover, 34, 13, 2.8);
+  const defUrl = cursorSvgUrl(def, 30, 10, 2.4);
+  styleEl.textContent = `
+    button, a[href], input, textarea, select, label, [onclick], [role="button"], .btn, .species-card, .prog-card, .match-item, .chord-chip, .mini-chip, .tag, .prime-btn, .step-num, .occ-group-head, .help-continue-btn{
+      cursor:${hoverUrl} 17 17, pointer !important;
+    }
+    html,body{ cursor:${defUrl} 15 15, auto !important; }
+  `;
+}
+function startCursorColorCycle(){
+  applyCursorHue();
+  setInterval(()=>{ cursorHueIdx = (cursorHueIdx+1) % CURSOR_HUES.length; applyCursorHue(); }, 650);
+}
+if(typeof document!=='undefined' && document.readyState!=='loading') startCursorColorCycle();
+else if(typeof document!=='undefined') document.addEventListener('DOMContentLoaded', startCursorColorCycle);
 (function mountHarmonicWaves(){
   const holder = document.getElementById('harmonicWavesHolder');
   if(holder) holder.appendChild(buildHarmonicWavesSVG());
@@ -7140,6 +7833,12 @@ function buildHarmonicWavesSVG(){
   if(holder) holder.appendChild(buildNoteHexBackground());
 })();
 (function initCursorReticle(){
+  // Disabled: replaced entirely by the native `cursor: url(...)` CSS cursor set on html,body
+  // above, which moves with zero JS involvement and is therefore guaranteed to feel identical to
+  // the normal system cursor on every browser/OS -- something a DOM-tracked element can only ever
+  // approximate. Left in place (rather than deleted) in case a JS-driven cursor is wanted again
+  // later, e.g. for a future hover-grow effect layered on top of the native one.
+  return;
   const el = document.getElementById('cursorReticle');
   if(!el) return;
   let shown = false;
@@ -7153,16 +7852,22 @@ function buildHarmonicWavesSVG(){
   // (which read as "laggy" even though each individual update was itself instant). Only the LATEST
   // position from each batch of events is used, so no responsiveness is lost -- this is strictly
   // fewer, better-timed updates, not throttled/delayed ones.
-  let pendingX = 0, pendingY = 0, pendingTarget = null, rafScheduled = false;
+  let pendingX = 0, pendingY = 0, pendingRawTarget = null, rafScheduled = false;
   function flushCursorFrame(){
     rafScheduled = false;
     el.style.transform = `translate3d(${pendingX}px, ${pendingY}px, 0)`;
     if(!shown){ el.classList.add('visible'); shown = true; }
-    el.classList.toggle('clicking', !!pendingTarget);
+    // The closest() DOM-ancestor walk is real work (checks every selector in the list against
+    // every ancestor up to <body>) -- it was still running on EVERY raw mousemove event even
+    // after the position update itself got batched to one-per-frame, since it happened directly
+    // in the event listener, not inside this rAF callback. Moving it here means it now also only
+    // runs once per animation frame, same as the position write.
+    const target = pendingRawTarget && pendingRawTarget.closest ? pendingRawTarget.closest(CLICKABLE_SELECTOR) : null;
+    el.classList.toggle('clicking', !!target);
   }
   document.addEventListener('mousemove', (e)=>{
     pendingX = e.clientX; pendingY = e.clientY;
-    pendingTarget = e.target && e.target.closest ? e.target.closest(CLICKABLE_SELECTOR) : null;
+    pendingRawTarget = e.target;
     if(!rafScheduled){ rafScheduled = true; requestAnimationFrame(flushCursorFrame); }
   }, {passive:true});
   // Deliberately NOT hiding this on mouseleave -- with the native cursor forced off globally,
