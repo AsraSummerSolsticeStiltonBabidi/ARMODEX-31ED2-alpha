@@ -265,6 +265,12 @@
   nav.tabs button{ font-family:'Inter',sans-serif; font-weight:700; font-size:15px; background:var(--panel); color:var(--muted); border:1.5px solid var(--border); padding:12px 24px; border-radius:999px; cursor:pointer; transition:all .15s ease; }
   nav.tabs button:hover{color:var(--text); border-color:var(--border-strong);}
   nav.tabs button.active{background:#f4efe2; color:#14181f; border-color:#f4efe2; box-shadow:0 4px 14px rgba(244,239,226,.25);}
+  /* Shrink the three tab buttons a bit on narrow screens so they keep to a single row instead of
+     wrapping onto two lines. */
+  @media (max-width:480px){
+    nav.tabs{ flex-wrap:nowrap; gap:4px; }
+    nav.tabs button{ font-size:12px; padding:9px 10px; flex:1 1 0; text-align:center; }
+  }
 
   .panel{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:0 14px 36px rgba(0,0,0,.4);}
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
@@ -293,7 +299,15 @@
   .list-toolbar{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
   .list-toolbar input{max-width:280px;}
   .prog-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); column-gap:14px; grid-auto-rows:1px; align-items:start; }
-  .prog-card{ background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.4), inset 0 2px 10px rgba(0,0,0,.35); border-left:4px solid var(--prog-color, var(--border)); border-radius:var(--radius); padding:16px; cursor:pointer; transition:border-color .15s ease, transform .12s ease, box-shadow .12s ease; break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%; }
+  .prog-card{ background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.4), inset 0 2px 10px rgba(0,0,0,.35); border-left:4px solid var(--prog-color, var(--border)); border-radius:var(--radius); padding:16px; cursor:pointer; transition:border-color .15s ease, transform .12s ease, box-shadow .12s ease; break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%; position:relative; }
+  /* Same soft radial glow used to mark the focused shape card, now behind a shape/progression
+     card while it's actually sounding (hovering it is what triggers the hover-play preview). */
+  .prog-card::before, .species-card::before{
+    content:''; position:absolute; inset:-60px; border-radius:inherit;
+    background:radial-gradient(circle closest-side at 50% 45%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.3) 30%, rgba(255,255,255,.12) 55%, rgba(255,255,255,.03) 80%, rgba(255,255,255,0) 100%);
+    opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:-1;
+  }
+  .prog-card:hover::before, .species-card:hover::before{ opacity:1; }
   .prog-card:hover{border-color:var(--accent2); border-left-color:var(--prog-color, var(--accent2)); transform:translateY(-3px) scale(1.015); box-shadow:0 16px 34px rgba(0,0,0,.45), inset 0 2px 10px rgba(0,0,0,.35), 0 0 0 3px var(--accent2);}
   .prog-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle;}
   .prog-card h3{font-family:'Chakra Petch',sans-serif; font-size:17px; margin:0 0 6px; font-weight:600; letter-spacing:.01em;}
@@ -403,14 +417,23 @@
   }
   @media (max-height:700px){ svg.hexsvg{ max-height:50vh; } }
   .hex-viewport.expanded svg.hexsvg{ max-height:85vh; }
+  /* The builder freed up vertical room (controls moved elsewhere, MIDI-download button removed),
+     so its map can use a slightly taller clamp than the shared default without pushing the rest
+     of the page below the fold. */
+  .builder-map-viewport svg.hexsvg{ max-height:min(72vh, 760px); }
+  .builder-map-viewport.expanded svg.hexsvg{ max-height:88vh; }
+  /* Same idea for the Hex map tab's own map -- its max-height clamp was cutting the rendered
+     box shorter than the width-driven aspect ratio wants, which (since the SVG uses
+     preserveAspectRatio:"meet") left it centered with blank letterboxing down both sides
+     instead of actually filling the width. Raising the clamp lets it use the width fully. */
+  .explorer-map-viewport svg.hexsvg{ max-height:min(78vh, 820px); }
+  .explorer-map-viewport.expanded svg.hexsvg{ max-height:90vh; }
   text.hexlabel{font-family:'JetBrains Mono',monospace; font-size:13px; pointer-events:none; user-select:none; -webkit-user-select:none;}
 
   .builder-grid{display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start;}
   @media (max-width:1000px){.builder-grid{grid-template-columns:1fr;}}
-  .builder-right{display:grid; grid-template-columns:1fr 1fr; grid-template-areas:"search shapes"; gap:20px;}
-  .builder-search-panel{grid-area:search;}
-  .builder-shapes-panel{grid-area:shapes;}
-  @media (max-width:700px){.builder-right{grid-template-columns:1fr; grid-template-areas:"search" "shapes";}}
+  @media (max-width:700px){.builder-right > .row{flex-direction:column;}}
+  #builderProgressionTop, #mapViewTop, #speciesTabTop, #progDetailTop, #builderViewTop, #builderTutorialBanner{scroll-margin-top:14px;}
   label.field-label.builder-section-label, .hex-frame .plate-label.builder-section-label, .builder-section-label{font-family:'Chakra Petch',sans-serif; font-size:17px; font-weight:800; color:#ffffff; letter-spacing:.01em; white-space:nowrap; text-transform:none;}
   .selection-strip{display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;}
   .sel-note{ font-family:'JetBrains Mono',monospace; font-size:11px; display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:4px 6px 4px 9px; }
@@ -427,12 +450,12 @@
   .built-chord .drag-handle.locked{ cursor:default; opacity:.75; }
   .built-chord.editing{ border-color:var(--accent2); box-shadow:0 0 0 2px rgba(94,196,186,.25); }
   .built-chord .root, .built-chord .ivs, .built-chord-tag{ flex-shrink:0; }
-  .built-chord input[type="text"]{ flex:1 1 90px; min-width:70px; }
-  .built-chord .ctrls{ flex-shrink:0; margin-left:auto; }
+  .built-chord input[type="text"]{ flex:0 0 auto; width:33%; max-width:33%; min-width:60px; margin-left:auto; }
+  .built-chord .ctrls{ flex-shrink:0; }
   .built-chord-tag{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--accent); white-space:nowrap; }
   .built-chord .root{font-family:'JetBrains Mono',monospace; color:var(--accent); font-weight:600;}
   .built-chord .ivs{font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:12px;}
-  .built-chord input{flex:1; min-width:100px;}
+  .built-chord input{ flex:0 0 auto; width:33%; max-width:33%; min-width:60px; margin-left:auto; }
   .built-chord .ctrls{display:flex; gap:2px;}
   .built-chord .ctrls button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:3px 5px;}
   .built-chord .ctrls button:hover{color:var(--text);}
@@ -441,6 +464,9 @@
   .chord-focus-layout{ display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; }
   .focus-col{ flex:1 1 230px; min-width:220px; display:flex; flex-direction:column; gap:14px; }
   .focus-col-main{ flex:1.3 1 260px; }
+  /* Marks which shape you actually clicked: a noticeably lighter panel behind the focused card,
+     so it stands out clearly from the surrounding page and the dimmer includes/part-of columns. */
+  .focus-col-main{ background:radial-gradient(circle closest-side at 50% 40%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.3) 30%, rgba(255,255,255,.12) 55%, rgba(255,255,255,.03) 80%, rgba(255,255,255,0) 100%); padding:110px; margin:-110px; }
   .focus-col-title{ font-family:'Chakra Petch',sans-serif; font-weight:700; text-transform:uppercase; font-size:22px; letter-spacing:.03em; color:var(--text); margin-bottom:10px; }
   /* Includes/part-of side columns are secondary context, not the main focus -- shrink their cards
      to 66% so the hierarchy (this shape vs. what it relates to) reads at a glance. zoom (not
@@ -454,7 +480,15 @@
      max-width+centering (above) keeps its border from leaving dead empty space to the right of
      that now-narrower minimap -- both edges stay equidistant from it instead. */
   .focus-col:not(.focus-col-main) .hex-frame{ max-width:73%; margin-left:auto; margin-right:auto; }
-  .species-card{background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.4); border-radius:var(--radius); padding:14px; cursor:pointer; transition:border-color .12s ease, box-shadow .12s ease; break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%;}
+  /* Mobile only (desktop's side-by-side 3-column layout is untouched): stack this into a single
+     column with the focused shape's own card always first, "includes"/"part of" pushed below it --
+     rather than the DOM order (includes, main, part-of) which used to put "part of" above the
+     actual card once the columns wrapped on a narrow screen. */
+  @media (max-width:700px){
+    .chord-focus-layout{ flex-direction:column; }
+    .focus-col-main{ order:-1; }
+  }
+  .species-card{background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.4); border-radius:var(--radius); padding:14px; cursor:pointer; transition:border-color .12s ease, box-shadow .12s ease; break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%; position:relative;}
   .species-card.expanded-pop{ column-span:all; width:auto; display:block; margin-left:auto; margin-right:auto; }
   .species-card:hover{border-color:var(--accent2); transform:translateY(-3px) scale(1.015); box-shadow:0 16px 34px rgba(0,0,0,.45), 0 0 0 3px var(--accent2);}
   .species-card .num{font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:12px; letter-spacing:.05em; white-space:nowrap;}
@@ -548,8 +582,8 @@
     position:fixed; right:24px; bottom:24px; z-index:2150; display:flex; gap:16px;
   }
   .nav-history-fab button{
-    width:126px; height:126px; border-radius:50%; border:1.5px solid var(--border-strong);
-    background:var(--panel-raised); color:var(--text); font-size:48px; cursor:pointer;
+    width:113px; height:113px; border-radius:50%; border:1.5px solid var(--border-strong);
+    background:var(--panel-raised); color:var(--text); font-size:43px; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.4); transition:all .15s ease;
   }
   .help-continue-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; padding-top:18px; border-top:1px solid var(--border); }
@@ -586,6 +620,7 @@
     font-size:15px; letter-spacing:.01em; padding:14px 18px; border-radius:12px; margin-bottom:16px;
     box-shadow:0 0 0 3px rgba(255,47,176,.3), 0 6px 20px rgba(255,47,176,.5);
     animation:tutorialBannerPulse 1.6s ease-in-out infinite;
+    width:fit-content; max-width:100%;
   }
   @keyframes tutorialBannerPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.015); } }
   .tutorial-highlight{
@@ -594,6 +629,31 @@
     box-shadow:0 0 0 3px rgba(255,47,176,.4), 0 6px 20px rgba(255,47,176,.6) !important;
   }
   @media (prefers-reduced-motion: reduce){ .builder-tutorial-banner, .tutorial-highlight{ animation:none; } }
+  /* Comic speech-bubble presentation: a small glowing hexagon "mascot" (hand + eye emoji) sits to
+     the left, with the banner itself acting as the speech bubble, connected by a CSS-triangle
+     tail pointing back at the hexagon -- like the bubble is coming out of it. */
+  .tut-bubble-wrap{ display:inline-flex; align-items:flex-start; width:fit-content; max-width:100%; }
+  .tut-hex{
+    position:relative; flex:0 0 auto; width:44px; height:44px; margin-top:4px;
+    clip-path:polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+    background:linear-gradient(160deg,#ff8fdd,#ff2fb0 65%);
+    display:flex; align-items:center; justify-content:center; gap:1px;
+    font-size:15px; line-height:1;
+    box-shadow:0 0 14px 3px rgba(255,47,176,.7), 0 0 0 2px rgba(255,255,255,.25) inset;
+    animation:tutHexGlow 1.6s ease-in-out infinite;
+  }
+  @keyframes tutHexGlow{ 0%,100%{ box-shadow:0 0 14px 3px rgba(255,47,176,.65), 0 0 0 2px rgba(255,255,255,.25) inset; } 50%{ box-shadow:0 0 26px 8px rgba(255,47,176,1), 0 0 0 2px rgba(255,255,255,.45) inset; } }
+  .tut-bubble{ position:relative; margin-left:12px; min-width:0; }
+  .tut-bubble::before{
+    content:''; position:absolute; left:-9px; top:14px; width:0; height:0;
+    border-top:8px solid transparent; border-bottom:8px solid transparent; border-right:10px solid #ff2fb0;
+  }
+  @media (prefers-reduced-motion: reduce){ .tut-hex{ animation:none; } }
+  /* top is set below the Tap-keys label's own height (88px font + padding) so the banner never
+     covers that text -- it's still positioned to overlap the hexagons underneath, which is fine. */
+  .builder-tutorial-float{ position:absolute; left:14px; top:118px; z-index:6; width:fit-content; max-width:calc(100% - 28px); }
+  .builder-tutorial-float .builder-tutorial-banner{ margin-bottom:0; }
+  .builder-tutorial-float:empty{ display:none; }
   /* One-time auto-playing demo: a ghost cursor "clicks" 3 hexagons in sequence to form an
      audible major chord, then the whole thing fades out on its own -- purely illustrative, not
      interactive, so it can't be clicked or dragged. */
@@ -690,7 +750,11 @@
   .sub{ color:#96a1ac; }                                   /* secondary text recedes a touch */
   label.field-label{ color:#e7ecf2; font-weight:700; }     /* section labels clearly brighter than body text */
   .hex-frame .plate-label{ color:#dfe5ec; font-weight:700; }
-  .tap-keys-label{ font-size:34px !important; line-height:1; white-space:nowrap; }
+  .tap-keys-label{ font-size:88px !important; line-height:1; white-space:nowrap; letter-spacing:.01em; }
+  .play-icon-btn{ display:inline-flex !important; align-items:center; gap:9px; text-align:left; }
+  .play-circle-icon{ display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; flex-shrink:0; font-size:11px; line-height:1; }
+  .play-circle-icon-big{ width:40px; height:40px; font-size:18px; }
+  .play-icon-btn-big{ justify-content:flex-start; }
   .tap-keys-row .btn.mini{ font-size:10.5px; padding:6px 9px; }
   .hex-frame .octave-caption{ left:auto; }
   .prog-card h3{ font-weight:800; color:#ffffff; }         /* progression names pop as true titles */
@@ -1333,7 +1397,7 @@ function playChordsAudio(chords, timbre){
       const pad = schedulePad(notes, startTime, padDur);
       if(pad) allNodes = allNodes.concat(pad.nodes);
     }
-    else allNodes = allNodes.concat(scheduleChordAudio(notes, timbre, startTime, chordDur, c.root-anchor));
+    else allNodes = allNodes.concat(scheduleChordAudio(notes, timbre, startTime, chordDur, c.root-anchor, false, false, 1.9));
     if(state.randomTopline) allNodes = allNodes.concat(scheduleRandomTopline(notes, timbre, startTime, chordDur, c.root-anchor, beatsPerChord*secPerBeat));
   });
   registerProgressionSession(allNodes, now + chords.length*beatsPerChord*secPerBeat + 0.1);
@@ -2110,7 +2174,7 @@ document.addEventListener('drop', (e)=>{
   if(!midiFile) return;
   e.preventDefault();
   stopHoverPlay();
-  state.builder = { editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[0], selectedOrderQr:{0:{q:0,r:0}}, error:'', editingChordIdx:null, editingChordBackup:null };
+  state.builder = { editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[0], selectedOrderQr:{0:{q:0,r:0}}, lastClicked:0, error:'', editingChordIdx:null, editingChordBackup:null };
   state.tab='catalog'; state.view='builder';
   importMidiFileObject(midiFile);
   scrollBuilderIntoView();
@@ -3307,6 +3371,10 @@ const I18N = {
     "en": "<b>Z</b> / <b>X</b> → same as ← / →, stepping back and forward through your recently-viewed screens.",
     "es": "<b>Z</b> / <b>X</b> → igual que ← / →, retroceden y avanzan por las pantallas que has visto recientemente."
   },
+  "shortcuts.li7": {
+    "en": "<b>Space</b> → jumps back to the top of whatever screen you're on (the builder's tutorial banner, a progression's detail view, the shapes tab, or the hex map), wherever you've scrolled to.",
+    "es": "<b>Espacio</b> → te lleva de vuelta arriba del todo de la pantalla en la que estés (el banner del tutorial del constructor, la vista de una progresión, la pestaña de formas, o el mapa hexagonal), sin importar cuánto hayas bajado."
+  },
   "sw.h2": {
     "en": "How can I use this software?",
     "es": "¿Cómo puedo usar este software?"
@@ -3835,6 +3903,10 @@ const I18N = {
     "en": "▶ Play shape",
     "es": "▶ Reproducir forma"
   },
+  "word.shape": {
+    "en": "Shape",
+    "es": "Forma"
+  },
   "word.playprog": {
     "en": "▶ Play progression",
     "es": "▶ Reproducir progresión"
@@ -4150,6 +4222,10 @@ const I18N = {
   "builder.addshape": {
     "en": "+ Add shape to progression",
     "es": "+ Añadir forma a la progresión"
+  },
+  "builder.editing": {
+    "en": "Editing progression",
+    "es": "Editando progresión"
   },
   "builder.editingshape": {
     "en": null,
@@ -4512,24 +4588,24 @@ const I18N = {
     "es": "Entendido"
   },
   "tut.step1": {
-    "en": "Tap hexagons above to pick notes. Your first note becomes the root, fixed at 0.",
-    "es": "Toca hexágonos arriba para elegir notas. Tu primera nota será la raíz, fija en 0."
+    "en": "Tap hexagons on the map to pick notes. Your first note becomes the root, fixed at 0.",
+    "es": "Toca hexágonos en el mapa para elegir notas. Tu primera nota será la raíz, fija en 0."
   },
   "tut.step2": {
-    "en": "Then press \"+ Add shape to progression\".",
-    "es": "Luego pulsa \"+ Añadir forma a la progresión\"."
+    "en": "Then press \"Add shape to progression\".",
+    "es": "Luego pulsa \"Añadir forma a la progresión\"."
   },
   "tut.step3": {
-    "en": "Nice! Now tap a second shape.",
-    "es": "¡Bien! Ahora toca una segunda forma."
+    "en": "Nice! Now tap a second shape. Ctrl + click a key to make it the root; click-and-drag a marked key to move the whole shape at once.",
+    "es": "¡Bien! Ahora toca una segunda forma. Ctrl + clic en una tecla para convertirla en la raíz; haz clic y arrastra una tecla marcada para mover toda la forma a la vez."
   },
   "tut.step4": {
-    "en": "Press \"+ Add shape to progression\" again.",
-    "es": "Pulsa \"+ Añadir forma a la progresión\" otra vez."
+    "en": "Press \"Play progression\" to listen how your new shape combines with the previous one.<br>Press \"Add shape to progression\" again.",
+    "es": "Pulsa \"Progresión\" para escuchar cómo combina tu nueva forma con la anterior.<br>Pulsa \"Añadir forma a la progresión\" otra vez."
   },
   "tut.step5": {
-    "en": "Press ▶ Play progression to hear both, then \"Save progression\".",
-    "es": "Pulsa ▶ Play progression para escuchar ambas, y luego \"Save progression\"."
+    "en": "Press \"Save progression\" to finish — or tap another shape first if you want to preview it with ▶ Progression.",
+    "es": "Pulsa \"Guardar progresión\" para terminar — o toca otra forma primero si quieres previsualizarla con ▶ Progresión."
   },
   "word.backtoprogressions": {
     "en": "← Back to progressions",
@@ -4544,20 +4620,32 @@ const I18N = {
     "es": "Ejemplo — tocando un acorde:"
   },
   "tut.tip.playshape": {
-    "en": "🔊 Press \"▶ Play shape\" anytime to hear it.",
-    "es": "🔊 Pulsa \"▶ Play shape\" cuando quieras para escucharlo."
+    "en": "🔊 Press \"▶ Shape\" anytime to hear it.",
+    "es": "🔊 Pulsa \"▶ Forma\" cuando quieras para escucharlo."
   },
   "tut.tip.hoverlist": {
-    "en": "🖱️ Hover a shape below to hear it.",
-    "es": "🖱️ Pasa el ratón por una forma para escucharla."
+    "en": "🖱️ Hover a shape to hear it, you can also edit it.",
+    "es": "🖱️ Pasa el ratón por una forma para escucharla, también puedes editarla."
   },
   "tut.tip.addmore": {
-    "en": "Add more shapes anytime before saving.",
-    "es": "Añade más formas cuando quieras antes de guardar."
+    "en": "Add more shapes or \"Save progression\" to finish —",
+    "es": "Añade más formas o pulsa \"Guardar progresión\" para terminar —"
   },
   "tut.savemsg": {
-    "en": "🎉 Saved! You're back in Progressions — its shapes are now in Shapes too.",
-    "es": "🎉 ¡Guardada! Estás de vuelta en Progressions — sus formas ya están también en Shapes."
+    "en": "🎉 Saved! Its shapes are now in Shapes too.",
+    "es": "🎉 ¡Guardada! Sus formas ya están también en Shapes."
+  },
+  "tut.main.h2": {
+    "en": "Hi",
+    "es": "Hola"
+  },
+  "tut.main.msg": {
+    "en": "This app is a catalog and a hex-controller playground for writing and revisiting chord progressions in 31ED2 microtonal tuning.",
+    "es": "Esta app es un catálogo y un espacio de juego con controlador hexagonal para escribir y revisar progresiones de acordes en la afinación microtonal 31ED2."
+  },
+  "tut.main.msg2": {
+    "en": "For deeper explanations of every feature, the tuning system, and keyboard shortcuts, check out the <b>Help</b> section any time.",
+    "es": "Para explicaciones más profundas de cada función, del sistema de afinación, y de los atajos de teclado, revisa la sección <b>Help</b> cuando quieras."
   },
   "tut.restart": {
     "en": "Tutorial",
@@ -4573,13 +4661,13 @@ const state = {
   tab:'catalog', view:'list',
   progressions: [], nicknames: {}, octaveEquivalence: false,
   selectedProgId:null, selectedChordKey:null, chordSeqSelection:[],
-  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false,
+  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, seenMainTutorial:true, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false,
   lang: 'en', // default; a saved preference (if any) overrides this once loadData() resolves
   mapMode:'write', playModeNotes:[], mapTimbre:'guitar', chordsTabTimbre:'guitar', strumMode:true,
   progressionsTabTimbre:'guitar', hexExpandLevel:0, emergentHighlight:null, bigMapBoardSize:null, bigMapExactPoints:null,
   expandedChordSig:null, showEqInfo:false, showLibInfo:false, showProgImportInfo:false, chordTags:{}, chordsFilterText:'', showMidiPanel:false,
   navHistory:[], navIndex:-1, navSuppress:false, audioUnlocked:false,
-  confirmResetLibrary:false, muted:false, builderChordSearch:'', rootBass:true, mapSelectMode:true, builderMidiWrite:false, builderFreePlay:false, showBuilderIdentify:false,
+  confirmResetLibrary:false, muted:false, builderChordSearch:'', rootBass:true, mapSelectMode:true, builderMidiWrite:false, builderFreePlay:false, showBuilderIdentify:false, showBuilderUseRegistered:false,
   loopingProgId:null, loopingTimbre:null, loopingTimer:null,
   expandedSimilaritySig:null, expandedProgSimilarity:null,
   builder:{ editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[], selectedOrderQr:{}, lastClicked:null, error:'', editingChordIdx:null, editingChordBackup:null },
@@ -4628,10 +4716,27 @@ async function loadData(){
     }
   }catch(e){}
   try{ const r = await storageGet('midiCalibration'); if(r){ const d=JSON.parse(r.value); if(typeof d.baseNote==='number') state.midi.baseNote=d.baseNote; } }catch(e){}
-  try{ const r = await storageGet('lang'); if(r && (JSON.parse(r.value)==='en' || JSON.parse(r.value)==='es')) state.lang = JSON.parse(r.value); }catch(e){}
+  try{
+    const r = await storageGet('lang');
+    if(r && (JSON.parse(r.value)==='en' || JSON.parse(r.value)==='es')){
+      state.lang = JSON.parse(r.value);
+    } else {
+      // No saved preference yet: default to English, unless the browser itself is set to
+      // Spanish, Catalan, Galician, or Basque (i.e. a language spoken as the majority language
+      // in Spain or Latin America) -- in which case default to Spanish instead.
+      const browserLangs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
+      const spanishLeaning = /^(es|ca|gl|eu)\b/i;
+      state.lang = browserLangs.some(l=>spanishLeaning.test(l||'')) ? 'es' : 'en';
+    }
+  }catch(e){}
   try{ const r = await storageGet('seenHelpHint'); if(!r || JSON.parse(r.value)!==true) state.showHelpHint = true; }catch(e){ state.showHelpHint = true; }
   try{ const r = await storageGet('epilepsySafeMode'); if(r) state.epilepsySafeMode = JSON.parse(r.value); }catch(e){}
   try{ const r = await storageGet('seenBuilderTutorial'); if(r) state.seenBuilderTutorial = JSON.parse(r.value)===true; }catch(e){}
+  try{
+    const r = await storageGet('seenMainTutorial');
+    if(r) state.seenMainTutorial = JSON.parse(r.value)===true;
+    else state.seenMainTutorial = state.progressions.length>0; // grandfather existing users in silently
+  }catch(e){ state.seenMainTutorial = false; }
   applyEpilepsySafeModeClass();
   try{ const r = await storageGet('seenEpilepsyWarning'); state.__seenEpilepsyWarning = !!(r && JSON.parse(r.value)===true); }catch(e){ state.__seenEpilepsyWarning = false; }
   try{
@@ -4701,25 +4806,32 @@ async function toggleOctaveEquivalence(){
 
 /* ============================ ACTIONS ============================ */
 function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopBuilderProgressionPlay(); builderShapePlayActive=false; stopPrimeIntervalPreview(); }
-function switchTab(t){ stopAllAudioActivity(); state.tab=t; if(t==='catalog') state.view='list'; if(t==='species') state.expandedChordSig=null; state.selectedChordKey=null; render(); if(t==='map') scrollMapIntoView(); }
+function switchTab(t){ stopAllAudioActivity(); const leavingCatalog = state.tab==='catalog' && t!=='catalog'; state.tab=t; if(t==='catalog') state.view='list'; if(t==='species') state.expandedChordSig=null; state.selectedChordKey=null; if(leavingCatalog) state.showTutorialSaveMessage=false; render(); if(t==='map') scrollMapIntoView(); }
 function newProgression(){
   stopAllAudioActivity();
   // Every progression's first chord is forced to root 0 — a fixed, always-findable reference
   // point so different progressions can be compared/anchored on equal footing.
-  state.builder = { editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[0], selectedOrderQr:{0:{q:0,r:0}}, error:'' };
+  state.builder = { editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[0], selectedOrderQr:{0:{q:0,r:0}}, lastClicked:0, error:'' };
   state.tab='catalog'; state.view='builder'; render();
   scrollBuilderIntoView();
 }
-// Scrolls so the builder's Cancel row sits at the very top of the screen — the whole working area
-// (map, hints, and the action buttons below it) then fits within reach with no manual scrolling.
+// Scrolls so the most relevant thing sits at the very top of the screen. The tutorial banner now
+// floats over the map instead of pushing content down, so it no longer needs special scroll
+// priority -- the Cancel row (or, once there's a progression, the Progression panel) is always
+// the right thing to pin to the top, tutorial or not.
 function scrollBuilderIntoView(){
   try{
     const go = ()=>{
-      const tutorialActive = !state.seenBuilderTutorial;
-      const el = document.getElementById(tutorialActive ? 'builderTutorialBanner' : 'builderViewTop');
+      const targetId = document.getElementById('builderProgressionTop') ? 'builderProgressionTop' : 'builderViewTop';
+      const el = document.getElementById(targetId);
       if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
     };
+    // A single rAF isn't always enough here: the built-chord list, search results, and hex map
+    // can all still be reflowing (fonts, conditional rows appearing) a frame after render(), which
+    // shifts builderProgressionTop's position and makes the scroll land short. Re-running the same
+    // scroll a beat later corrects for that without any visible jump (it's idempotent once settled).
     if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(go); else setTimeout(go, 0);
+    setTimeout(go, 120);
   }catch(e){}
 }
 function editProgression(id){
@@ -4730,7 +4842,7 @@ function editProgression(id){
   state.tab='catalog'; state.view='builder'; render();
   scrollBuilderIntoView();
 }
-function cancelBuilder(){ stopAllAudioActivity(); state.view = state.builder.editingId ? 'detail' : 'list'; render(); }
+function cancelBuilder(){ stopAllAudioActivity(); if(!state.seenBuilderTutorial){ state.seenBuilderTutorial = true; storageSet('seenBuilderTutorial', JSON.stringify(true)).catch(()=>{}); } state.view = state.builder.editingId ? 'detail' : 'list'; render(); }
 function firstChordLocked(){ return state.builder.chords.length===0 || state.builder.editingChordIdx===0; }
 function builderStartEditChord(idx){
   const c = state.builder.chords[idx];
@@ -4835,6 +4947,7 @@ function builderHexClick(raw, e, q, r){
 }
 function toggleBuilderFreePlay(){ state.builderFreePlay = !state.builderFreePlay; render(); }
 function toggleBuilderIdentify(){ state.showBuilderIdentify = !state.showBuilderIdentify; renderBuilderSearchOnly(); }
+function toggleBuilderUseRegistered(){ state.showBuilderUseRegistered = !state.showBuilderUseRegistered; renderBuilderSearchOnly(); }
 function builderSetRoot(raw){
   if(firstChordLocked()) return; // no reassigning root while building the progression's first chord
   const arr = state.builder.selectedOrder; const i = arr.indexOf(raw); if(i<=0) return;
@@ -4868,6 +4981,13 @@ function builderAddChord(){
   // selected anymore (nothing is selected at this point).
   state.builder.selectedOrder = []; state.builder.selectedOrderQr = {}; state.builder.error = ''; state.builder.lastClicked = null;
   render();
+  // While the tutorial banner is still active, each "Add shape" commit changes the page's
+  // content above/around it (the built-chord list appearing, buttons re-arranging) -- re-run the
+  // same scroll used on builder entry so the banner (with the next step's instructions) stays
+  // pinned at the top instead of drifting out of view as the layout shifts underneath it. Once
+  // the tutorial's done, the same call now targets the Progression panel instead, so adding a
+  // shape from the hex map always brings the freshly-updated progression into view.
+  scrollBuilderIntoView();
 }
 function builderDuplicateChord(idx){
   const c = state.builder.chords[idx]; if(!c) return;
@@ -4925,6 +5045,11 @@ function markBuilderTutorialComplete(b){
   }
 }
 function dismissTutorialSaveMessage(){ state.showTutorialSaveMessage = false; render(); }
+function dismissMainTutorial(){
+  state.seenMainTutorial = true;
+  storageSet('seenMainTutorial', JSON.stringify(true)).catch(()=>{});
+  render();
+}
 function restartBuilderTutorial(){
   // Acts as a toggle: pressing it while the tutorial is showing turns it OFF (same as finishing
   // it normally), so the builder immediately goes back to its regular, non-tutorial auto-scroll
@@ -4998,7 +5123,11 @@ async function confirmSaveProgression(){
 function scrollProgDetailIntoView(){
   try{
     const go = ()=>{ const el = document.getElementById('progDetailTop'); if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' }); };
+    // Same reliability fix as the builder's scroll: content below this anchor (chord chips,
+    // minimaps) can still be reflowing a frame after render(), so a single rAF sometimes lands
+    // short. Re-firing a beat later corrects any drift without a visible extra jump.
     if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(go); else setTimeout(go, 0);
+    setTimeout(go, 120);
   }catch(e){}
 }
 // Scrolls so the Map view's top row sits at the very top of the screen, matching the same
@@ -5007,9 +5136,27 @@ function scrollMapIntoView(){
   try{
     const go = ()=>{ const el = document.getElementById('mapViewTop'); if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' }); };
     if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(go); else setTimeout(go, 0);
+    setTimeout(go, 120);
   }catch(e){}
 }
-function openProgression(id){ stopAllAudioActivity(); state.selectedProgId=id; state.view='detail'; state.selectedChordKey=null; state.chordSeqSelection=[]; state.emergentHighlight=null; render(); scrollProgDetailIntoView(); }
+// Space bar re-runs whichever of these auto-scrolls applies to the current page, so the person
+// can jump back to the "top" of wherever they are (builder/tutorial, a progression's detail view,
+// the shapes tab, or the hex map) without hunting for a scrollbar. Documented in the shortcuts
+// help list.
+function scrollToPageAnchor(){
+  if(state.tab==='catalog' && state.view==='builder'){ scrollBuilderIntoView(); return; }
+  if(state.tab==='catalog' && state.view==='detail'){ scrollProgDetailIntoView(); return; }
+  if(state.tab==='species'){
+    try{
+      const go = ()=>{ const el = document.getElementById('speciesTabTop'); if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' }); };
+      if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(go); else setTimeout(go, 0);
+    }catch(e){}
+    return;
+  }
+  if(state.tab==='map'){ scrollMapIntoView(); return; }
+  try{ window.scrollTo({ top:0, behavior:'smooth' }); }catch(e){}
+}
+function openProgression(id){ stopAllAudioActivity(); state.selectedProgId=id; state.view='detail'; state.selectedChordKey=null; state.chordSeqSelection=[]; state.emergentHighlight=null; state.showTutorialSaveMessage=false; render(); scrollProgDetailIntoView(); }
 function openProgressionAtChord(id, idx){ stopAllAudioActivity(); state.selectedProgId=id; state.view='detail'; state.selectedChordKey=id+':'+idx; state.chordSeqSelection=[]; state.emergentHighlight=null; render(); scrollProgDetailIntoView(); }
 function backToList(){ stopAllAudioActivity(); state.view='list'; state.selectedProgId=null; state.chordSeqSelection=[]; state.emergentHighlight=null; render(); }
 function askDeleteProgression(id){ state.confirmDeleteId = id; render(); }
@@ -5038,8 +5185,9 @@ function scrollSpeciesTopIntoView(){
   };
   if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(()=>requestAnimationFrame(go));
   else setTimeout(go, 60);
-  // Late correction pass: catches any scroll position drift caused by the expanded card's
+  // Late correction passes: catch any scroll position drift caused by the expanded card's
   // column-span:all reflow settling after the first scroll already fired.
+  setTimeout(go, 120);
   setTimeout(go, 220);
 }
 function viewChordInChordsTab(sig){
@@ -5224,7 +5372,7 @@ function saveConnectAsProgression(){
   const chain = state.connect.chain; if(chain.length===0) return;
   const anchor = chain[0].root; // rebase so the chain's first chord satisfies the forced-root-0 rule
   const chords = chain.map(c=>({ id:uid(), root:c.root-anchor, intervals:c.intervals.slice(), label:c.label||'' }));
-  state.builder = { editingId:null, name:'', tags:'', notesText:'', chords, selectedOrder:[], error:'' };
+  state.builder = { editingId:null, name:'', tags:'', notesText:'', chords, selectedOrder:[], lastClicked:0, error:'' };
   state.tab='catalog'; state.view='builder'; render();
   scrollBuilderIntoView();
 }
@@ -5244,6 +5392,13 @@ function toggleChordExpand(sig){
   if(!wasExpanded){
     scrollSpeciesTopIntoView();
   }
+}
+function jumpToChordFromSearch(sig){
+  stopAllAudioActivity();
+  state.expandedChordSig = sig;
+  state.chordsFilterText = '';
+  render();
+  scrollSpeciesTopIntoView();
 }
 function toggleEqInfo(){ state.showEqInfo = !state.showEqInfo; render(); }
 function toggleLibInfo(){ state.showLibInfo = !state.showLibInfo; render(); }
@@ -5546,8 +5701,10 @@ function renderStatsPlate(){
 function render(){
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = `<div class="empty"><div class="glyph">⬡</div>${t('word.loading')}</div>`; return; }
+  const inBuilder = state.tab==='catalog' && state.view==='builder';
   app.innerHTML = `
-    <header class="app-header">
+    <header class="app-header"${inBuilder ? ' style="min-height:0; margin-bottom:0; padding-bottom:0; border-bottom:none;"' : ''}>
+      ${inBuilder ? '' : `
       <div class="hero-plate">
         <div class="hero-text">
           <h1>ARMODEX<span class="title-sub">31ED2</span></h1>
@@ -5559,6 +5716,8 @@ function render(){
           <circle cx="71.5" cy="57" r="3.4" fill="#f4efe2" opacity="0.85"/>
         </svg>
       </div>
+      `}
+      ${inBuilder ? '' : `
       <div class="eq-row">
       <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showSettingsMenu?'primary':''}" onclick="toggleSettingsMenu()" title="${t('word.settings')}">⚙️</button>
@@ -5645,7 +5804,9 @@ function render(){
       ${state.importMsg ? `<span class="eq-note">${escapeHtml(state.importMsg)}</span>` : ''}
     </div>
         <div class="stats-plate" id="statsPlate"></div>
+      `}
     </header>
+    ${inBuilder ? '' : `
     <nav class="tabs">
       <button class="${state.tab==='catalog'?'active':''}" data-hotkey="A" onclick="switchTab('catalog')">${t('tab.progressions')}</button>
       <button class="${state.tab==='species'?'active':''}" data-hotkey="S" onclick="switchTab('species')">${t('tab.shapes')}</button>
@@ -5653,12 +5814,13 @@ function render(){
       <!-- Connect tab hidden for now — not ready yet -->
       <!-- <button class="${state.tab==='connect'?'active':''}" onclick="switchTab('connect')">Connect</button> -->
     </nav>
+    `}
     <div id="tabContent"></div>
     ${state.showInfoSoftware ? renderSoftwareInfoModal() : ''}
     ${state.showInfoTuning ? renderTuningInfoModal() : ''}
     ${state.showInfoHexagons ? renderHexagonsInfoModal() : ''}
     ${state.showInfoShortcuts ? renderShortcutsInfoModal() : ''}
-    ${state.showEpilepsyWarning ? renderEpilepsyWarningModal() : ''}
+    ${state.showEpilepsyWarning ? renderEpilepsyWarningModal() : (!state.seenMainTutorial ? renderMainTutorialModal() : '')}
     ${state.showSaveNameModal ? renderSaveNameModal() : ''}
   `;
   const content = document.getElementById('tabContent');
@@ -5822,7 +5984,8 @@ document.addEventListener('keydown', (e)=>{
   const tag = (e.target && e.target.tagName) || '';
   if(tag==='INPUT' || tag==='TEXTAREA' || (e.target && e.target.isContentEditable)) return;
   if(e.ctrlKey || e.metaKey || e.altKey) return; // don't hijack browser/OS shortcuts sharing these letters
-  if(e.key==='ArrowLeft' || e.key==='z' || e.key==='Z'){ navBack(); }
+  if(e.key===' ' || e.code==='Space'){ e.preventDefault(); scrollToPageAnchor(); }
+  else if(e.key==='ArrowLeft' || e.key==='z' || e.key==='Z'){ navBack(); }
   else if(e.key==='ArrowRight' || e.key==='x' || e.key==='X'){ navForward(); }
   else if(e.key==='a' || e.key==='A'){ switchTab('catalog'); }
   else if(e.key==='s' || e.key==='S'){ switchTab('species'); }
@@ -5949,6 +6112,21 @@ function renderSaveNameModal(){
     </div>
   </div>`;
 }
+function renderMainTutorialModal(){
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) dismissMainTutorial()">
+    <div class="modal-panel" style="max-width:460px; background:#ff2fb0; border-color:#ff2fb0; box-shadow:0 0 0 3px rgba(255,47,176,.3), 0 14px 40px rgba(255,47,176,.5);">
+      <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="font-family:'Chakra Petch',sans-serif; margin:0; font-size:22px; color:#fff;">${t('tut.main.h2')}</h2>
+      </div>
+      <p class="sub" style="max-width:none; color:#fff;">${t('tut.main.msg')}</p>
+      <p class="sub" style="max-width:none; color:#fff; margin-top:10px;">${t('tut.main.msg2')}</p>
+      <div class="row" style="justify-content:flex-end; margin-top:16px;">
+        <button class="btn primary" style="background:#fff; color:#ff2fb0; border-color:#fff;" onclick="dismissMainTutorial()">${t('epilepsy.continue')}</button>
+      </div>
+    </div>
+  </div>`;
+}
 function renderEpilepsyWarningModal(){
   return `
   <div class="modal-backdrop" onclick="if(event.target===this) dismissEpilepsyWarning()">
@@ -5983,6 +6161,7 @@ function renderShortcutsInfoModal(){
         <li>${t('shortcuts.li4')}</li>
         <li>${t('shortcuts.li5')}</li>
         <li>${t('shortcuts.li6')}</li>
+        <li>${t('shortcuts.li7')}</li>
       </ul>
       ${helpContinueReadingHtml('shortcuts')}
     </div>
@@ -6279,7 +6458,7 @@ function renderCatalogList(content){
     list = list.slice().sort((a,b)=> a.chords.length - b.chords.length);
   }
   content.innerHTML = `
-    ${state.showTutorialSaveMessage ? `<div class="builder-tutorial-banner" style="display:flex; justify-content:space-between; align-items:center; gap:12px;"><span>${t('tut.savemsg')}</span><button class="btn small ghost" style="flex-shrink:0; background:transparent; border-color:#fff; color:#fff;" onclick="dismissTutorialSaveMessage()">${t('epilepsy.continue')}</button></div>` : ''}
+    ${state.showTutorialSaveMessage ? tutorialBubble(`<span>${t('tut.savemsg')}</span><button class="btn small ghost" style="flex-shrink:0; background:transparent; border-color:#fff; color:#fff; margin-left:12px;" onclick="dismissTutorialSaveMessage()">${t('epilepsy.continue')}</button>`, null, 'display:flex; justify-content:space-between; align-items:center;') : ''}
     <div class="list-toolbar">
       <button class="btn primary" id="newProgressionBtn" data-hotkey="R" onclick="newProgression(); flashBackground(0.5);">${t('cat.newprog')}</button>
       <span class="help-dropdown-wrap">
@@ -6616,21 +6795,62 @@ function builderTutorialDemoHtml(){
     </div>
   `;
 }
+// tut.step4 ("Press \"Play progression\"... Press \"Add shape\" again.") is deliberately held
+// back for 2 extra seconds after its condition first becomes true (second shape's first note just
+// tapped) -- giving the just-committed first shape's step3 message a moment to actually be read
+// instead of being instantly replaced the moment a key is tapped.
+let step4EnteredAt = null;
 function builderTutorialStepHtml(b){
   if(state.seenBuilderTutorial) return '';
   if(b.chords.length===0 && b.selectedOrder.length===0){
     if(tutorialDemoState==='pending') playTutorialDemo();
     if(tutorialDemoState==='playing'){
-      return `<div class="builder-tutorial-banner" id="builderTutorialBanner"><b>${t('tut.title.write')}</b><br>${t('tut.demo.caption')}${builderTutorialDemoHtml()}</div>`;
+      return tutorialBubble(`<b>${t('tut.title.write')}</b><br>${t('tut.demo.caption')}${builderTutorialDemoHtml()}`, 'builderTutorialBanner');
     }
-    return `<div class="builder-tutorial-banner" id="builderTutorialBanner"><b>${t('tut.title.write')}</b><br>${t('tut.step1')}</div>`;
+    return tutorialBubble(`<b>${t('tut.title.write')}</b><br>${t('tut.step1')}`, 'builderTutorialBanner');
   }
+  const isStep4 = (b.chords.length===1 && b.selectedOrder.length>0);
+  if(!isStep4){ step4EnteredAt = null; }
   let msg;
   if(b.chords.length===0 && b.selectedOrder.length>0) msg = `${t('tut.tip.playshape')}<br>${t('tut.step2')}`;
   else if(b.chords.length===1 && b.selectedOrder.length===0) msg = t('tut.step3');
-  else if(b.chords.length===1 && b.selectedOrder.length>0) msg = t('tut.step4');
-  else msg = `${t('tut.tip.hoverlist')}<br>${t('tut.step5')}<br>${t('tut.tip.addmore')}`;
-  return `<div class="builder-tutorial-banner" id="builderTutorialBanner">${msg}</div>`;
+  else if(isStep4){
+    if(step4EnteredAt===null){
+      step4EnteredAt = Date.now();
+      setTimeout(()=>{ if(state.tab==='catalog' && state.view==='builder') render(); }, 2000);
+    }
+    const elapsed = Date.now() - step4EnteredAt;
+    if(elapsed < 2000) msg = t('tut.step3'); // keep showing the previous step's message during the delay
+    else msg = t('tut.step4');
+  }
+  else msg = `${t('tut.tip.hoverlist')} ${t('tut.tip.addmore')}`;
+  return tutorialBubble(msg, 'builderTutorialBanner');
+}
+// Manually breaks a button label into two lines at the space nearest its midpoint, and returns
+// it as an explicit <br>-joined pair instead of relying on the browser's own text wrapping.
+// Necessary because a shrink-to-fit box (inline-block/width:fit-content) that's forced to wrap
+// due to insufficient width does NOT size itself to the wrapped line's actual width -- per the
+// CSS2.1 shrink-to-fit algorithm, once the max-content width exceeds the available space, the
+// box's width collapses to the FULL available width instead, leaving visible empty space around
+// a wrapped label. Pre-breaking the text at a fixed point makes the max-content width equal to
+// the wider of the two lines, which normally does fit inside the available space, so shrink-to-fit
+// sizes the box tightly around the text as expected.
+// Wraps tutorial banner content in the comic speech-bubble presentation: a small glowing
+// hexagon "mascot" (hand + eye emoji) with the actual message rendered as a speech bubble
+// trailing off it, connected by a CSS-triangle tail. idAttr/extraStyle let call sites keep their
+// existing id (for scroll-into-view targeting) and any inline style overrides on the bubble itself.
+function tutorialBubble(innerHtml, idAttr, extraStyle){
+  return `<div class="tut-bubble-wrap"><div class="tut-hex">🤚👁️</div><div class="builder-tutorial-banner tut-bubble"${idAttr ? ` id="${idAttr}"` : ''}${extraStyle ? ` style="${extraStyle}"` : ''}>${innerHtml}</div></div>`;
+}
+function wrapButtonLabel(text){
+  if(!text || text.length<14) return text;
+  const mid = Math.floor(text.length/2);
+  let best = -1, bestDist = Infinity;
+  for(let i=0;i<text.length;i++){
+    if(text[i]===' '){ const d = Math.abs(i-mid); if(d<bestDist){ bestDist=d; best=i; } }
+  }
+  if(best<0) return text;
+  return escapeHtml(text.slice(0,best)) + '<br>' + escapeHtml(text.slice(best+1));
 }
 function builderTutorialHighlight(b, target){
   if(state.seenBuilderTutorial) return '';
@@ -6642,6 +6862,7 @@ function builderTutorialHighlight(b, target){
 }
 function renderBuilder(content){
   const b = state.builder;
+  if(builderProgLoopActive && !(b.chords.length>=2 || (b.chords.length>=1 && b.selectedOrder.length>=1))) stopBuilderProgressionPlay();
   const assoc = findBuilderSelectionMatch();
   const recognitionPanel = builderRecognitionSnippet(assoc);
   // Both "use registered shapes" (search existing catalog to place one) and "Identify shape"
@@ -6651,16 +6872,19 @@ function renderBuilder(content){
   const hasRegisteredShapes = computeSpecies(state.progressions).list.length>0;
   content.innerHTML = `
     <div class="row" id="builderViewTop" style="justify-content:space-between; margin-bottom:14px;">
-      <button class="btn nav-standout" onclick="cancelBuilder()">← Cancel</button>
-      <span class="sub" style="margin:0;">${b.editingId ? 'Editing progression' : 'New progression'}</span>
+      <button class="btn nav-standout" onclick="cancelBuilder()">← ${t('word.cancel')}</button>
+      ${b.editingId ? `<span class="sub" style="margin:0;">${t('builder.editing')}</span>` : ''}
     </div>
-    ${builderTutorialStepHtml(b)}
     <div class="builder-grid">
       <div style="${state.hexExpandLevel===1 ? 'grid-column:1 / -1;' : ''}">
         <div class="hex-frame${builderPlayingIdx===b.chords.length?' now-playing-map':''}">
-          <div class="row tap-keys-row" style="align-items:center; flex-wrap:wrap; gap:10px 14px; margin-right:64px;">
+          <div class="row" style="align-items:center; margin-right:64px;">
             <span class="builder-section-label tap-keys-label">${t('builder.tapkeys')}</span>
-            <div class="row" style="flex-wrap:wrap; gap:6px; flex:1;">
+          </div>
+          <div class="builder-tutorial-float">${builderTutorialStepHtml(b)}</div>
+          <span class="zoom-hint" style="cursor:pointer;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
+          <div class="hex-viewport builder-map-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="builderHexHolder" style="margin-top:0;"></div>
+          <div class="row tap-keys-row" style="align-items:center; flex-wrap:wrap; gap:10px 14px; margin-top:0;">
               <button class="btn mini ${state.builderMidiWrite?'primary':''}" onclick="toggleBuilderMidiWrite()" title="${t('builder.midiwrite.title')}">${t('builder.midiwrite')}</button>
               <button class="btn mini" onclick="document.getElementById('importMidiFileInput').click()" title="Import a MIDI file and turn it into a progression: notes are grouped into chords by their start time, at a regular rhythm — a chord that lasts much longer than the rest is just repeated instead of preserved at length. MIDI note numbers are read directly as 31ED2 steps. You can also just drag a MIDI file anywhere onto the app.">⬆ Import MIDI file</button>
               <input type="file" id="importMidiFileInput" accept=".mid,.midi,audio/midi" style="display:none" onchange="handleImportMidiFile(this)">
@@ -6676,62 +6900,60 @@ function renderBuilder(content){
               </span>
               ` : ''}
               <button class="btn mini" style="background:#ff2fb0; border-color:#ff2fb0; color:#fff; font-size:10.5px; padding:5px 9px;" onclick="restartBuilderTutorial()" title="${t('tut.restart.title')}">${t('tut.restart')}</button>
-            </div>
-          </div>
-          <span class="zoom-hint" style="cursor:pointer;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
-          <span id="builderOctaveCaptionText" class="octave-caption" style="top:30px; left:auto; right:14px;"></span>
-          <div class="hex-viewport builder-map-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="builderHexHolder" style="margin-top:14px;"></div>
-          ${firstChordLocked() ? '' : `
-          <p class="sub" style="max-width:none; margin-top:6px; margin-bottom:2px;">${t('builder.ctrlclickroot')}</p>
-          <p class="sub" style="max-width:none; margin-top:0;">${t('builder.dragother')}</p>
-          `}
-          <div class="row" style="margin-top:10px;">
-            <button class="btn accent-blue${builderTutorialHighlight(b,'add')}${b.selectedOrder.length>0?' add-shape-pending':''}" style="font-size:16px; padding:14px 22px;" data-hotkey="E" onclick="builderAddChord()" ${(state.builder.editingChordIdx!=null || b.selectedOrder.length===0)?'disabled':''}>${t('builder.addshape')}</button>
-            <button class="btn accent-blue" style="font-size:16px; padding:14px 24px;" data-hotkey="W" onclick="toggleBuilderShapePlay()">${builderShapePlayActive ? t('word.stop') : t('word.playshape')}</button>
-            <button class="btn primary" style="font-size:16px; padding:14px 24px;" data-hotkey="Q" onclick="toggleBuilderProgressionPlay()" ${(state.builder.chords.length===0 && state.builder.selectedOrder.length===0)?'disabled':''}>${builderProgLoopActive ? t('word.stop') : t('word.playprog')}</button>
-            <span class="help-dropdown-wrap">
-              <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
-              ${state.showHearMenu ? `
-                <div class="help-dropdown-menu" style="min-width:320px; display:flex; flex-direction:column; gap:8px;">
-                  <span class="control-group">
-                    <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
-                    <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
-                  </span>
-                  <span class="control-group" title="${t('interp.strum.title')}">
-                    <label class="field-label" style="margin:0;">${t('interp.timbre')}</label>
-                    <button class="btn mini ${state.progressionsTabTimbre==='sine'?'primary':''}" onclick="setProgressionsTabTimbre('sine')">${t('word.sine')}</button>
-                    <button class="btn mini ${state.progressionsTabTimbre==='guitar'?'primary':''}" onclick="setProgressionsTabTimbre('guitar')">${t('word.guitar')}</button>
-                  </span>
-                  <span class="row" style="gap:6px;">
-                    <button class="btn mini ${state.strumMode?'primary':''}" onclick="toggleStrum()" title="${t('interp.strum.title2')}">${t('interp.strum')}</button>
-                    <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
-                  </span>
-                  <button class="btn mini ${state.randomTopline?'primary':''}" onclick="toggleRandomTopline()" title="${t('interp.topline.title')}">${t('interp.topline')}: ${state.randomTopline?t('word.on'):t('word.off')}</button>
-                  <span class="articulation-group">
-                    <button class="btn mini ${state.autoArticulation?'primary':''}" onclick="toggleAutoArticulation()" title="${t('interp.autoart.title')}">${t('interp.autoart')}: ${state.autoArticulation?t('word.on'):t('word.off')}</button>
-                    <span class="bpm-control" style="${state.autoArticulation?'':'opacity:.45;'}" title="${t('interp.poly.title')}"><label class="field-label" style="margin:0;">${t('interp.poly.label')}</label><input type="number" min="1" max="12" value="${state.polyrhythmA}" oninput="setPolyrhythmA(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}><span style="opacity:.6;">/</span><input type="number" min="1" max="12" value="${state.polyrhythmB}" oninput="setPolyrhythmB(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}></span>
-                  </span>
-                  <button class="btn small ghost" onclick="resetInterpretationSettings()" title="${t('interp.reset.title')}">${t('interp.reset')}</button>
-                </div>
-              ` : ''}
-            </span>
+              <button class="btn small ghost" style="background:rgba(201,82,74,.15); border-color:#c9524a; color:#f0a49e;" onclick="builderClearSelection()">${t('word.clearselection')}</button>
           </div>
           <div class="row" style="margin-top:8px;">
             ${state.builder.editingChordIdx!=null ? `<p class="sub" style="max-width:none; color:var(--accent2);">${t('builder.editingshape1')} ${state.builder.editingChordIdx+1} ${t('builder.editingshape2')}</p>` : ''}
-            <button class="btn small ghost" onclick="builderClearSelection()">${t('word.clearselection')}</button>
-            <button class="btn small" onclick="exportSelectionMidi('builder')">⬇ MIDI</button>
           </div>
           ${recognitionPanel}
         </div>
       </div>
-      <div class="builder-right" style="${hasRegisteredShapes ? '' : 'grid-template-columns:1fr; grid-template-areas:\"shapes\";'}">
-          ${hasRegisteredShapes ? `
-          <div class="panel builder-search-panel">
-            <div class="field" style="margin-top:0;">
-              <label class="field-label builder-section-label">${t('builder.useregistered')}</label>
+      <div class="builder-right" style="display:flex; flex-direction:column; gap:16px;">
+        <div class="row builder-top-row" style="align-items:flex-start; gap:16px;">
+          <div class="panel builder-controls-panel" id="builderControlsPanel" style="flex:1; min-width:0; display:flex; flex-direction:column;">
+            <div class="row" style="gap:8px; align-items:flex-start;">
+              <div style="display:flex; flex-direction:column; align-items:flex-start; gap:8px; flex:1 1 auto; min-width:0;">
+                <button class="btn accent-blue play-icon-btn play-icon-btn-big" style="font-size:34px; padding:26px 22px; width:100%; white-space:nowrap;" data-hotkey="W" onclick="toggleBuilderShapePlay()"><span class="play-circle-icon play-circle-icon-big">${builderShapePlayActive ? '⏹' : '▶'}</span>${t('word.shape')}</button>
+                ${(b.chords.length>=2 || (b.chords.length>=1 && b.selectedOrder.length>=1)) ? `<button class="btn primary play-icon-btn play-icon-btn-big" style="font-size:34px; padding:26px 22px; width:100%; white-space:nowrap;" data-hotkey="Q" onclick="toggleBuilderProgressionPlay()"><span class="play-circle-icon play-circle-icon-big">${builderProgLoopActive ? '⏹' : '▶'}</span>${t('builder.progression.label')}</button>` : ''}
+              </div>
+              <span class="help-dropdown-wrap" style="flex:0 0 auto;">
+                <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
+                ${state.showHearMenu ? `
+                  <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
+                    <span class="control-group">
+                      <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
+                      <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
+                    </span>
+                    <span class="control-group" title="${t('interp.strum.title')}">
+                      <label class="field-label" style="margin:0;">${t('interp.timbre')}</label>
+                      <button class="btn mini ${state.progressionsTabTimbre==='sine'?'primary':''}" onclick="setProgressionsTabTimbre('sine')">${t('word.sine')}</button>
+                      <button class="btn mini ${state.progressionsTabTimbre==='guitar'?'primary':''}" onclick="setProgressionsTabTimbre('guitar')">${t('word.guitar')}</button>
+                    </span>
+                    <span class="row" style="gap:6px;">
+                      <button class="btn mini ${state.strumMode?'primary':''}" onclick="toggleStrum()" title="${t('interp.strum.title2')}">${t('interp.strum')}</button>
+                      <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
+                    </span>
+                    <button class="btn mini ${state.randomTopline?'primary':''}" onclick="toggleRandomTopline()" title="${t('interp.topline.title')}">${t('interp.topline')}: ${state.randomTopline?t('word.on'):t('word.off')}</button>
+                    <span class="articulation-group">
+                      <button class="btn mini ${state.autoArticulation?'primary':''}" onclick="toggleAutoArticulation()" title="${t('interp.autoart.title')}">${t('interp.autoart')}: ${state.autoArticulation?t('word.on'):t('word.off')}</button>
+                      <span class="bpm-control" style="${state.autoArticulation?'':'opacity:.45;'}" title="${t('interp.poly.title')}"><label class="field-label" style="margin:0;">${t('interp.poly.label')}</label><input type="number" min="1" max="12" value="${state.polyrhythmA}" oninput="setPolyrhythmA(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}><span style="opacity:.6;">/</span><input type="number" min="1" max="12" value="${state.polyrhythmB}" oninput="setPolyrhythmB(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}></span>
+                    </span>
+                    <button class="btn small ghost" onclick="resetInterpretationSettings()" title="${t('interp.reset.title')}">${t('interp.reset')}</button>
+                  </div>
+                ` : ''}
+              </span>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <button class="btn accent-blue${builderTutorialHighlight(b,'add')}${b.selectedOrder.length>0?' add-shape-pending':''}" style="display:inline-block; font-size:14.5px; padding:12px 16px; max-width:100%; white-space:nowrap; text-align:left;" data-hotkey="E" onclick="builderAddChord()" ${(state.builder.editingChordIdx!=null || b.selectedOrder.length===0)?'disabled':''}>${t('builder.addshape')}</button>
+            </div>
+          </div>
+          <div class="panel builder-search-panel" id="builderSearchPanel" style="flex:1; min-width:0; display:flex; flex-direction:column; visibility:${hasRegisteredShapes?'visible':'hidden'};">
+            ${hasRegisteredShapes ? `
+            <div class="field" style="margin-top:0; display:flex; flex-direction:column; min-height:0; flex:1;">
+              <label class="field-label builder-section-label" style="display:flex; align-items:center; gap:6px;">${t('builder.useregistered')}</label>
               <p class="sub" style="max-width:none; margin-top:2px; font-size:10.5px;">${t('builder.dblclick.hint')}</p>
               <input type="text" id="builderChordSearchInput" placeholder="${t('builder.searchplaceholder')}" value="${escapeHtml(state.builderChordSearch)}" oninput="state.builderChordSearch=this.value; renderBuilderSearchOnly()">
-              <div class="occ-list" style="max-height:260px; margin-top:6px; overflow-y:auto;">
+              <div class="occ-list" style="flex:1; min-height:0; margin-top:6px; overflow-y:auto;">
                 ${builderChordSearchResults().map(sp=>`
                   <div class="match-item small" ondblclick="builderPlaceChordFromSearch('${sp.signature}')" onmouseenter="hoverPlaySpecies('${sp.signature}')" onmouseleave="stopHoverPlay()" title="${t('builder.dblclick.title')}" data-hover-root="0" data-hover-tones='${JSON.stringify(sp.intervals.filter(i=>i!==0))}' data-hover-sig="${sp.signature}">
                     <span>#${sp.num}${state.nicknames[sp.signature]?` <span class="chord-nick">"${escapeHtml(state.nicknames[sp.signature])}"</span>`:''}</span>
@@ -6740,17 +6962,19 @@ function renderBuilder(content){
                 `).join('') || `<span class="sub" style="margin:0;">${state.builderChordSearch.trim() ? t('word.nomatches') : t('species.empty')}</span>`}
               </div>
             </div>
+            ` : ''}
           </div>
-          ` : ''}
-        <div class="panel builder-shapes-panel">
+        </div>
+        ${(b.error || b.chords.length>0) ? `
+        <div class="panel builder-shapes-panel" id="builderProgressionTop" style="width:100%;">
           ${b.error ? `<p class="sub" style="max-width:none; color:var(--danger); margin-top:0;">${escapeHtml(b.error)}</p>` : ''}
-          <div class="row" style="justify-content:space-between; margin-bottom:0;">
-            <label class="field-label builder-section-label" style="margin:0;">${t('builder.progression.label')} (${b.chords.length})</label>
-            ${b.chords.length>0 ? `<button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>` : ''}
+          ${b.chords.length===0 ? '' : `
+          <div class="row" style="justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+            <label class="field-label builder-section-label" style="margin:0; display:flex; align-items:baseline; gap:5px;">${t('builder.progression.label')}<span class="sub" style="font-weight:400; margin:0; font-size:13px;">(${b.chords.length})</span></label>
+            <button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>
           </div>
           <div class="chords-built">
-            ${b.chords.length===0 ? `<p class="sub" style="max-width:none;">${t('builder.noshapesyet')}</p>` :
-              (()=>{
+            ${(()=>{
                 const species = computeSpecies(state.progressions);
                 return b.chords.map((c,idx)=>{
                   const eff = effectiveIntervals(c.intervals);
@@ -6779,11 +7003,15 @@ function renderBuilder(content){
               })()
             }
           </div>
+          `}
+          ${b.chords.length>=2 ? `
           <div class="row" style="margin-top:18px;">
             <button class="btn primary${builderTutorialHighlight(b,'save')}" style="font-size:17px; padding:16px 28px;" data-hotkey="R" onclick="saveProgression()">${t('word.saveprogression')}</button>
             ${b.editingId ? `<button class="btn" style="font-size:15px; padding:16px 22px;" onclick="saveProgressionAs()" title="${t('word.saveasnewprogression.title')}">${t('word.saveasnewprogression')}</button>` : ''}
           </div>
+          ` : ''}
         </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -6792,9 +7020,24 @@ function renderBuilder(content){
   const hl = liveHighlight(b.selectedOrder);
   const { cols: builderCols, rows: builderRows } = builderBoardSize();
   const exactFocusB = !state.octaveEquivalence ? exactFocusFromSelection(b.selectedOrder, b.selectedOrderQr) : null;
-  holder.appendChild(buildHexSVG({ shape:'rect-centered', cols: builderCols, rows: builderRows, size: state.hexExpandLevel===1?28:(isMobileViewport()?28:22), autoFit:false, highlightRoot:hl.root, tones:hl.tones, mode:hl.mode, focusRoot:exactFocusB?exactFocusB.focusRoot:null, focusTones:exactFocusB?exactFocusB.focusTones:null, fallbackRaws:exactFocusB?exactFocusB.fallbackRaws:null, echoRaws:exactFocusB?new Set(b.selectedOrder):null, interactive:true, onHexClick:builderHexClick, octaveHighlightPc: b.lastClicked!=null ? mod31(b.lastClicked) : null, shapeDragEnabled: !firstChordLocked(), allowHScroll:true }));
-  const builderCaption = document.getElementById('builderOctaveCaptionText');
-  if(builderCaption) builderCaption.textContent = b.lastClicked!=null ? t('octave.caption') : '';
+  holder.appendChild(buildHexSVG({ shape:'rect-centered', cols: builderCols, rows: builderRows, size: state.hexExpandLevel===1?34:(isMobileViewport()?34:31), autoFit:false, highlightRoot:hl.root, tones:hl.tones, mode:hl.mode, focusRoot:exactFocusB?exactFocusB.focusRoot:null, focusTones:exactFocusB?exactFocusB.focusTones:null, fallbackRaws:exactFocusB?exactFocusB.fallbackRaws:null, echoRaws:exactFocusB?new Set(b.selectedOrder):null, interactive:true, onHexClick:builderHexClick, octaveHighlightPc: b.lastClicked!=null ? mod31(b.lastClicked) : null, shapeDragEnabled: !firstChordLocked(), allowHScroll:true }));
+  syncBuilderSearchPanelHeight();
+}
+// "Use registered shapes" should follow the play-buttons panel's height (never the other way
+// around) -- CSS alone can't express a one-directional match between flex siblings (stretch
+// affects both), so it's synced here in JS: read the controls panel's actual rendered height
+// and pin the search panel to it, letting its own results list scroll internally if it's taller.
+function syncBuilderSearchPanelHeight(){
+  try{
+    const go = ()=>{
+      const controls = document.getElementById('builderControlsPanel');
+      const search = document.getElementById('builderSearchPanel');
+      if(!controls || !search) return;
+      search.style.height = controls.offsetHeight + 'px';
+      search.style.maxHeight = controls.offsetHeight + 'px';
+    };
+    if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(go); else setTimeout(go, 0);
+  }catch(e){}
 }
 
 // Groups occurrences by root (rather than by progression, as occ-list does), across every
@@ -6985,8 +7228,29 @@ function renderSpecies(content){
   if(focusSp){
     const includes = findSpeciesContains(focusSp, species.list);
     const partOf = findSpeciesPartialOf(focusSp, species.list);
+    // The search box in the toolbar above still works while looking at one shape's detail view --
+    // typing into it used to do nothing visible (the fixed focus layout below ignored the filter
+    // entirely), which looked broken. Show a dropdown of matching shapes right under the search
+    // box instead, so searching from inside a shape's detail view actually surfaces results, and
+    // clicking one jumps straight to it.
+    const searchQ = state.chordsFilterText.trim().toLowerCase();
+    const searchMatches = searchQ ? species.list.filter(sp=>{
+      const nick = (state.nicknames[sp.signature]||'').toLowerCase();
+      const tags = (state.chordTags[sp.signature]||[]).join(' ').toLowerCase();
+      return nick.includes(searchQ) || tags.includes(searchQ) || ('#'+sp.num).includes(searchQ);
+    }) : [];
     content.innerHTML = `
       ${toolbar}
+      ${searchQ ? `
+      <div class="help-dropdown-menu" style="position:static; width:100%; max-width:420px; max-height:260px; overflow-y:auto; margin-bottom:16px;">
+        ${searchMatches.length ? searchMatches.map(sp=>`
+          <div class="match-item small" onclick="jumpToChordFromSearch('${sp.signature}')" onmouseenter="hoverPlaySpecies('${sp.signature}')" onmouseleave="stopHoverPlay()">
+            <span>#${sp.num}${state.nicknames[sp.signature]?` <span class="chord-nick">"${escapeHtml(state.nicknames[sp.signature])}"</span>`:''}</span>
+            <span class="pos">${formatIvsPlain(sp.intervals)}</span>
+          </div>
+        `).join('') : `<span class="sub" style="margin:0;">${t('word.nomatches')}</span>`}
+      </div>
+      ` : ''}
       <button class="btn nav-standout" style="margin-bottom:16px;" onclick="clearChordFocus()">${t('word.showallchords')}</button>
       <div class="chord-focus-layout">
         <div class="focus-col">
@@ -7019,7 +7283,6 @@ function renderSpecies(content){
   }
   content.innerHTML = `
     ${toolbar}
-    <p class="sub" style="max-width:none; margin-bottom:16px;">${t('species.intro')}${state.octaveEquivalence ? '' : t('species.intro.octoff')}. ${t('species.intro.p2')}</p>
     ${list.length===0 ? `<div class="empty"><div class="glyph">⬡</div>${t('word.nomatches')}</div>` : `
     <div class="species-grid">
       ${list.map(sp=>renderChordCardHtml(sp, { speciesList: species.list })).join('')}
@@ -7155,24 +7418,28 @@ function renderMap(content){
       </span>
       <button class="btn accent-blue small" data-hotkey="W" onclick="toggleMapShapePlay()">${mapShapePlayActive ? t('word.stop') : t('word.playshape')}</button>
     </div>
-    <div class="hex-frame" style="${state.hexExpandLevel===1 ? 'width:96vw; max-width:96vw; margin-left:calc(-50vw + 50%); margin-right:calc(-50vw + 50%);' : ''}">
-      <span class="plate-label">${t('map.tapnotes.plate')}</span>
-      <span class="zoom-hint" style="cursor:pointer;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
-      <span id="octaveCaptionText" class="octave-caption"></span>
-      <div class="hex-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="mapHexHolder" style="margin-top:20px;"></div>
-    </div>
-    <div class="panel" style="margin-top:16px;">
-      <div class="selection-strip" id="mapSelStrip" style="margin-bottom:10px;"></div>
-      ${!state.mapSelectMode ? `<p class="sub" style="max-width:none;">${t('map.freeplay')}</p>` : ex.selectedOrder.length>0 ? `<p class="sub" style="max-width:none;">Root ${mod31(ex.selectedOrder[0])} · ${formatIvs(effectiveIntervals(canonicalIntervals(ex.selectedOrder[0], ex.selectedOrder)))}</p>${renderRecognitionHtml(assoc)}` : `<p class="sub" style="max-width:none;">${t('word.nothingselected')}</p>`}
-      <div class="row" style="margin-top:12px;">
-        <button class="btn small" onclick="explorerClear()">${t('word.clearselection2')}</button>
-        <button class="btn small" onclick="exportSelectionMidi('map')">⬇ MIDI</button>
+    <div class="builder-grid">
+      <div style="${state.hexExpandLevel===1 ? 'grid-column:1 / -1;' : ''}">
+        <div class="hex-frame" style="${state.hexExpandLevel===1 ? 'width:96vw; max-width:96vw; margin-left:calc(-50vw + 50%); margin-right:calc(-50vw + 50%);' : ''}">
+          <span class="plate-label">${t('map.tapnotes.plate')}</span>
+          <span class="zoom-hint" style="cursor:pointer;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
+          <span id="octaveCaptionText" class="octave-caption"></span>
+          <div class="hex-viewport explorer-map-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="mapHexHolder" style="margin-top:20px;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="selection-strip" id="mapSelStrip" style="margin-bottom:10px;"></div>
+        ${!state.mapSelectMode ? `<p class="sub" style="max-width:none;">${t('map.freeplay')}</p>` : ex.selectedOrder.length>0 ? `<p class="sub" style="max-width:none;">Root ${mod31(ex.selectedOrder[0])} · ${formatIvs(effectiveIntervals(canonicalIntervals(ex.selectedOrder[0], ex.selectedOrder)))}</p>${renderRecognitionHtml(assoc)}` : `<p class="sub" style="max-width:none;">${t('word.nothingselected')}</p>`}
+        <div class="row" style="margin-top:12px;">
+          <button class="btn small" onclick="explorerClear()">${t('word.clearselection2')}</button>
+          <button class="btn small" onclick="exportSelectionMidi('map')">⬇ MIDI</button>
+        </div>
       </div>
     </div>
   `;
   const mapHolder = document.getElementById('mapHexHolder');
   mapHolder.innerHTML = '';
-  mapHolder.appendChild(buildHexSVG({ shape:'rect-centered', cols: state.hexExpandLevel===1?42:22, rows: state.hexExpandLevel===1?22:BOARD_ROWS, size: state.hexExpandLevel===1?30:(isMobileViewport()?30:24), autoFit:false, highlightRoot:hl.root, tones:hl.tones, mode:hl.mode, focusRoot:exactFocus?exactFocus.focusRoot:null, focusTones:exactFocus?exactFocus.focusTones:null, fallbackRaws:exactFocus?exactFocus.fallbackRaws:null, echoRaws:exactFocus?new Set(ex.selectedOrder):null, interactive:true, onHexClick:explorerHexClick, octaveHighlightPc: ex.lastClicked!=null ? mod31(ex.lastClicked) : null, allowHScroll:true }));
+  mapHolder.appendChild(buildHexSVG({ shape:'rect-centered', cols: state.hexExpandLevel===1?42:22, rows: state.hexExpandLevel===1?22:BOARD_ROWS, size: state.hexExpandLevel===1?36:(isMobileViewport()?36:30), autoFit:false, highlightRoot:hl.root, tones:hl.tones, mode:hl.mode, focusRoot:exactFocus?exactFocus.focusRoot:null, focusTones:exactFocus?exactFocus.focusTones:null, fallbackRaws:exactFocus?exactFocus.fallbackRaws:null, echoRaws:exactFocus?new Set(ex.selectedOrder):null, interactive:true, onHexClick:explorerHexClick, octaveHighlightPc: ex.lastClicked!=null ? mod31(ex.lastClicked) : null, allowHScroll:true }));
   const captionHolder = document.getElementById('octaveCaptionText');
   if(captionHolder) captionHolder.textContent = ex.lastClicked!=null ? t('octave.caption') : '';
   if(assoc.exact) mountChordCardHex(assoc.exact, 'mapcard');
