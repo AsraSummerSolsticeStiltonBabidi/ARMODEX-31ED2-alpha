@@ -714,6 +714,18 @@
     background:radial-gradient(circle closest-side at 50% 40%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.3) 30%, rgba(255,255,255,.12) 55%, rgba(255,255,255,.03) 80%, rgba(255,255,255,0) 100%);
   }
   .focus-col-title{ font-family:'Chakra Petch',sans-serif; font-weight:700; text-transform:uppercase; font-size:22px; letter-spacing:.03em; color:var(--text); margin-bottom:10px; }
+  /* A "sticker" label for the New Progression / Hex Map screens -- purely a positioning wrapper,
+     zero effect on layout. The title is position:absolute (taken clean out of flow) so it can
+     never push, shrink, or shift anything underneath it, no matter its own size. */
+  .view-sticker-wrap{ position:relative; }
+  .view-sticker-title{
+    /* position:absolute already means this can never push/shift/resize anything around it --
+       growing the font here just makes the sticker itself bigger, painting over whatever's
+       underneath (nothing else in the layout moves, since this was already taken out of flow). */
+    position:absolute; top:0; left:2px; pointer-events:none; z-index:1;
+    font-family:'Chakra Petch',sans-serif; font-weight:700; text-transform:uppercase;
+    font-size:19px; letter-spacing:.04em; color:var(--text); text-shadow:0 2px 6px rgba(0,0,0,.6);
+  }
   /* Includes/part-of side columns are secondary context, not the main focus -- shrink their cards
      to 66% so the hierarchy (this shape vs. what it relates to) reads at a glance. zoom (not
      transform:scale) is used so the layout box actually shrinks along with the visuals, instead
@@ -1189,6 +1201,8 @@
       var cont = document.querySelector('.splash-continue');
       if(sub) sub.textContent = 'Reúne tus armonías, identifica formas y progresiones, encuéntralas en cualquier parte de tu colección, disfruta las conexiones.';
       if(cont) cont.textContent = 'Haz clic para continuar';
+      var pkmn = document.querySelector('.pkmn-text');
+      if(pkmn) pkmn.textContent = '¡Hazte con todos!';
     }
   }catch(e){}
 })();
@@ -2027,18 +2041,18 @@ function startTranslateWellPreview(){
   const ctx = getAudioCtx(); if(!ctx) return;
   const timbre = state.chordsTabTimbre || 'sine';
   const DUR = 1.2, RELEASE = 6, GAP_MS = 1700;
-  const twelveEdoRaw = [0,4,7,11].map(n=> n*(31/12));
-  const edo31Raw = [0,10,18,28];
+  // Only the root and the major third -- nothing else -- so the comparison isolates exactly the
+  // one interval that differs in size between the two tunings (12ED2's major third vs 31ED2's).
+  const twelveEdoRaw = [0,4].map(n=> n*(31/12));
+  const edo31Raw = [0,10];
   const hardStopRinging = ()=>{
     if(translateWellRingingNodes.length){ stopAudioSession({ nodes: translateWellRingingNodes }); translateWellRingingNodes = []; }
   };
   const playVoiced = (baseNotes)=>{
     const t = ctx.currentTime;
     // two bass notes below the (shared) root -- one octave down and two octaves down --
-    // plus the chord's fifth also echoed an octave below its normal position,
-    // plus the same chord two octaves above at lower volume
-    const fifthLow = baseNotes[2] - 31;
-    const withBass = baseNotes.concat([-31, -62, fifthLow]);
+    // plus the same two notes one octave above at lower volume
+    const withBass = baseNotes.concat([-31, -62]);
     const upperOctave = baseNotes.map(n=>n+62);
     const main = scheduleChordAudio(withBass, timbre, t, DUR, 0, false, true, RELEASE);
     const high = scheduleChordAudio(upperOctave, timbre, t, DUR, 0, false, true, RELEASE, false, 0.35);
@@ -4085,7 +4099,7 @@ const I18N = {
   },
   "tun.p1": {
     "en": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> is a <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> tuning system that divides the <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octave<span class=\"jargon-q\">?</span></span> into 31 equidistant notes called steps. You can use it by playing whichever pitches sound the way you want.",
-    "es": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> es un sistema de afinación <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divide la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notas equidistantes llamadas steps. Puedes usarlo tocando las alturas que te suenen como quieras."
+    "es": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> es un sistema de afinación <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divide la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notas equidistantes llamadas steps. Puedes usarlo tocando las notas que te suenen como quieras."
   },
   "tun.p2": {
     "en": "Generally, it is a more accurate approximation to <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">just intonation<span class=\"jargon-q\">?</span></span> than <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, the Western standard tuning system adopted just a few centuries ago. Just intonation intervals are sometimes approximated by tuning systems like these (ED2), in an attempt to reduce the amount of notes needed to compose.",
@@ -4152,8 +4166,8 @@ const I18N = {
     "es": "Cuarta justa"
   },
   "tun.row.sepmaj3": {
-    "en": "Septimal major third",
-    "es": "Tercera mayor séptimal"
+    "en": "Supermajor third",
+    "es": "Tercera supermayor"
   },
   "tun.row.maj3": {
     "en": "Major third",
@@ -4164,8 +4178,8 @@ const I18N = {
     "es": "Tercera menor"
   },
   "tun.row.sepmin3": {
-    "en": "Septimal minor third",
-    "es": "Tercera menor séptimal"
+    "en": "Subminor third",
+    "es": "Tercera submenor"
   },
   "tun.row.sepwt": {
     "en": "Septimal whole tone",
@@ -4506,6 +4520,14 @@ const I18N = {
   "ecosystem.btn": {
     "en": "Your ecosystem",
     "es": "Tu ecosistema"
+  },
+  "builder.viewtitle": {
+    "en": "New progression",
+    "es": "Nueva progresión"
+  },
+  "map.viewtitle": {
+    "en": "Hex map",
+    "es": "Mapa hexagonal"
   },
   "ecosystem.needshape.h2": {
     "en": "No shapes yet",
@@ -7209,6 +7231,7 @@ function renderTuningInfoModal(){
       </div>
       <p class="sub" style="max-width:none;">${t('tun.p1')}</p>
       <p class="sub" style="max-width:none;">${t('tun.p2')}</p>
+      <p class="sub" style="max-width:none; margin-top:10px;">${t('tun.p3')} <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(31)" onmouseleave="stopPrimeIntervalPreview()">2</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(13)" onmouseleave="stopPrimeIntervalPreview()">3</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(10)" onmouseleave="stopPrimeIntervalPreview()">5</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(25)" onmouseleave="stopPrimeIntervalPreview()">7</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(14)" onmouseleave="stopPrimeIntervalPreview()">11</span>, ${t('tun.p3b')}</p>
       <h3 style="margin-top:18px;">${t('tun.table.h3')}</h3>
       <div class="ji-table-frame">
         <table class="ji-table">
@@ -7232,13 +7255,12 @@ function renderTuningInfoModal(){
             <tr class="err-high ji-hoverable" onmouseenter="startTableIntervalPreview(5)" onmouseleave="stopTableIntervalPreview()"><td>${t('tun.row.wt')}</td><td>5</td><td>193.55</td><td>9:8</td><td>203.91</td><td>-10.36</td></tr>
             <tr class="ji-hoverable" onmouseenter="startTableIntervalPreview(3)" onmouseleave="stopTableIntervalPreview()"><td>${t('tun.row.diaton')}</td><td>3</td><td>116.13</td><td>16:15</td><td>111.73</td><td>+4.40</td></tr>
             <tr class="err-high ji-hoverable" onmouseenter="startTableIntervalPreview(2)" onmouseleave="stopTableIntervalPreview()"><td>${t('tun.row.chrom')}</td><td>2</td><td>77.42</td><td>25:24</td><td>70.67</td><td>+6.75</td></tr>
-            <tr class="ji-hoverable" onmouseenter="startTableIntervalPreview(1)" onmouseleave="stopTableIntervalPreview()"><td>${t('tun.row.diesis')}</td><td>1</td><td>38.71</td><td>128:125</td><td>41.06</td><td>-2.35</td></tr>
+            <tr class="ji-hoverable" onmouseenter="startTableIntervalPreview(1)" onmouseleave="stopTableIntervalPreview()"><td>${t('tun.row.diesis')}</td><td>1</td><td>38.71</td><td></td><td></td><td></td></tr>
           </tbody>
         </table>
         <p class="sub" style="max-width:none; margin-top:8px; font-size:11px;">${t('tun.table.source')}</p>
         <p class="sub" style="max-width:none; margin-top:10px;">${t('tun.table.centsexplainer')}</p>
       </div>
-      <p class="sub" style="max-width:none; margin-top:14px;">${t('tun.p3')} <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(31)" onmouseleave="stopPrimeIntervalPreview()">2</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(13)" onmouseleave="stopPrimeIntervalPreview()">3</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(10)" onmouseleave="stopPrimeIntervalPreview()">5</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(25)" onmouseleave="stopPrimeIntervalPreview()">7</span>, <span class="prime-btn" onmouseenter="startPrimeIntervalPreview(14)" onmouseleave="stopPrimeIntervalPreview()">11</span>, ${t('tun.p3b')}</p>
       <p class="sub" style="max-width:none;">${t('tun.p4')}</p>
       ${helpContinueReadingHtml('tuning')}
     </div>
@@ -7454,7 +7476,7 @@ function mountProgMiniMap(p){
     const c = p.chords[0];
     const eff = effectiveIntervals(c.intervals);
     const cfg = chordHexConfigFromQr(c.intervals, c.qrOffsets, 0, new Set(eff));
-    holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:8, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
+    holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:10, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
     return;
   }
   const allTones = new Set();
@@ -7467,10 +7489,16 @@ function mountProgMiniMap(p){
   // visually) land notes somewhere else entirely.
   const exactPoints = progressionExactPoints(p);
   const exact = exactBigMapConfig(exactPoints, 0, tonesArr);
+  // The "exact" branch (real recorded click positions) never set focusPoints -- so buildHexSVG
+  // fell through to its nearest-occurrence-to-center search instead of using the guaranteed-
+  // correct recorded (q,r) for every note. That heuristic search can legitimately land on the
+  // wrong cell (or miss one) when the grid is large, which is why some notes -- like key 40 in
+  // the example -- were silently absent from the minimap. Passing focusPoints directly uses the
+  // real positions with no guessing involved, same as the non-exact fallback below already does.
   const cfg = exact
-    ? { shape:'rect-centered', cols:exact.cols, rows:exact.rows, root:0, tones:new Set(tonesArr), mode:'raw', focusRoot:exact.focusRoot, focusTones:exact.focusTones, echoPcs:null }
+    ? { shape:'rect-centered', cols:exact.cols, rows:exact.rows, root:0, tones:new Set(tonesArr), mode:'raw', focusPoints:[exact.focusRoot, ...exact.focusTones], focusRoot:exact.focusRoot, focusTones:exact.focusTones, echoPcs:null }
     : chordHexConfig([0, ...tonesArr]);
-  holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:8, highlightRoot:cfg.root, tones:cfg.tones, mode:'raw', showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
+  holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:10, highlightRoot:cfg.root, tones:cfg.tones, mode:'raw', showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
 }
 function preserveFocusRerender(renderFn){
   const active = document.activeElement;
@@ -7842,6 +7870,8 @@ function renderBuilder(content){
   // screen that do nothing useful yet, right when simplicity matters most.
   const hasRegisteredShapes = computeSpecies(state.progressions).list.length>0;
   content.innerHTML = `
+    <div class="view-sticker-wrap">
+      <div class="view-sticker-title">${t('builder.viewtitle')}</div>
     <div class="builder-grid">
       <div style="${state.hexExpandLevel===1 ? 'grid-column:1 / -1;' : ''}">
         <div class="hex-frame hex-frame-transparent${builderPlayingIdx===b.chords.length?' now-playing-map':''}">
@@ -7889,7 +7919,7 @@ function renderBuilder(content){
         </div>
       </div>
       <div class="builder-right" id="builderRightCol" style="display:flex; flex-direction:column; gap:8px;">
-        <div class="row builder-top-row" style="align-items:flex-start; gap:16px;">
+        <div class="row builder-top-row" style="${state.hexExpandLevel===1?'display:none;':''} align-items:flex-start; gap:16px;">
           <div class="panel builder-search-panel" id="builderSearchPanel" style="flex:0 1 auto; width:fit-content; max-width:100%; min-width:0; margin-left:auto; display:flex; flex-direction:column; visibility:${hasRegisteredShapes?'visible':'hidden'}; background:transparent; border:1.5px solid var(--border-strong); border-radius:var(--radius); padding:12px; overflow:visible; position:relative;">
             ${hasRegisteredShapes ? `
             <div class="field" id="builderSearchField" style="margin-top:0; min-height:0; min-width:0; flex:0 1 auto; width:fit-content; display:flex; flex-direction:row; flex-wrap:nowrap; gap:12px; align-items:flex-start;">
@@ -7997,6 +8027,7 @@ function renderBuilder(content){
         </div>
         ` : ''}
       </div>
+    </div>
     </div>
   `;
   const holder = document.getElementById('builderHexHolder');
@@ -8434,29 +8465,31 @@ function renderMap(content){
   const exactFocus = (state.mapSelectMode && !state.octaveEquivalence) ? exactFocusFromSelection(ex.selectedOrder, ex.selectedOrderQr) : null;
   const assoc = (state.mapSelectMode && ex.selectedOrder.length>0) ? findChordAssociations(ex.selectedOrder) : { exact:null, partial:[] };
   content.innerHTML = `
-    <div class="row" id="mapViewTop" style="margin-bottom:12px;">
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="btn accent-blue play-icon-btn play-icon-btn-big${mapShapePlayActive?' is-playing':''}" style="font-size:20px; padding:10px 16px; white-space:nowrap;" data-hotkey="W" onclick="toggleMapShapePlay()"><span class="play-circle-icon play-circle-icon-big">${mapShapePlayActive ? '⏹' : '▶'}</span>${t('word.shape')}</button>
-        <span class="help-dropdown-wrap">
-          <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
-          ${state.showHearMenu ? `
-            <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
-              <span class="control-group" title="Listen on hover / play">
-                <label class="field-label" style="margin:0;">${t('interp.timbre')}</label>
-                <button class="btn mini ${state.mapTimbre==='sine'?'primary':''}" onclick="setMapTimbre('sine')">${t('word.sine')}</button>
-                <button class="btn mini ${state.mapTimbre==='guitar'?'primary':''}" onclick="setMapTimbre('guitar')">${t('word.guitar')}</button>
-              </span>
-              <span class="row" style="gap:6px;">
-                <button class="btn mini ${state.strumMode?'primary':''}" onclick="toggleStrum()" title="${t('interp.strum.title2')}">${t('interp.strum')}</button>
-                <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
-              </span>
-            </div>
-          ` : ''}
-        </span>
-      </div>
-    </div>
+    <div class="view-sticker-wrap">
+      <div class="view-sticker-title">${t('map.viewtitle')}</div>
     <div class="builder-grid">
       <div style="${state.hexExpandLevel===1 ? 'grid-column:1 / -1;' : ''}">
+        <div class="row" id="mapViewTop" style="justify-content:center; margin-bottom:4px;">
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+            <button class="btn accent-blue play-icon-btn play-icon-btn-big${mapShapePlayActive?' is-playing':''}" style="font-size:20px; padding:10px 16px; white-space:nowrap;" data-hotkey="W" onclick="toggleMapShapePlay()"><span class="play-circle-icon play-circle-icon-big">${mapShapePlayActive ? '⏹' : '▶'}</span>${t('word.shape')}</button>
+            <span class="help-dropdown-wrap">
+              <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
+              ${state.showHearMenu ? `
+                <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
+                  <span class="control-group" title="Listen on hover / play">
+                    <label class="field-label" style="margin:0;">${t('interp.timbre')}</label>
+                    <button class="btn mini ${state.mapTimbre==='sine'?'primary':''}" onclick="setMapTimbre('sine')">${t('word.sine')}</button>
+                    <button class="btn mini ${state.mapTimbre==='guitar'?'primary':''}" onclick="setMapTimbre('guitar')">${t('word.guitar')}</button>
+                  </span>
+                  <span class="row" style="gap:6px;">
+                    <button class="btn mini ${state.strumMode?'primary':''}" onclick="toggleStrum()" title="${t('interp.strum.title2')}">${t('interp.strum')}</button>
+                    <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
+                  </span>
+                </div>
+              ` : ''}
+            </span>
+          </div>
+        </div>
         <div class="hex-frame hex-frame-transparent" style="${state.hexExpandLevel===1 ? 'width:96vw; max-width:96vw; margin-left:calc(-50vw + 50%); margin-right:calc(-50vw + 50%);' : ''}">
           <span class="zoom-hint" id="mapZoomHint" style="cursor:pointer; top:1px; right:2px;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
           <span id="octaveCaptionText" class="octave-caption"></span>
@@ -8474,6 +8507,7 @@ function renderMap(content){
         <div class="selection-strip" id="mapSelStrip" style="margin-bottom:10px;"></div>
         ${!state.mapSelectMode ? `` : ex.selectedOrder.length>0 ? `<p class="sub" style="max-width:none; display:inline-block; background:var(--panel-alt); border:1px solid var(--border); border-radius:6px; padding:6px 10px;">Root ${mod31(ex.selectedOrder[0])} · ${formatIvs(effectiveIntervals(canonicalIntervals(ex.selectedOrder[0], ex.selectedOrder)))}</p>${renderRecognitionHtml(assoc, {sideBySideWherePartOf:true})}` : `<p class="sub" style="max-width:none;">${t('word.nothingselected')}</p>`}
       </div>
+    </div>
     </div>
   `;
   const mapHolder = document.getElementById('mapHexHolder');
@@ -9003,7 +9037,13 @@ function buildKaleidoscopeSVG(){
     const len = R * (0.4 + 0.6/Math.sqrt(n)); // harmonic-ish falloff of reach
     const hue = Math.round((n-1) * (360/N)); // every wave its own color, a full rainbow around the circle
     const wiggleAmp = R*0.05/Math.sqrt(n);
-    const steps = Math.max(20, n*3);
+    // A true sine wave needs many samples per oscillation to render as a smooth curve rather than
+    // sharp "pressure spike" zig-zags -- the previous density (only 3 points per cycle at high n)
+    // was too coarse to actually look like a sine wave once n got large. Sampling a fixed ~24
+    // points per oscillation, regardless of n, keeps every harmonic looking like a real sine wave
+    // while still tracing exactly n full oscillations along the ray (the true n:1 harmonic ratio).
+    const POINTS_PER_CYCLE = 24;
+    const steps = Math.max(48, n*POINTS_PER_CYCLE);
     let d = '';
     for(let i=0;i<=steps;i++){
       const t = i/steps;
