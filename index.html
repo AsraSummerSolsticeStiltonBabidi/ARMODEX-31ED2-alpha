@@ -440,7 +440,7 @@
   .first-iv{ font-weight:800; color:var(--text); text-decoration:underline; text-underline-offset:2px; font-size:1.08em; }
   .chip-hex-mini{width:42px; height:42px; margin-top:4px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
   .prog-card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
-  .prog-mini-map{width:34px; flex-shrink:0;}
+  .prog-mini-map{width:64px; flex-shrink:0;}
   .prog-mini-map svg{width:100%; height:auto; display:block;}
   .chip-hex-mini svg{max-width:100%; max-height:100%; width:auto; height:auto; display:block;}
   .chord-flow{display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; align-items:start;}
@@ -598,7 +598,7 @@
   .built-chord .ctrls button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:3px 5px;}
   .built-chord .ctrls button:hover{color:var(--text);}
 
-  .species-grid{ column-gap:14px; column-fill:balance; column-width:190px; }
+  .species-grid{ column-gap:14px; column-fill:balance; column-width:224px; }
   .chord-focus-layout{ display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
   .focus-col{ flex:1 1 230px; min-width:220px; display:flex; flex-direction:column; gap:14px; max-height:calc(100vh - 90px); overflow-y:auto; overflow-x:hidden; }
   /* Includes / Part-of side columns scroll independently when many shapes stack up, instead of
@@ -696,7 +696,7 @@
   .focus-col-main{ flex:1 1 380px; max-width:460px; }
   .focus-main-wrap{ position:relative; flex:0 1 380px; max-width:460px; }
   .focus-main-wrap .focus-col-main{ max-width:100%; }
-  .focus-col-main .hex-frame{ max-width:60%; margin-left:auto !important; margin-right:auto !important; display:flex; justify-content:center; }
+  .focus-col-main .hex-frame{ max-width:90%; margin-left:auto !important; margin-right:auto !important; display:flex; justify-content:center; }
   /* Marks which shape you actually clicked: a noticeably lighter panel behind the focused card,
      so it stands out clearly from the surrounding page and the dimmer includes/part-of columns. */
   /* Was padding:110px; margin:-110px on the real box to bleed the glow outward -- but padding on a
@@ -857,13 +857,18 @@
   .hover-nick{text-align:center; margin-top:8px; font-size:12px;}
   .hover-num{font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--accent); font-weight:700;}
   .nav-history-fab{
-    position:fixed; right:24px; bottom:24px; z-index:2150; display:flex; gap:16px;
+    position:fixed; right:24px; bottom:24px; z-index:2150; display:flex; flex-direction:column; align-items:center; gap:10px;
   }
+  .nav-history-fab-row{ display:flex; gap:16px; }
   .nav-history-fab button{
     width:113px; height:113px; border-radius:50%; border:1.5px solid var(--border-strong);
     background:#f4efe2; font-size:43px; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.4); transition:all .15s ease;
   }
+  /* The circle itself stays the same size -- just the arrow glyph inside back/forward grows,
+     since the thin ← → strokes read much smaller than the old solid ◀▶ triangles at the same
+     font-size. */
+  #navBackBtn, #navForwardBtn{ font-size:64px; }
   /* Same treatment as the ARMODEX title: animated hue-rotating fill with a thick black stroke,
      instead of a flat solid triangle. */
   .nav-history-fab button{
@@ -880,6 +885,9 @@
   .help-menu-emoji{ margin-right:6px; font-size:18px; vertical-align:middle; display:inline-block; }
   .nav-history-fab button:hover:not(:disabled){border-color:var(--accent2); color:var(--accent2);}
   .nav-history-fab button:disabled{opacity:.3; cursor:not-allowed;}
+  /* Half the size of the back/forward buttons, sitting directly above them -- the two arrows
+     keep their original side-by-side position, unmoved. */
+  .nav-history-fab .nav-home-btn{ width:67px; height:67px; font-size:26px; }
   .help-hint-layer{
     position:fixed; left:0; top:0; z-index:5500; pointer-events:none;
     display:flex; flex-direction:column; align-items:center; gap:4px;
@@ -1188,8 +1196,11 @@
 <div id="builtChordMinimapTooltip" class="built-chord-minimap-tooltip"></div>
 <div id="centsTooltip" class="cents-tooltip"></div>
 <div class="nav-history-fab">
-  <button id="navBackBtn" data-hotkey="Z" onclick="navBack()" title="Back to where you were" disabled>◀</button>
-  <button id="navForwardBtn" data-hotkey="X" onclick="navForward()" title="Forward" disabled>▶</button>
+  <button id="navHomeBtn" class="nav-home-btn" data-hotkey="A" onclick="switchTab('catalog')" title="Progressions overview">🏠</button>
+  <div class="nav-history-fab-row">
+    <button id="navBackBtn" data-hotkey="Z" onclick="navBack()" title="Back to where you were" disabled>←</button>
+    <button id="navForwardBtn" data-hotkey="X" onclick="navForward()" title="Forward" disabled>→</button>
+  </div>
 </div>
 
 <script>
@@ -1517,6 +1528,19 @@ function buildNoteHexBackground(){
   return svg;
 }
 let currentlyLitPcs = new Set();
+// Every scheduled call to pulseNoteColor() below is a plain setTimeout keyed to when that note
+// was due to start -- nothing was cancelling those pending timeouts when playback was cut short
+// (e.g. mouse leaving a hovered progression card), so notes already "in the pipeline" kept
+// lighting up the background hex grid on schedule even after the audio itself had been stopped.
+// notePulseTimers tracks every such pending timeout so stopHoverPlay/stopAllAudioActivity can
+// cancel them outright, and clearNotePulseTimers also force-fades whatever's still lit right now.
+let notePulseTimers = [];
+function clearNotePulseTimers(){
+  notePulseTimers.forEach(id=>clearTimeout(id));
+  notePulseTimers = [];
+  currentlyLitPcs.forEach(pc=>{ (noteHexPcGroups[pc]||[]).forEach(poly=>{ poly.style.opacity = '0'; }); });
+  currentlyLitPcs = new Set();
+}
 // Fast notes (small durSec) get a LONGER opacity transition -- more blending, less on/off
 // flicker -- while slower notes keep a snappy, closely-synced fade. Safe mode multiplies this
 // further on top, same as before.
@@ -1607,7 +1631,7 @@ function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassInt
   }
   const delayMs = Math.max(0, (startTime - ctx.currentTime) * 1000);
   const inBuilderNow = state.tab==='catalog' && state.view==='builder';
-  if(!inBuilderNow) setTimeout(()=> pulseNoteColor(notes, dur), delayMs);
+  if(!inBuilderNow) notePulseTimers.push(setTimeout(()=> pulseNoteColor(notes, dur), delayMs));
   const STRUM_GAP = 0.055; // seconds between successive notes when strumming, low to high
   const ordered = state.strumMode ? notes.slice().sort((a,b)=>a-b) : notes;
   const created = [];
@@ -2128,6 +2152,7 @@ function stopHoverPlay(){
   if(hoverPlayInterval){ clearInterval(hoverPlayInterval); hoverPlayInterval=null; }
   stopChordHoverAudio();
   resetWaveSpeed();
+  clearNotePulseTimers();
   // Progression-card hover-play (playProgressionAudio/playChordsAudio) tracks its own nodes in
   // activeProgressionSessions, separate from the chord-hover session stopChordHoverAudio()
   // handles above -- this loop was never actually stopping it on mouseleave, only preventing the
@@ -5372,7 +5397,7 @@ async function toggleOctaveEquivalence(){
 }
 
 /* ============================ ACTIONS ============================ */
-function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopMapShapePlayWatchdog(); stopBuilderProgressionPlay(); builderShapePlayActive=false; stopBuilderShapePlayWatchdog(); stopPrimeIntervalPreview(); }
+function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopMapShapePlayWatchdog(); stopBuilderProgressionPlay(); builderShapePlayActive=false; stopBuilderShapePlayWatchdog(); stopPrimeIntervalPreview(); clearNotePulseTimers(); }
 function switchTab(t){ stopAllAudioActivity(); const leavingCatalog = state.tab==='catalog' && t!=='catalog'; const leavingBuilder = state.tab==='catalog' && state.view==='builder' && (t!=='catalog' || state.view!=='builder'); state.tab=t; if(t==='catalog') state.view='list'; if(t==='species') state.expandedChordSig=null; state.selectedChordKey=null; if(leavingCatalog) state.showTutorialSaveMessage=false; if(leavingCatalog) state.showBuilderGearMenu=false; state.showSettingsMenu=false; state.showHelpMenu=false; state.showLangMenu=false; closeSettingsSubWindows(); render(); if(t==='map') scrollMapIntoView(); }
 function newProgression(){
   stopAllAudioActivity();
@@ -5383,6 +5408,13 @@ function newProgression(){
   builderUserHasTapped = false;
   resetBuilderUndoHistory();
   state.hexExpandLevel = 0; // fresh entry into the builder always starts un-expanded
+  // If the whole collection is currently empty (e.g. just reset, or a brand new install), treat
+  // this like the very first time again and re-show the builder tutorial, even if it had already
+  // been dismissed once before in a previous collection.
+  if(state.progressions.length===0 && state.seenBuilderTutorial){
+    state.seenBuilderTutorial = false;
+    storageSet('seenBuilderTutorial', JSON.stringify(false)).catch(()=>{});
+  }
   state.tab='catalog'; state.view='builder'; render();
   scrollBuilderIntoView();
 }
@@ -7492,7 +7524,7 @@ function mountProgMiniMap(p){
     const c = p.chords[0];
     const eff = effectiveIntervals(c.intervals);
     const cfg = chordHexConfigFromQr(c.intervals, c.qrOffsets, 0, new Set(eff));
-    holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:10, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
+    holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:19, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
     return;
   }
   const allTones = new Set();
@@ -7514,7 +7546,7 @@ function mountProgMiniMap(p){
   const cfg = exact
     ? { shape:'rect-centered', cols:exact.cols, rows:exact.rows, root:0, tones:new Set(tonesArr), mode:'raw', focusPoints:[exact.focusRoot, ...exact.focusTones], focusRoot:exact.focusRoot, focusTones:exact.focusTones, echoPcs:null }
     : chordHexConfig([0, ...tonesArr]);
-  holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:10, highlightRoot:cfg.root, tones:cfg.tones, mode:'raw', showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
+  holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:19, highlightRoot:cfg.root, tones:cfg.tones, mode:'raw', showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
 }
 function preserveFocusRerender(renderFn){
   const active = document.activeElement;
@@ -7965,15 +7997,13 @@ function renderBuilder(content){
         <div class="panel builder-shapes-panel" id="builderProgressionTop" style="width:100%;">
           ${b.error ? `<p class="sub" style="max-width:none; color:var(--danger); margin-top:0;">${escapeHtml(b.error)}</p>` : ''}
           ${b.chords.length===0 ? '' : `
-          <div class="row" style="justify-content:flex-start; align-items:flex-start; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-            <span style="display:flex; align-items:center; gap:8px;">
+          <div class="row" style="justify-content:space-between; align-items:flex-end; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <span style="display:flex; align-items:flex-end; gap:8px;">
               ${(()=>{
                   const progPlayable = (b.chords.length>=2 || (b.chords.length>=1 && b.selectedOrder.length>=1));
                   return `<button class="btn primary play-icon-btn play-icon-btn-big prog-play-btn${builderProgLoopActive?' is-playing':''}" style="font-size:22px; padding:14px 18px; width:fit-content; white-space:nowrap; ${progPlayable?'':'opacity:.45; cursor:default;'}" ${progPlayable?'data-hotkey="Q"':'disabled'} onclick="toggleBuilderProgressionPlay()"><span class="play-circle-icon play-circle-icon-big">${builderProgLoopActive ? '⏹' : '▶'}</span>${t('builder.progression.label')}</button>`;
                 })()}
-              <span class="sub" style="font-weight:400; margin:0; font-size:13px;">(${b.chords.length})</span>
-            </span>
-            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px;">
+              <span class="sub" style="font-weight:400; margin:0 4px 4px 0; font-size:13px; align-self:flex-end;">(${b.chords.length})</span>
               <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
                 <button class="btn mini ${state.showHearMenu?'primary':''}" style="white-space:nowrap;" onclick="toggleHearMenu()">${t('interp.btn')}</button>
                 ${state.showHearMenu ? `
@@ -8000,8 +8030,8 @@ function renderBuilder(content){
                   </div>
                 ` : ''}
               </span>
-              <button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>
-            </div>
+            </span>
+            <button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>
           </div>
           <div class="chords-built">
             ${(()=>{
@@ -8241,7 +8271,8 @@ function renderChordCardHtml(sp, opts={}){
     </div>
   `;
 }
-function mountChordCardHex(sp, holderIdPrefix){
+function mountChordCardHex(sp, holderIdPrefix, opts){
+  opts = opts || {};
   const holder = document.getElementById((holderIdPrefix||'sp')+'-'+sp.num);
   if(!holder) return;
   holder.innerHTML = '';
@@ -8259,6 +8290,14 @@ function mountChordCardHex(sp, holderIdPrefix){
     const baseSize = 10, minSize = 6; // minSize = 60% of baseSize, the requested floor
     const noteCount = (sp.intervals||[]).length;
     const scale = Math.max(minSize/baseSize, Math.min(1, 1 - Math.max(0, noteCount-4)*0.08));
+    cellSize = Math.round(baseSize * scale);
+  } else if(opts.isFocusMain){
+    // The single-shape detail view's own main card (center column) -- bigger than the normal
+    // 15px baseline since this card has the most room and is the actual point of focus, same
+    // auto-shrink-with-note-count logic as above just starting from a larger base.
+    const baseSize = 34, minSize = 20;
+    const noteCount = (sp.intervals||[]).length;
+    const scale = Math.max(minSize/baseSize, Math.min(1, 1 - Math.max(0, noteCount-4)*0.06));
     cellSize = Math.round(baseSize * scale);
   }
   holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:cellSize, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, dim:true, vividMarks:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showCents:true }));
@@ -8339,7 +8378,8 @@ function renderSpecies(content){
         </div>
       </div>
     `;
-    [focusSp, ...includes, ...partOf].forEach(sp=>mountChordCardHex(sp, 'sp'));
+    mountChordCardHex(focusSp, 'sp', {isFocusMain:true});
+    [...includes, ...partOf].forEach(sp=>mountChordCardHex(sp, 'sp'));
     document.querySelectorAll('.focus-col-scroll-wrap .focus-col, .focus-main-wrap .focus-col').forEach(updateFocusColArrow);
     return;
   }
@@ -8485,8 +8525,8 @@ function renderMap(content){
       <div class="view-sticker-title">${t('map.viewtitle')}</div>
     <div class="builder-grid">
       <div style="${state.hexExpandLevel===1 ? 'grid-column:1 / -1;' : ''}">
-        <div class="row" id="mapViewTop" style="justify-content:center; margin-bottom:4px;">
-          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+        <div class="row" id="mapViewTop" style="justify-content:center; margin-bottom:0;">
+          <div style="display:flex; flex-direction:row; gap:10px; align-items:flex-end;">
             <button class="btn accent-blue play-icon-btn play-icon-btn-big${mapShapePlayActive?' is-playing':''}" style="font-size:20px; padding:10px 16px; white-space:nowrap;" data-hotkey="W" onclick="toggleMapShapePlay()"><span class="play-circle-icon play-circle-icon-big">${mapShapePlayActive ? '⏹' : '▶'}</span>${t('word.shape')}</button>
             <span class="help-dropdown-wrap">
               <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
@@ -8506,7 +8546,7 @@ function renderMap(content){
             </span>
           </div>
         </div>
-        <div class="hex-frame hex-frame-transparent" style="margin-top:-14px; ${state.hexExpandLevel===1 ? 'width:96vw; max-width:96vw; margin-left:calc(-50vw + 50%); margin-right:calc(-50vw + 50%);' : ''}">
+        <div class="hex-frame hex-frame-transparent" style="margin-top:-40px; ${state.hexExpandLevel===1 ? 'width:96vw; max-width:96vw; margin-left:calc(-50vw + 50%); margin-right:calc(-50vw + 50%);' : ''}">
           <span class="zoom-hint" id="mapZoomHint" style="cursor:pointer; top:1px; right:2px;" onclick="toggleHexExpanded()">${hexExpandLabel()}</span>
           <span id="octaveCaptionText" class="octave-caption"></span>
           <div class="hex-viewport explorer-map-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="mapHexHolder" style="margin-top:0;"></div>
