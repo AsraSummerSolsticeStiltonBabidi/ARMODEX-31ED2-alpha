@@ -89,6 +89,11 @@
      into a grayish blur. The mini title doesn't need it -- it already sits directly on the white
      card, unlike the original hero title which floated over a busy background. */
   .hero-title-mini, .hero-title-mini .title-sub{ text-shadow:none; }
+  /* Same issue as the mini header title above -- the body's global text-shadow (meant to keep
+     text legible over the busy background gradient) also landed on the Settings/Help/Language
+     dropdown menus and the MIDI panel, both of which sit on solid opaque panel backgrounds and
+     don't need it; there it just read as an unwanted gray blur/glow around every label. */
+  .help-dropdown-menu, .help-dropdown-menu *, .panel, .panel .field-label, .panel .sub, .panel p, .panel label, .panel h2, .panel h3, .panel span:not(.step-num):not(.chord-nick){ text-shadow:none; }
   .splash-screen{
     position:fixed; inset:0; z-index:99999; background:#f4efe2; color:#14181f;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
@@ -137,6 +142,11 @@
     position:fixed; inset:0; z-index:-1;
     animation:bgColorCycle 7s linear infinite;
   }
+  /* These two full-viewport background layers animate forever regardless of what's on screen --
+     paused while any intro/splash overlay is up, since that's exactly when every frame matters
+     most and they'd otherwise be competing for budget with the intro's own animations for no
+     visible benefit (they're fully covered by the opaque splash/transition screens anyway). */
+  body.intro-playing .bg-cycle, body.intro-playing .harmonic-waves-holder{ animation-play-state:paused; }
   @keyframes bgColorCycle{
     0%{background:hsl(0 42% 7%);} 16.66%{background:hsl(60 42% 7%);} 33.33%{background:hsl(120 42% 7%);}
     50%{background:hsl(180 42% 7%);} 66.66%{background:hsl(240 42% 7%);} 83.33%{background:hsl(300 42% 7%);}
@@ -182,6 +192,9 @@
   @media (prefers-reduced-motion: reduce){ .cursor-reticle{animation:none;} }
   @media (prefers-reduced-motion: reduce){ .harmonic-waves-holder, .harmonic-waves-holder *{animation:none !important;} }
   .wrap{max-width:1120px;margin:0 auto; width:100%; box-sizing:border-box;}
+  /* Removed the cap entirely for this view -- Includes/Part-of only get real multi-column
+     room once this uses the full viewport width, not just a larger-but-still-fixed number. */
+  .wrap.wrap-wide{ max-width:none; }
   @media (min-width:1000px){
     .wrap{ margin-left:0; margin-right:auto; max-width:none; width:calc(100% - 8px); }
   }
@@ -216,6 +229,7 @@
   }
   @keyframes ecoGradient{ 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
   .btn.ecosystem-launch-btn:hover{
+    background:#0d0f11;
     filter:brightness(1.25) saturate(1.5);
     border-color:#fff3da;
     transform:scale(1.12);
@@ -229,19 +243,24 @@
      can't push neighbors) running all the time, not just on hover. */
   .ecosystem-text-pulse{
     display:inline-block;
-    font-weight:800;
+    font-weight:900;
     background-image:linear-gradient(120deg,#ff2fb0,#ff9d2f,#f4ff2f,#2fff8f,#2fd2ff,#7a2fff,#ff2fb0);
     background-size:400% 400%;
     -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
-    -webkit-text-stroke:.6px #0d0f11; paint-order:stroke fill;
+    -webkit-text-stroke:1px #0d0f11; paint-order:stroke fill;
     animation:ecoGradient 3s ease infinite, ecoBob 1.8s ease-in-out infinite;
   }
   @keyframes ecoBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
   .btn.ecosystem-launch-btn:hover .ecosystem-text-pulse{
+    -webkit-text-stroke-color:#fff;
     animation:ecoGradient 0.8s ease infinite, ecoBob 0.9s ease-in-out infinite;
   }
   @media (prefers-reduced-motion: reduce){ .ecosystem-text-pulse{animation:none;} }
-  .btn.small.ecosystem-launch-btn{ font-size:16px; padding:12px 15px; }
+  /* Widened padding so the larger text actually has room -- the earlier transform:scale trick
+     kept the button's box the same size as before but let the scaled text visually spill past
+     its edges, which looked broken. Real font-size + matching padding instead. */
+  .btn.small.ecosystem-launch-btn{ font-size:16px; padding:12px 24px; }
+  .btn.small.ecosystem-launch-btn .ecosystem-text-pulse{ font-size:22px; }
   @media (max-width:560px){ .hero-plate{flex-wrap:wrap; height:auto;} .hero-logo{margin:0 auto;} }
   /* flex-wrap:wrap on a width:fit-content flex box is a trap: the browser still computes the
      box's fit-content/max-content size as if all children were laid out on a single line (wrap
@@ -280,8 +299,8 @@
      not `.hero-btn-stack .btn` generally -- that broader selector was also repainting every
      button INSIDE the opened dropdown menus (which sit on a dark panel background) with this
      light-card styling, making their text unreadable against that dark background. */
-  .hero-btn-stack > .help-dropdown-wrap > .btn{ background:transparent; border-color:#3d434b; color:#14181f; white-space:nowrap; flex:1; padding:6px 16px; font-size:13px; text-align:left; display:flex; align-items:center; justify-content:flex-start; }
-  .hero-btn-stack > .help-dropdown-wrap > .btn.primary{ background:#14181f; color:#f4efe2; }
+  .hero-btn-stack > .help-dropdown-wrap > .btn{ background:transparent; border-color:#3d434b; color:#14181f; white-space:nowrap; flex:1 0 max-content; min-width:max-content; padding:6px 16px; font-size:13px; text-align:left; display:flex; align-items:center; justify-content:flex-start; box-shadow:none !important; }
+  .hero-btn-stack > .help-dropdown-wrap > .btn.primary{ background:#14181f; color:#f4efe2; box-shadow:none; }
   /* Only the emoji glyph gets an outer shadow (not the whole button label) so it reads clearly
      against the white card without darkening the plain black text next to it. */
   /* Hard black outline around the emoji glyph (not a soft shadow) via layered text-shadow
@@ -347,6 +366,7 @@
   nav.tabs button{ font-family:'Inter',sans-serif; font-weight:700; font-size:19px; background:var(--panel); color:var(--muted); border:1.5px solid var(--border); padding:15px 30px; border-radius:999px; cursor:pointer; transition:all .15s ease; }
   nav.tabs button:hover{color:var(--text); border-color:var(--border-strong);}
   nav.tabs button.active{background:#f4efe2; color:#14181f; border-color:#f4efe2; box-shadow:0 4px 14px rgba(244,239,226,.25);}
+
   /* Shrink the three tab buttons a bit on narrow screens so they keep to a single row instead of
      wrapping onto two lines. */
   @media (max-width:480px){
@@ -415,7 +435,7 @@
   .chord-chip .ivs{font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted);}
   .chord-chip .lbl{font-size:10px; color:var(--text); font-style:italic; opacity:.85;}
   .chord-chip .num{font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; color:#f4efe2;}
-  .chord-nick{ font-weight:800; color:#5b9dea; font-size:1.15em; letter-spacing:.01em; }
+  .chord-nick{ font-weight:800; color:#5b9dea; font-size:1.15em; letter-spacing:.01em; background:#0a0b0d; padding:2px 7px; border-radius:5px; display:inline-block; }
   .identicroot-num{ font-weight:800; color:#e2903a; }
   .first-iv{ font-weight:800; color:var(--text); text-decoration:underline; text-underline-offset:2px; font-size:1.08em; }
   .chip-hex-mini{width:42px; height:42px; margin-top:4px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
@@ -579,13 +599,66 @@
   .built-chord .ctrls button:hover{color:var(--text);}
 
   .species-grid{ column-gap:14px; column-fill:balance; column-width:190px; }
-  .chord-focus-layout{ display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; }
-  .focus-col{ flex:1 1 230px; min-width:220px; display:flex; flex-direction:column; gap:14px; }
+  .chord-focus-layout{ display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  .focus-col{ flex:1 1 230px; min-width:220px; display:flex; flex-direction:column; gap:14px; max-height:calc(100vh - 90px); overflow-y:auto; overflow-x:hidden; }
   /* Includes / Part-of side columns scroll independently when many shapes stack up, instead of
      growing the whole layout taller and pushing the focused (main) shape and the OTHER side
      column down out of view. */
-  .focus-col:not(.focus-col-main){ max-height:80vh; overflow-y:auto; padding-right:4px; }
-  .focus-col-scroll-wrap{ position:relative; flex:1 1 230px; min-width:220px; }
+  .focus-col:not(.focus-col-main){ max-height:92vh; overflow-y:auto; padding-right:4px; }
+  /* Was a hard-fixed flex:0 0 260px -- always exactly one narrow column no matter how wide the
+     screen was. Let this side grow to use whatever space is actually available, and lay its own
+     cards out in a real multi-column grid (below) instead of a single vertical stack. */
+  .focus-col-scroll-wrap{ position:relative; flex:1 1 260px; width:auto; min-width:340px; max-width:1800px; }
+  /* Defensive: nothing inside an Includes/Part-of mini-card should ever be able to force the
+     card (or the fixed-width column it sits in) wider than intended -- clip at the card boundary
+     and let long text wrap instead of pushing out to the right, and keep each card's own minimap
+     centered within it rather than left-aligned with extra space bleeding off to the right. */
+  /* Clip at the fixed-width column boundary itself, regardless of WHAT inside a mini-card is
+     trying to render wider (a card's own internal sizing logic, an SVG minimap, a long nickname,
+     whatever) -- this guarantees nothing in Includes/Part-of can ever visually bleed past the
+     260px column to the right, without needing to fight each possible inner cause individually. */
+  /* overflow-x:hidden here (and on .focus-col below) was silently CLIPPING whole cards, not just
+     containing them: CSS multi-column layout never grows taller than its box -- once content is
+     taller than max-height, it spills into a NEW COLUMN to the right instead. With overflow-x
+     hidden, that 2nd/3rd column (and every card in it) was invisible, which is why "part of" /
+     "includes" shapes could vanish entirely for a shape with more of them than fit in one column's
+     height. Multiple columns are now the intended, visible layout -- nothing to clip. */
+  .focus-col-scroll-wrap{ overflow-x:visible; }
+  /* auto-fill/minmax sizing was too fragile -- depends on the exact resolved pixel width of a
+     flex item down to the pixel, which varies with scrollbar gutters, box-sizing rounding, etc.,
+     and in practice kept collapsing to a single column even with room to spare. Force a real
+     fixed column count instead, so multiple columns are guaranteed whenever there's more than
+     one card, regardless of those edge cases. */
+  /* Fixed 2-column was a safe fallback but capped things even when there was clearly room for
+     more, and each card ended up narrower/squashed than a normal card should be. auto-fill with
+     a real card-width minimum (roughly double the old value) lets the grid put as many full-size
+     columns side by side as actually fit this now-much-wider container (see .wrap-wide and the
+     bumped scroll-wrap max-width below), instead of guessing a fixed count. */
+  /* Both the fixed-column grid and the JS-measured grid ended up compacting the cards smaller
+     than the "good" size they had before, and still capped at ~2 columns. Reuse the exact same
+     technique that already works well for the Progressions/Shapes tab grids (.prog-grid /
+     .species-grid): native CSS multi-column with a real card-width minimum. Cards render at their
+     natural size, and the number of columns is purely a function of how much width this area
+     actually has -- no guessing, no JS measurement needed. */
+  /* CSS multi-column (the previous approach here) and vertical-only scrolling are fundamentally
+     at odds: columns NEVER grow taller than their box -- once content exceeds the height, it
+     spills into a new column to the RIGHT, not a new row below. That's what caused the ping-pong:
+     overflow-x:hidden to contain that horizontal spill also hid whole cards that landed in the
+     spillover column, and overflow-x:visible then let sizing look inconsistent/compacted as the
+     browser tried to balance columns against the tall max-height. Grid doesn't have this problem
+     at all -- extra cards simply add another ROW further down, which is exactly what
+     overflow-y:auto on this element already expects. Column COUNT is still purely a function of
+     real available width (auto-fill/minmax), same end result as the columns approach, minus the
+     row/column direction mismatch that was actually causing both bugs. */
+  /* Multi-column here kept fighting itself (see history above), so simplify: a single centered
+     column of cards at their natural width, so each card -- and the "more below" arrow under it --
+     stays aligned to the same center line instead of stretching edge-to-edge. */
+  .focus-col-scroll-wrap .focus-col{ overflow-x:visible; max-width:100%; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .focus-col-scroll-wrap .focus-col-title{ width:100%; text-align:center; }
+  .focus-col-scroll-wrap p.sub{ text-align:center; }
+  .focus-col-scroll-wrap .species-card{ box-sizing:border-box !important; max-width:100% !important; width:min(100%, 300px) !important; }
+  .focus-col-scroll-wrap .hex-frame{ display:flex; justify-content:center; box-sizing:border-box; max-width:100%; }
+  .focus-col-scroll-wrap .count, .focus-col-scroll-wrap .rel-line, .focus-col-scroll-wrap .nick-inline{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
   .focus-col-scroll-wrap .focus-col{ flex:none; width:100%; }
   /* Down-arrow that appears only while a column actually has more cards below the fold --
      preferred over a fade-out or a visible scrollbar since it reads unambiguously as "scroll for
@@ -595,27 +668,68 @@
     font-size:20px; color:var(--accent2); padding:6px 0 2px;
     background:linear-gradient(to bottom, transparent, var(--bg) 70%);
     opacity:0; transition:opacity .15s ease;
+    /* Hovering the card underneath raises IT to z-index:5 (see .species-card:hover), which was
+       painting over this arrow and making it look like it vanished on hover. Keep the arrow
+       above that at all times. */
+    z-index:10;
   }
   .focus-col-more-arrow.show{ opacity:1; animation:focusColArrowBob 1.4s ease-in-out infinite; }
   @keyframes focusColArrowBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(3px); } }
-  .focus-col:not(.focus-col-main){ max-width:300px; }
-  .focus-col-main{ flex:1.3 1 260px; }
+  /* Includes/Part-of only: left:0/right:0 spans the whole (wide) wrap, well past the actual
+     300px card now that it's properly centered via margin:auto above. Match the strip's width to
+     the card's -- same width as the selected shape's own "more below" strip -- instead of
+     stretching edge to edge. */
+  .focus-col-scroll-wrap .focus-col-more-arrow{ left:50%; right:auto; transform:translateX(-50%); width:min(100%, 300px); }
+  .focus-col-scroll-wrap .focus-col-more-arrow.show{ animation:focusColArrowBobCentered 1.4s ease-in-out infinite; }
+  @keyframes focusColArrowBobCentered{ 0%,100%{ transform:translateX(-50%) translateY(0); } 50%{ transform:translateX(-50%) translateY(3px); } }
+  /* This caps the column's own box at 300px, but nothing was centering that box WITHIN the much
+     wider .focus-col-scroll-wrap -- it just sat flush against the left edge (default block
+     behavior), so the card/title (centered inside this 300px box) ended up centered relative to
+     the wrong reference frame, while the "more below" arrow (positioned across the FULL wrap)
+     centered correctly -- hence the mismatch. margin:auto centers this box itself in the wrap,
+     so card, title, and arrow all share the same center line. */
+  .focus-col:not(.focus-col-main){ max-width:300px; margin-left:auto; margin-right:auto; }
+  /* Was flex:1.3 1 260px with no cap on the card itself -- once the card stopped being
+     artificially shrunk (alwaysExpanded fix), it grew to fill its full flex-grow share of a wide
+     page, reading as "horizontally giant". Give it a real max-width so it settles at a normal,
+     comfortable card size instead of stretching to fill available space. */
+  .focus-col-main{ flex:1 1 380px; max-width:460px; }
+  .focus-main-wrap{ position:relative; flex:0 1 380px; max-width:460px; }
+  .focus-main-wrap .focus-col-main{ max-width:100%; }
+  .focus-col-main .hex-frame{ max-width:60%; margin-left:auto !important; margin-right:auto !important; display:flex; justify-content:center; }
   /* Marks which shape you actually clicked: a noticeably lighter panel behind the focused card,
      so it stands out clearly from the surrounding page and the dimmer includes/part-of columns. */
-  .focus-col-main{ background:radial-gradient(circle closest-side at 50% 40%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.3) 30%, rgba(255,255,255,.12) 55%, rgba(255,255,255,.03) 80%, rgba(255,255,255,0) 100%); padding:110px; margin:-110px; }
+  /* Was padding:110px; margin:-110px on the real box to bleed the glow outward -- but padding on a
+     flex item (content-box by default) inflates its actual flex layout size well past what the
+     negative margin visually cancels, which is what made this card render "giant"/oversized.
+     A pointer-events:none absolutely-positioned pseudo-element achieves the same bleed without
+     touching this element's own box size or the flex layout at all. */
+  /* Moved from .focus-col-main to the outer, non-scrolling .focus-main-wrap: .focus-col-main
+     itself is now the scrollable element (overflow-y:auto), and this pseudo-element's negative
+     inset was extending past its box on all sides -- since it wasn't clipped, it inflated
+     .focus-col-main's own scrollHeight by ~110px, which made the "more below" arrow appear even
+     when the real content had plenty of room left. The wrap never scrolls, so it can't happen there. */
+  .focus-main-wrap::before{
+    content:''; position:absolute; inset:-110px; z-index:-1; pointer-events:none;
+    background:radial-gradient(circle closest-side at 50% 40%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.3) 30%, rgba(255,255,255,.12) 55%, rgba(255,255,255,.03) 80%, rgba(255,255,255,0) 100%);
+  }
   .focus-col-title{ font-family:'Chakra Petch',sans-serif; font-weight:700; text-transform:uppercase; font-size:22px; letter-spacing:.03em; color:var(--text); margin-bottom:10px; }
   /* Includes/part-of side columns are secondary context, not the main focus -- shrink their cards
      to 66% so the hierarchy (this shape vs. what it relates to) reads at a glance. zoom (not
      transform:scale) is used so the layout box actually shrinks along with the visuals, instead
      of leaving behind the original full-size blank space transform would. */
-  .focus-col:not(.focus-col-main) .species-card{ zoom:0.66; max-width:75%; margin-left:auto; margin-right:auto; }
+  /* Was max-width:75% + font-size:0.82em, sized for the old cramped single 260px column --
+     now each card gets its own real grid cell (about half the wide column each), so let it use
+     the cell's full width and normal text size again instead of shrinking/deforming further on
+     top of that. */
+  .focus-col:not(.focus-col-main) .species-card{ max-width:100%; }
   /* The 0.66 zoom above scales the whole card uniformly, including its minimap -- but a
      collapsed card's minimap is already sized to fill its hex-frame at "normal" (unshrunk)
      proportions to begin with, so after the uniform zoom it still reads as oversized next to the
      shrunk text/tags around it. Shrink just the hex-frame further, on top of that. The card's own
      max-width+centering (above) keeps its border from leaving dead empty space to the right of
      that now-narrower minimap -- both edges stay equidistant from it instead. */
-  .focus-col:not(.focus-col-main) .hex-frame{ max-width:73%; margin-left:auto; margin-right:auto; }
+  .focus-col:not(.focus-col-main) .hex-frame{ max-width:73%; margin-left:auto !important; margin-right:auto !important; display:flex; justify-content:center; }
   /* Mobile only (desktop's side-by-side 3-column layout is untouched): stack this into a single
      column with the focused shape's own card always first, "includes"/"part of" pushed below it --
      rather than the DOM order (includes, main, part-of) which used to put "part of" above the
@@ -627,15 +741,27 @@
   .species-card{background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.4); border-radius:var(--radius); padding:14px; cursor:pointer; transition:border-color .12s ease, box-shadow .12s ease; break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%; position:relative;}
   .species-card.expanded-pop{ column-span:all; width:auto; display:block; margin-left:auto; margin-right:auto; }
   .species-card:hover{border-color:var(--accent2); transform:translateY(-3px) scale(1.015); box-shadow:0 16px 34px rgba(0,0,0,.45), 0 0 0 3px var(--accent2), 0 22px 90px -25px rgba(255,255,255,.6); z-index:5;}
+  /* Hex Map's exact-match card only: keep the border/glow hover cue but drop the grow/lift
+     transform -- the per-hexagon cents tooltip (a separate, JS-driven mouseenter/mouseleave
+     listener on each polygon inside buildHexSVG) is untouched by this and keeps working exactly
+     as before; this only cancels the CSS :hover transform on the outer card. */
+  #exactMatchCardWrap .species-card:hover{ transform:none; }
+  /* The grow/lift hover transform pushed these mini-cards past their fixed-width column's left
+     edge -- since the column clips with overflow-x:hidden, the card visually got cut off on its
+     left side instead of just growing in place. Disable the transform here too, same as the
+     exact-match card above; the border/glow hover cue (from the base .species-card:hover rule)
+     still applies. */
+  .focus-col-scroll-wrap .species-card:hover{ transform:none; }
+  .focus-col-main .species-card:hover{ transform:none; }
   .species-card .num{font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:12px; letter-spacing:.05em; white-space:nowrap;}
   .num-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-  .nick-inline{
-    background:transparent; border:none; border-bottom:1px dashed var(--border-strong);
-    color:#5b9dea; font-weight:800; font-size:13px; padding:1px 2px; min-width:4.5ch;
+  input.nick-inline, input[type=text].nick-inline{
+    background:#0a0b0d; border:none; border-radius:5px;
+    color:#5b9dea; font-weight:800; font-size:13px; padding:2px 7px; min-width:4.5ch;
   }
-  .nick-inline:focus{ background:var(--panel-alt); border:1px solid var(--accent2); border-radius:4px; border-bottom:1px solid var(--accent2); }
+  input.nick-inline:focus, input[type=text].nick-inline:focus{ background:#0a0b0d; border:1px solid var(--accent2); border-radius:5px; }
   .species-card input{margin-bottom:8px;}
-  .species-card .count{font-size:12px; color:var(--text); font-weight:700;}
+  .species-card .count{font-size:12px; color:var(--text); font-weight:700; width:fit-content; max-width:100%;}
   .occ-list{margin-top:8px; display:flex; flex-direction:column; gap:4px; max-height:180px; overflow:auto;}
   .occ-wrap{display:none;}
   .occ-wrap.show{display:block;}
@@ -659,12 +785,12 @@
   .ranking-toggle{
     display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--bg);
     background:var(--accent2); font-weight:800; font-size:12.5px; letter-spacing:.02em;
-    padding:7px 12px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.35);
+    padding:7px 12px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.2);
     transition:transform .1s ease, box-shadow .1s ease;
   }
-  .ranking-toggle:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.45); }
-  .rel-label{ color:#8ec8f0; font-size:10px; font-weight:800; letter-spacing:.06em; margin-bottom:2px; }
-  .rel-line{ color:#8ec8f0; font-size:11px; line-height:1.6; padding-left:4px; cursor:pointer; }
+  .ranking-toggle:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.28); }
+  .rel-label{ color:#8ec8f0; font-size:11.5px; font-weight:800; letter-spacing:.06em; margin-bottom:2px; }
+  .rel-line{ color:#8ec8f0; font-size:12.5px; line-height:1.65; padding-left:4px; cursor:pointer; }
   .rel-line:hover{ color:#c2e3f7; text-decoration:underline; }
   .sim-badge.common{ background:rgba(79,179,169,.15); border:1px solid rgba(79,179,169,.4); color:var(--accent2); }
   .sim-badge.diff{ background:rgba(201,82,74,.12); border:1px solid rgba(201,82,74,.35); color:#d98077; }
@@ -709,9 +835,9 @@
   }
   .built-chord-minimap-tooltip.visible{ display:block; opacity:1; }
   .built-chord-minimap-tooltip svg{ width:100%; height:100%; display:block; }
-  .step-ladder{display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-top:8px; font-family:'JetBrains Mono',monospace; font-size:11px; justify-content:center;}
-  .step-num{ background:#f4efe2; color:#14181f; font-weight:900; font-size:12.5px; padding:3px 6px; border-radius:5px; line-height:1.2; text-shadow:0 0 3px rgba(255,255,255,.85), 0 0 6px rgba(255,255,255,.5); }
-  .step-gap-num{color:var(--accent2); font-size:9px; font-weight:700; position:relative; top:4px;}
+  .step-ladder{display:flex; align-items:center; flex-wrap:wrap; gap:6px 7px; margin-top:8px; font-family:'JetBrains Mono',monospace; font-size:11px; justify-content:center;}
+  .step-num{ background:#f4efe2; color:#14181f; font-weight:900; font-size:15px; padding:4px 8px; border-radius:5px; line-height:1.2; text-shadow:0 0 3px rgba(255,255,255,.85), 0 0 6px rgba(255,255,255,.5); }
+  .step-gap-num{color:var(--accent2); font-size:11.5px; font-weight:700; position:relative; top:5px;}
   .hover-nick{text-align:center; margin-top:8px; font-size:12px;}
   .hover-num{font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--accent); font-weight:700;}
   .nav-history-fab{
@@ -931,6 +1057,11 @@
      rewraps or shifts. Placed last so they win the cascade at equal specificity. ---- */
   .sub{ color:#96a1ac; }                                   /* secondary text recedes a touch */
   label.field-label{ color:#e7ecf2; font-weight:700; }     /* section labels clearly brighter than body text */
+  /* Some section headers (e.g. "Danger zone", "Whole collection" in the Settings/Files menus) are
+     plain <div class="field-label"> rather than <label class="field-label"> -- both selectors
+     above require the label tag, so those divs fell through to the default muted/gray body text
+     instead of the brighter, correctly-styled look. A bare class selector catches every tag. */
+  .field-label{ color:#e7ecf2; font-weight:700; }
   .hex-frame .plate-label{ color:#dfe5ec; font-weight:700; }
   .tap-keys-label{ font-size:78px !important; line-height:1; white-space:nowrap; letter-spacing:.01em; }
   .play-icon-btn{ display:inline-flex !important; align-items:center; gap:9px; text-align:left; }
@@ -963,16 +1094,28 @@
   .pkmn-text{
     font-family:'Chakra Petch',sans-serif; font-weight:800; font-size:clamp(34px,7vw,64px); letter-spacing:.02em;
     color:hsl(45 72% 42%); text-shadow:none;
-    animation:pkmnPop .55s cubic-bezier(.2,1.6,.4,1) both, pkmnHue .38s linear infinite, pkmnWiggle 1s ease-in-out .55s infinite, pkmnPurify 2.8s ease forwards;
+    animation:pkmnPop .55s cubic-bezier(.2,1.6,.4,1) both, pkmnWiggle 1s ease-in-out .55s infinite, pkmnColorCycle 2.8s linear forwards;
   }
   @keyframes pkmnPop{ 0%{ transform:scale(.2) rotate(-8deg); opacity:0; } 60%{ transform:scale(1.14) rotate(2deg); opacity:1; } 80%{ transform:scale(.96) rotate(-1deg); } 100%{ transform:scale(1) rotate(0deg); } }
-  @keyframes pkmnHue{ from{ filter:hue-rotate(0deg); } to{ filter:hue-rotate(360deg); } }
   @keyframes pkmnWiggle{ 0%,100%{ transform:scale(1) rotate(0deg); } 50%{ transform:scale(1.05) rotate(1.3deg); } }
-  /* Starts at the same darkened, desaturated-ish tone used for the ARMODEX splash title
-     (hsl(_ 72% 42%)) so it reads clearly against the still-white background; as the background
-     fades to black over the same 2.8s, the base color ramps up to a fully pure hue (100% sat,
-     50% light — no white or black mixed in), which then keeps cycling via the hue-rotate filter. */
-  @keyframes pkmnPurify{ from{ color:hsl(45 72% 42%); } to{ color:hsl(45 100% 50%); } }
+  /* Was two separate simultaneous animations on this element: pkmnPurify (color) plus pkmnHue
+     (an infinite filter:hue-rotate). Animated `filter` on text repainting every ~16ms was a real
+     cost, and stacked with pkmnPop/pkmnWiggle (transform) and the full-viewport background fade
+     running at the same time, was very likely the main cause of the reported low-fps/freezes on
+     this screen. Merged into one `color`-only keyframe spanning the whole 2.8s visible lifetime
+     of this screen -- starts at the same darkened tone, ramps to a pure hue as the background
+     fades to black, then keeps cycling through the same rainbow via plain color stops (a cheap
+     paint property) instead of an animated filter. */
+  @keyframes pkmnColorCycle{
+    0%{ color:hsl(45 72% 42%); }
+    14%{ color:hsl(45 100% 50%); }
+    28%{ color:hsl(105 100% 50%); }
+    42%{ color:hsl(165 100% 50%); }
+    57%{ color:hsl(225 100% 50%); }
+    71%{ color:hsl(285 100% 50%); }
+    85%{ color:hsl(345 100% 50%); }
+    100%{ color:hsl(45 100% 50%); }
+  }
   #cursorHueStyle{}
   /* Nudges attention to "+ Add shape" whenever there's something tapped on the map that hasn't
      been committed yet -- a gentle scale + glow, not a rapid flash, so it stays comfortable even
@@ -989,7 +1132,8 @@
   /* Steady glow, no flashing/pulsing -- deliberately calm so it can't run afoul of the
      photosensitivity precautions taken elsewhere in the app (this is a slow CSS transition,
      never a rapid repeat). */
-  .built-chord.now-playing{ outline:3px solid var(--accent2); outline-offset:1px; box-shadow:0 0 14px var(--accent2-soft); transition:outline-color .2s ease, box-shadow .2s ease; }
+  .built-chord.now-playing{ outline:3px solid #f5c518; outline-offset:1px; box-shadow:0 0 14px rgba(245,197,24,.55); transition:outline-color .2s ease, box-shadow .2s ease; }
+  .chord-chip.now-playing{ outline:3px solid #f5c518; outline-offset:1px; box-shadow:0 0 14px rgba(245,197,24,.55); transition:outline-color .2s ease, box-shadow .2s ease; }
   .hex-frame.now-playing-map{ box-shadow:0 0 0 3px var(--accent2), 0 0 22px 2px var(--accent2-soft); border-radius:var(--radius); transition:box-shadow .2s ease; }
 </style>
 <style id="cursorHueStyle"></style>
@@ -1096,7 +1240,7 @@ function hexPoints(cx,cy,size){
 }
 function buildHexSVG(opts){
   const {shape='diamond', range=5, cols=BOARD_COLS, rows=BOARD_ROWS, size=28, autoFit=true,
-         highlightRoot=null, tones=new Set(), mode='pc', showLabels=true, zeroLabelOnly=false, interactive=false, onHexClick=null, dim=false, focusPoints=null, focusRoot=null, focusTones=null, octaveHighlightPc=null, showCents=false, echoPcs=null, echoRaws=null, shapeDragEnabled=false, fallbackRaws=null, vividMarks=false, allowHScroll=false, showRootRing=true, rootLabelScale=1, labelScale=1} = opts;
+         highlightRoot=null, tones=new Set(), mode='pc', showLabels=true, zeroLabelOnly=false, interactive=false, onHexClick=null, dim=false, focusPoints=null, focusRoot=null, focusTones=null, octaveHighlightPc=null, showCents=false, echoPcs=null, echoRaws=null, shapeDragEnabled=false, fallbackRaws=null, vividMarks=false, allowHScroll=false, showRootRing=true, rootLabelScale=1, labelScale=1, plainRootStroke=false} = opts;
   const cells = shape==='rect' ? hexesRect(cols, rows) : shape==='rect-centered' ? hexesRectCentered(cols, rows) : hexesInRange(range);
   const positioned = cells.map(c=>{
     const {x,y}=axialToPixel(c.q,c.r,size);
@@ -1186,7 +1330,7 @@ function buildHexSVG(opts){
     const isKeyEcho = (octaveHighlightPc!=null && c.pc===octaveHighlightPc && !isRoot && !isTone);
     const isRealEcho = (!isKeyEcho) && (((echoPcs!=null && echoPcs.has(c.pc)) || (echoRaws!=null && echoRaws.has(c.raw))) && !isRoot && !isTone);
     let fill, stroke, sw;
-    if(isRoot){ fill = vividMarks ? `hsl(${hue} 88% 55%)` : `hsl(${hue} ${dim?55:68}% ${dim?32:44}%)`; stroke='var(--accent)'; sw=3; }
+    if(isRoot){ fill = vividMarks ? `hsl(${hue} 88% 55%)` : `hsl(${hue} ${dim?55:68}% ${dim?32:44}%)`; stroke = plainRootStroke ? 'var(--accent2)' : 'var(--accent)'; sw = plainRootStroke ? 2.4 : 3; }
     else if(isTone){ fill = vividMarks ? `hsl(${hue} 88% 50%)` : `hsl(${hue} ${dim?46:58}% ${dim?27:36}%)`; stroke='var(--accent2)'; sw=2.4; }
     else if(isRealEcho){ fill=`hsl(${hue} ${dim?34:44}% ${dim?25:32}%)`; stroke='var(--border-strong)'; sw=1.6; }
     else if(isKeyEcho){ fill=`hsl(${hue} ${dim?22:29}% ${dim?21:26}%)`; stroke='var(--border)'; sw=1.1; }
@@ -1977,14 +2121,43 @@ function stopHoverPlay(){
   // stopHoverPlay first) and again when it ended -- producing a silent or truncated-to-one-chord
   // pass right after hovering. The loop manages its own lifecycle via stopBuilderProgressionPlay,
   // so hover cleanup must leave it alone.
-  if(activeProgressionSessions.length && !builderProgLoopActive){
+  // Same guard extended to the progression-detail view's own "Play progression" loop
+  // (state.loopingProgId) -- hovering a chord chip there while it plays was hitting the exact
+  // same bug as the builder: stopHoverPlay() unconditionally wiping the shared
+  // activeProgressionSessions array out from under the loop's own currently-sounding chord.
+  if(activeProgressionSessions.length && !builderProgLoopActive && !state.loopingProgId){
     activeProgressionSessions.forEach(s=>stopAudioSession(s));
     activeProgressionSessions = [];
   }
 }
+// Shared resume timer for "hover interrupts Hex Map Play-shape, then it resumes 2s later" --
+// used by both hoverPlayProgression and hoverPlayStatChip below, same pattern as the builder's
+// builderShapeHoverResumeTimer.
+let mapShapeHoverResumeTimer = null;
 function hoverPlayProgression(progId){
   const p = state.progressions.find(x=>x.id===progId); if(!p) return;
+  if(mapShapePlayActive){
+    // Same fix as the builder: hovering something that plays its own audio (here, a whole
+    // progression) while the Hex Map's "Play shape" loop is sounding must take priority over it
+    // instead of silently losing the race to the shared chord-hover-audio state, or worse,
+    // leaving the loop dead afterward with nothing bringing it back.
+    stopChordHoverAudio();
+    clearTimeout(mapShapeHoverResumeTimer);
+    playProgressionAudio(progId, state.progressionsTabTimbre);
+    mapShapeHoverResumeTimer = setTimeout(()=>{ mapShapeHoverResumeTimer=null; refreshMapShapePlayIfActive(); }, 2000);
+    return;
+  }
   startHoverPlay(()=>playProgressionAudio(progId, state.progressionsTabTimbre), progressionDurationMs(p));
+}
+function hoverPlayStatChip(absNotes, timbre, displayRoot){
+  if(mapShapePlayActive){
+    stopChordHoverAudio();
+    clearTimeout(mapShapeHoverResumeTimer);
+    playChordAudio(absNotes, timbre, displayRoot);
+    mapShapeHoverResumeTimer = setTimeout(()=>{ mapShapeHoverResumeTimer=null; refreshMapShapePlayIfActive(); }, 2000);
+    return;
+  }
+  startHoverPlay(()=>playChordAudio(absNotes, timbre, displayRoot), chordDurationMs(timbre, absNotes.length));
 }
 function hoverPlaySpecies(sig){
   const species = computeSpecies(state.progressions);
@@ -2020,6 +2193,12 @@ function hoverPlayMapSelection(){
 }
 function stopHoverPlayMapSelection(){ stopHoverPlay(); }
 function hoverPlayChordInProg(progId, idx){
+  // While this progression's own "Play progression" loop is running, hovering a chord chip's
+  // preview audio shares no session bookkeeping with that loop -- overlapping the two just
+  // stacked/clashed. Same fix as the builder's hoverPlayBuiltChord: hover-play audio is disabled
+  // entirely while the loop runs (only for playback on the SAME progression -- hovering a
+  // different, non-playing progression's chips elsewhere in the list is unaffected).
+  if(state.loopingProgId===progId) return;
   const p = state.progressions.find(x=>x.id===progId); if(!p) return;
   const c = p.chords[idx]; if(!c) return;
   highlightBigMapForChord(progId, idx);
@@ -2983,6 +3162,18 @@ function highlightBigMapForChord(progId, idx){
   const label = document.getElementById('bigMapLabel');
   if(label) label.textContent = `Chord ${idx+1} of ${p.chords.length}`;
   renderBigProgressionMap(ad.root, ad.tones);
+  highlightChordChipPlaying(progId, idx);
+}
+// Marks the chord chip currently sounding during this progression's "Play progression" loop --
+// same idea as the builder's .built-chord.now-playing, done via direct DOM class toggling (not
+// a full render()) so it doesn't disturb anything else mid-playback.
+function highlightChordChipPlaying(progId, idx){
+  document.querySelectorAll(`.chord-chip[id^="chordChip-${progId}-"]`).forEach(el=>el.classList.remove('now-playing'));
+  const el = document.getElementById(`chordChip-${progId}-${idx}`);
+  if(el) el.classList.add('now-playing');
+}
+function clearChordChipPlaying(progId){
+  document.querySelectorAll(`.chord-chip[id^="chordChip-${progId}-"]`).forEach(el=>el.classList.remove('now-playing'));
 }
 function highlightBigMapForAll(progId){
   const p = state.progressions.find(x=>x.id===progId); if(!p) return;
@@ -3008,7 +3199,7 @@ function playProgressionWithVisual(progId, timbre){
   p.chords.forEach((c,idx)=>{
     setTimeout(()=>highlightBigMapForChord(progId, idx), idx*beatsPerChord*secPerBeat*1000);
   });
-  setTimeout(()=>highlightBigMapForAll(progId), p.chords.length*beatsPerChord*secPerBeat*1000);
+  setTimeout(()=>{ highlightBigMapForAll(progId); clearChordChipPlaying(progId); }, p.chords.length*beatsPerChord*secPerBeat*1000);
 }
 function startPlayLoop(progId, timbre){
   stopPlayLoop();
@@ -3034,6 +3225,7 @@ function clearPlayLoopState(){
   if(state.loopingProgId){
     activeProgressionSessions.forEach(s=>stopAudioSession(s));
     activeProgressionSessions = [];
+    clearChordChipPlaying(state.loopingProgId);
   }
   state.loopingProgId = null;
   state.loopingTimbre = null;
@@ -4312,8 +4504,24 @@ const I18N = {
     "es": "Toca teclas"
   },
   "ecosystem.btn": {
-    "en": "YOUR ECOSYSTEM",
-    "es": "TU ECOSISTEMA"
+    "en": "Your ecosystem",
+    "es": "Tu ecosistema"
+  },
+  "ecosystem.needshape.h2": {
+    "en": "No shapes yet",
+    "es": "Aun no hay shapes"
+  },
+  "ecosystem.needshape.msg": {
+    "en": "You need to catalogue at least 1 shape before you can see it living in your ecosystem.",
+    "es": "Necesitas catalogar al menos 1 shape antes de poder verla vivir en tu ecosistema."
+  },
+  "nickdupe.h2": {
+    "en": "Nickname already in use",
+    "es": "Ese nickname ya esta en uso"
+  },
+  "nickdupe.msg": {
+    "en": "Another shape already has that nickname. Each shape needs its own unique nickname.",
+    "es": "Otra shape ya tiene ese nickname. Cada shape necesita un nickname unico."
   },
   "ecosystem.title": {
     "en": "A physics-based sandbox for wandering your collected shapes",
@@ -5001,7 +5209,7 @@ const state = {
   tab:'catalog', view:'list',
   progressions: [], nicknames: {}, octaveEquivalence: false,
   selectedProgId:null, selectedChordKey:null, chordSeqSelection:[],
-  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, seenMainTutorial:true, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false,
+  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showEcosystemNeedShapeMsg:false, showNicknameDupeMsg:false, showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, seenMainTutorial:true, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false,
   lang: 'en', // default; a saved preference (if any) overrides this once loadData() resolves
   mapMode:'write', playModeNotes:[], mapTimbre:'guitar', chordsTabTimbre:'guitar', strumMode:true,
   progressionsTabTimbre:'guitar', hexExpandLevel:0, emergentHighlight:null, bigMapBoardSize:null, bigMapExactPoints:null,
@@ -5145,7 +5353,7 @@ async function toggleOctaveEquivalence(){
 }
 
 /* ============================ ACTIONS ============================ */
-function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopBuilderProgressionPlay(); builderShapePlayActive=false; stopBuilderShapePlayWatchdog(); stopPrimeIntervalPreview(); }
+function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopMapShapePlayWatchdog(); stopBuilderProgressionPlay(); builderShapePlayActive=false; stopBuilderShapePlayWatchdog(); stopPrimeIntervalPreview(); }
 function switchTab(t){ stopAllAudioActivity(); const leavingCatalog = state.tab==='catalog' && t!=='catalog'; const leavingBuilder = state.tab==='catalog' && state.view==='builder' && (t!=='catalog' || state.view!=='builder'); state.tab=t; if(t==='catalog') state.view='list'; if(t==='species') state.expandedChordSig=null; state.selectedChordKey=null; if(leavingCatalog) state.showTutorialSaveMessage=false; if(leavingCatalog) state.showBuilderGearMenu=false; state.showSettingsMenu=false; state.showHelpMenu=false; state.showLangMenu=false; closeSettingsSubWindows(); render(); if(t==='map') scrollMapIntoView(); }
 function newProgression(){
   stopAllAudioActivity();
@@ -5332,29 +5540,36 @@ function builderHexClick(raw, e, q, r){
 // keys/numbers themselves -- a brief bright flash that eases back to nothing over 1.5s, so tapping
 // a note reads clearly without permanently recoloring anything on the map.
 let builderGlowFadeTimer = null;
-function pulseBuilderMapGlow(raw){
+// Shared by both the builder's hex map (holderId 'builderHexHolder') and the Hex Map tab's own
+// map (holderId 'mapHexHolder') -- a color-tinted glow that flashes on the just-tapped note's
+// hue, then eases back out, via a drop-shadow filter on the SVG itself (follows the real alpha
+// silhouette of the drawn hexagons, not an invisible rectangle around the holder).
+let mapGlowFadeTimers = {};
+function pulseMapGlow(holderId, raw){
   try{
-    const holder = document.getElementById('builderHexHolder');
+    const holder = document.getElementById(holderId);
     const svg = holder ? holder.querySelector('svg.hexsvg') : null;
     if(!svg) return;
     const hue = Math.round(mod31(raw)*(360/31));
-    // Even lower-opacity glow color for a softer wash.
-    const color = `hsla(${hue}, 90%, 58%, 0.05)`;
-    if(builderGlowFadeTimer) clearTimeout(builderGlowFadeTimer);
-    // A box-shadow on the rectangular holder always reads as a glowing "card", since it hugs the
-    // container's bounding box rather than the actual hexagon shapes. A drop-shadow filter on the
-    // SVG itself follows the real alpha silhouette of the drawn hexagons instead, so the glow
-    // outlines the hex map's own contour, not an invisible rectangle around it.
-    // No fade-in anymore -- the glow appears instantly at full strength, then eases back out.
+    // Keep the two endpoints in the SAME color-function shape (hsla, only the alpha differs) --
+    // transitioning from hsla(...) to the keyword "transparent" (a different function form) makes
+    // some browsers unable to interpolate the drop-shadow smoothly, so it jumps/cuts out abruptly
+    // instead of truly fading, which is what made it read as "popping up" over the map below.
+    // Fading alpha only (not blur/spread) keeps the interpolation clean and strictly opacity-based.
+    const colorOn = `hsla(${hue}, 90%, 58%, 0.05)`;
+    const colorOff = `hsla(${hue}, 90%, 58%, 0)`;
+    if(mapGlowFadeTimers[holderId]) clearTimeout(mapGlowFadeTimers[holderId]);
+    // No fade-in -- the glow appears instantly at full strength, then eases back out.
     svg.style.transition = 'none';
-    svg.style.filter = `drop-shadow(0 0 3px ${color}) drop-shadow(0 0 16px ${color})`;
-    builderGlowFadeTimer = setTimeout(()=>{
+    svg.style.filter = `drop-shadow(0 0 3px ${colorOn}) drop-shadow(0 0 16px ${colorOn})`;
+    mapGlowFadeTimers[holderId] = setTimeout(()=>{
       svg.style.transition = 'filter 1.5s ease-out';
-      svg.style.filter = 'drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent)';
-      builderGlowFadeTimer = setTimeout(()=>{ svg.style.filter=''; svg.style.transition=''; }, 1550);
+      svg.style.filter = `drop-shadow(0 0 3px ${colorOff}) drop-shadow(0 0 16px ${colorOff})`;
+      mapGlowFadeTimers[holderId] = setTimeout(()=>{ svg.style.filter=''; svg.style.transition=''; }, 1550);
     }, 60);
   }catch(e){}
 }
+function pulseBuilderMapGlow(raw){ pulseMapGlow('builderHexHolder', raw); }
 function toggleBuilderFreePlay(){ state.builderFreePlay = !state.builderFreePlay; render(); }
 function toggleBuilderGearMenu(){ state.showBuilderGearMenu = !state.showBuilderGearMenu; render(); }
 function toggleBuilderIdentify(){ state.showBuilderIdentify = !state.showBuilderIdentify; renderBuilderSearchOnly(); }
@@ -5485,6 +5700,26 @@ function saveProgression(){ openSaveNameModal('save'); }
 // The progression's name/tags/notes used to be edited live inside the builder itself. Moved into
 // a dedicated confirm step instead -- opened only once you actually press Save -- so the builder
 // screen stays focused purely on the notes/shapes themselves, one thing at a time.
+function goToEcosystem(){
+  const hasShapes = computeSpecies(state.progressions).list.length>0;
+  if(!hasShapes){ state.showEcosystemNeedShapeMsg = true; render(); return; }
+  window.location.href='ecosystem.html';
+}
+function closeEcosystemNeedShapeMsg(){ state.showEcosystemNeedShapeMsg = false; render(); }
+function renderEcosystemNeedShapeModal(){
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) closeEcosystemNeedShapeMsg()">
+    <div class="modal-panel" style="max-width:420px;">
+      <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="font-family:'Chakra Petch',sans-serif; margin:0; font-size:20px;">${t('ecosystem.needshape.h2')}</h2>
+      </div>
+      <p class="sub" style="max-width:none;">${t('ecosystem.needshape.msg')}</p>
+      <div class="row" style="justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn primary" style="font-size:16px; padding:12px 26px;" onclick="closeEcosystemNeedShapeMsg()">${t('word.ok')}</button>
+      </div>
+    </div>
+  </div>`;
+}
 function openSaveNameModal(mode){
   // stopHoverPlay() alone doesn't touch the looping "Play shape" / "Play progression" toggles --
   // if either was left running, it kept sounding right through the save-name modal and past the
@@ -5631,7 +5866,30 @@ function jumpToMatch(progId){
   state.selectedChordKey=null; state.chordSeqSelection=[]; state.emergentHighlight=null; render();
   scrollProgDetailIntoView();
 }
-async function setNickname(sig, val){ state.nicknames[sig]=val; await persistNicknames(); }
+async function setNickname(sig, val){
+  const trimmed = val.trim();
+  if(trimmed){
+    const dupe = Object.entries(state.nicknames).some(([s,n])=> s!==sig && (n||'').trim().toLowerCase()===trimmed.toLowerCase());
+    if(dupe){ state.showNicknameDupeMsg = true; render(); return; }
+  }
+  state.nicknames[sig]=val;
+  await persistNicknames();
+}
+function closeNicknameDupeMsg(){ state.showNicknameDupeMsg = false; render(); }
+function renderNicknameDupeModal(){
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) closeNicknameDupeMsg()">
+    <div class="modal-panel" style="max-width:420px;">
+      <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="font-family:'Chakra Petch',sans-serif; margin:0; font-size:20px;">${t('nickdupe.h2')}</h2>
+      </div>
+      <p class="sub" style="max-width:none;">${t('nickdupe.msg')}</p>
+      <div class="row" style="justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn primary" style="font-size:16px; padding:12px 26px;" onclick="closeNicknameDupeMsg()">${t('word.ok')}</button>
+      </div>
+    </div>
+  </div>`;
+}
 function explorerRemoveNote(raw){
   const arr = state.explorer.selectedOrder;
   const i = findSelectionMatchIndex(arr, raw);
@@ -5650,10 +5908,31 @@ function findSelectionMatchIndex(arr, raw){
 }
 let explorerFlashToken = 0;
 let mapShapePlayActive = false;
+// Same self-healing watchdog as the builder's Play-shape loop (see startBuilderShapePlayWatchdog):
+// hovering a progression-occurrence chip in the exact-match/"where this shape occurs" results
+// (hoverPlayProgression) shares the same global chord-hover-audio bookkeeping this loop uses, and
+// interrupting it that way could leave it silently stopped with nothing to bring it back. This
+// watchdog periodically checks whether it's supposed to be sounding and restarts it if not.
+let mapShapePlayWatchdog = null;
+function startMapShapePlayWatchdog(){
+  clearInterval(mapShapePlayWatchdog);
+  mapShapePlayWatchdog = setInterval(()=>{
+    if(!mapShapePlayActive) return;
+    if(mapShapeHoverResumeTimer) return; // mid hover-interrupt, about to resume on its own
+    const notes = state.explorer.selectedOrder;
+    if(!notes || notes.length===0) return;
+    if(!chordArpeggioTimer) refreshMapShapePlayIfActive();
+  }, 900);
+}
+function stopMapShapePlayWatchdog(){
+  clearInterval(mapShapePlayWatchdog);
+  mapShapePlayWatchdog = null;
+}
 function toggleMapShapePlay(){
   if(mapShapePlayActive){
     stopHoverPlay();
     mapShapePlayActive = false;
+    stopMapShapePlayWatchdog();
     render();
     return;
   }
@@ -5663,6 +5942,7 @@ function toggleMapShapePlay(){
   const ctx = getAudioCtx();
   if(!ctx){ render(); return; }
   mapShapePlayActive = true;
+  startMapShapePlayWatchdog();
   const timbre = state.mapTimbre;
   const sp = { intervals: notes };
   const dur = chordHoverDurationMs(timbre)/1000;
@@ -5712,6 +5992,11 @@ function withMapScrollPinned(fn){
   requestAnimationFrame(()=> window.scrollTo(0, y));
   setTimeout(()=> window.scrollTo(0, y), 160);
 }
+function explorerHexClickGlowNextFrame(raw){
+  // render() rebuilds #mapHexHolder's SVG synchronously, which would wipe out a filter
+  // applied before it runs. Defer the glow to the frame after the rebuild so it actually paints.
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ pulseMapGlow('mapHexHolder', raw); }); });
+}
 function explorerHexClick(raw, e, q, r){
   playChordAudio([raw], state.mapTimbre);
   if(!state.mapSelectMode){
@@ -5722,6 +6007,7 @@ function explorerHexClick(raw, e, q, r){
     state.explorer.selectedOrder = [raw];
     const myToken = ++explorerFlashToken;
     withMapScrollPinned(render);
+    explorerHexClickGlowNextFrame(raw);
     setTimeout(()=>{
       if(myToken!==explorerFlashToken) return; // a newer note (or a real selection) has taken over
       state.explorer.selectedOrder = [];
@@ -5738,13 +6024,16 @@ function explorerHexClick(raw, e, q, r){
     arr.unshift(raw);
     state.explorer.lastClicked = raw;
     refreshMapShapePlayIfActive();
-    withMapScrollPinned(render); return;
+    withMapScrollPinned(render);
+    explorerHexClickGlowNextFrame(raw);
+    return;
   }
   const i = findSelectionMatchIndex(arr, raw);
   if(i>=0){ arr.splice(i,1); if(state.explorer.lastClicked===raw) state.explorer.lastClicked = null; }
   else { arr.push(raw); state.explorer.lastClicked = raw; }
   refreshMapShapePlayIfActive();
   withMapScrollPinned(render);
+  explorerHexClickGlowNextFrame(raw);
 }
 // The exact-match card's max-height used to be a flat calc(100vh - 230px) guess, which didn't
 // account for how far DOWN the page the card actually starts (varies with map size, results
@@ -6137,7 +6426,7 @@ function renderMostCommonPairHtml(color){
     const eff = effectiveIntervals(c.intervals).filter(i=>i!==0);
     const nick = state.nicknames[sig];
     const absNotes = [displayRoot, ...eff.map(iv=>displayRoot+iv)];
-    return `<span class="mini-chip stat-chip" onclick="jumpToMatch('${p.id}')" onmouseenter="startHoverPlay(()=>playChordAudio(${JSON.stringify(absNotes)}, state.chordsTabTimbre, ${displayRoot}), chordDurationMs(state.chordsTabTimbre, ${absNotes.length}))" onmouseleave="stopHoverPlay()" data-hover-root="${displayRoot}" data-hover-tones='${JSON.stringify(eff.map(iv=>displayRoot+iv))}' data-hover-sig="${sig}"><span class="first-iv">${displayRoot}</span>${eff.length ? ' · '+formatIvsRest(eff) : ''}${nick?` <span class="chord-nick">"${escapeHtml(nick)}"</span>`:''}</span>`;
+    return `<span class="mini-chip stat-chip" onclick="jumpToMatch('${p.id}')" onmouseenter="hoverPlayStatChip(${JSON.stringify(absNotes)}, state.chordsTabTimbre, ${displayRoot})" onmouseleave="stopHoverPlay()" data-hover-root="${displayRoot}" data-hover-tones='${JSON.stringify(eff.map(iv=>displayRoot+iv))}' data-hover-sig="${sig}"><span class="first-iv">${displayRoot}</span>${eff.length ? ' · '+formatIvsRest(eff) : ''}${nick?` <span class="chord-nick">"${escapeHtml(nick)}"</span>`:''}</span>`;
   };
   return `
     <div class="stat-row" style="align-items:center; color:${color};">
@@ -6196,6 +6485,10 @@ function render(){
   if(!state.loaded){ app.innerHTML = `<div class="empty"><div class="glyph">⬡</div>${t('word.loading')}</div>`; return; }
   const inBuilder = state.tab==='catalog' && state.view==='builder';
   const inShapeDetail = state.tab==='species' && !!state.expandedChordSig;
+  // The global .wrap max-width (1120px) was starving Includes/Part-of of the room they need to
+  // actually break into multiple columns -- widen just this view, since it's the one place that
+  // benefits from using significantly more of a wide screen.
+  app.classList.toggle('wrap-wide', inShapeDetail);
   const inHexMap = state.tab==='map';
   const inProgDetail = state.tab==='catalog' && state.view==='detail';
   // All four of these views have their own auto-scroll anchor meant to sit at the very top of the
@@ -6327,6 +6620,7 @@ function render(){
       <button class="${state.tab==='catalog'?'active':''}" data-hotkey="A" onclick="switchTab('catalog')">${t('tab.progressions')}</button>
       <button class="${state.tab==='species'?'active':''}" data-hotkey="S" onclick="switchTab('species')">${t('tab.shapes')}</button>
       <button class="${state.tab==='map'?'active':''}" data-hotkey="D" onclick="switchTab('map')">${t('tab.hexmap')}</button>
+      <button class="ecosystem-tab-btn" onclick="goToEcosystem()" title="${t('ecosystem.title')}">${t('ecosystem.btn')}</button>
       <!-- Connect tab hidden for now — not ready yet -->
       <!-- <button class="${state.tab==='connect'?'active':''}" onclick="switchTab('connect')">Connect</button> -->
     </nav>
@@ -6338,6 +6632,8 @@ function render(){
     ${state.showInfoShortcuts ? renderShortcutsInfoModal() : ''}
     ${state.showEpilepsyWarning ? renderEpilepsyWarningModal() : (!state.seenMainTutorial ? renderMainTutorialModal() : '')}
     ${state.showSaveNameModal ? renderSaveNameModal() : ''}
+    ${state.showEcosystemNeedShapeMsg ? renderEcosystemNeedShapeModal() : ''}
+    ${state.showNicknameDupeMsg ? renderNicknameDupeModal() : ''}
   `;
   const content = document.getElementById('tabContent');
   if(state.tab==='catalog'){
@@ -6728,7 +7024,7 @@ function renderMainTutorialModal(){
       <p class="sub" style="max-width:none; color:#fff;">${t('tut.main.msg')}</p>
       <p class="sub" style="max-width:none; color:#fff; margin-top:10px;">${t('tut.main.msg2')}</p>
       <div class="row" style="justify-content:flex-end; margin-top:16px;">
-        <button class="btn primary" style="background:#fff; color:#ff2fb0; border-color:#fff;" onclick="dismissMainTutorial()">${t('epilepsy.continue')}</button>
+        <button class="btn primary" style="background:#fff; color:#ff2fb0; border-color:#fff; font-size:16px; padding:13px 26px;" onclick="dismissMainTutorial()">${t('epilepsy.continue')}</button>
       </div>
     </div>
   </div>`;
@@ -7261,7 +7557,7 @@ function renderCatalogDetail(content){
               const nick = state.nicknames[sig];
               const seqPos = state.chordSeqSelection.indexOf(idx);
               const ad = anchoredDisplay(p, idx);
-              return `<div class="chord-chip ${seqPos>=0?'seq-picked':''}" style="zoom:${chipScale};" draggable="true" ondragstart="dragChordStart(event, '${p.id}', ${idx})" onmouseenter="hoverPlayChordInProg('${p.id}', ${idx})" onmouseleave="stopHoverPlayChordInProg('${p.id}')" data-hover-root="${ad.root}" data-hover-tones='${JSON.stringify(ad.tones)}' data-hover-sig="${sig}">
+              return `<div class="chord-chip ${seqPos>=0?'seq-picked':''}" id="chordChip-${p.id}-${idx}" style="zoom:${chipScale};" draggable="true" ondragstart="dragChordStart(event, '${p.id}', ${idx})" onmouseenter="hoverPlayChordInProg('${p.id}', ${idx})" onmouseleave="stopHoverPlayChordInProg('${p.id}')" data-hover-root="${ad.root}" data-hover-tones='${JSON.stringify(ad.tones)}' data-hover-sig="${sig}">
                 <div class="clickzone" onclick="handleChordChipClick(event, '${p.id}', ${idx}, '${sig}')">
                   <span class="seq-order-badge">${idx+1}</span>
                   ${seqPos>=0 ? `<span class="seq-badge">${seqPos+1}</span>` : ''}
@@ -7928,7 +8224,6 @@ function renderSpecies(content){
   }
   const toolbar = `
     <div class="list-toolbar" id="speciesTabTop">
-      <button class="btn small ecosystem-launch-btn" onclick="window.location.href='ecosystem.html'" title="${t('ecosystem.title')}"><span class="ecosystem-text-pulse">${t('ecosystem.btn')}</span></button>
       <input type="text" id="chordSearchInput" placeholder="${t('chord.searchplaceholder')}" value="${escapeHtml(state.chordsFilterText)}" oninput="state.chordsFilterText=this.value; renderSpeciesOnly()">
       <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showSortMenu?'primary':''}" onclick="toggleSortMenu()">${t('word.sortby')}</button>
@@ -7982,8 +8277,11 @@ function renderSpecies(content){
           </div>
           <div class="focus-col-more-arrow">▼</div>
         </div>
-        <div class="focus-col focus-col-main">
-          ${renderChordCardHtml(focusSp, { speciesList: species.list })}
+        <div class="focus-main-wrap">
+          <div class="focus-col focus-col-main" onscroll="updateFocusColArrow(this)">
+            ${renderChordCardHtml(focusSp, { speciesList: species.list, alwaysExpanded:true })}
+          </div>
+          <div class="focus-col-more-arrow">▼</div>
         </div>
         <div class="focus-col-scroll-wrap">
           <div class="focus-col" onscroll="updateFocusColArrow(this)">
@@ -7995,7 +8293,7 @@ function renderSpecies(content){
       </div>
     `;
     [focusSp, ...includes, ...partOf].forEach(sp=>mountChordCardHex(sp, 'sp'));
-    document.querySelectorAll('.focus-col-scroll-wrap .focus-col').forEach(updateFocusColArrow);
+    document.querySelectorAll('.focus-col-scroll-wrap .focus-col, .focus-main-wrap .focus-col').forEach(updateFocusColArrow);
     return;
   }
   const q = state.chordsFilterText.trim().toLowerCase();
@@ -8023,7 +8321,7 @@ function renderSpecies(content){
 function clearChordFocus(){ state.expandedChordSig = null; render(); }
 function updateFocusColArrow(el){
   try{
-    const wrap = el.closest('.focus-col-scroll-wrap');
+    const wrap = el.closest('.focus-col-scroll-wrap, .focus-main-wrap');
     const arrow = wrap ? wrap.querySelector('.focus-col-more-arrow') : null;
     if(!arrow) return;
     const hasMore = (el.scrollHeight - el.scrollTop - el.clientHeight) > 4;
@@ -8164,7 +8462,7 @@ function renderMap(content){
           <span id="octaveCaptionText" class="octave-caption"></span>
           <div class="hex-viewport explorer-map-viewport touch-scroll-map ${state.hexExpandLevel===1?'expanded':''}" id="mapHexHolder" style="margin-top:0;"></div>
         </div>
-        <div class="row" style="margin-top:6px; justify-content:space-between; flex-wrap:nowrap;">
+        <div class="row" style="margin-top:-48px; justify-content:space-between; flex-wrap:nowrap; position:relative; z-index:1;">
           <span class="row" style="gap:10px; flex-wrap:nowrap;">
             <button class="btn mini ${state.mapSelectMode?'accent-white':''}" onclick="toggleMapSelectMode()" title="${t('map.selectmode.title')}">${state.mapSelectMode ? t('map.selectmode.on') : t('map.selectmode.off')}</button>
             <button class="btn small" onclick="explorerClear()">${t('word.clearselection2')}</button>
@@ -8172,7 +8470,7 @@ function renderMap(content){
           <button class="btn small" style="flex-shrink:0;" onclick="exportSelectionMidi('map')">⬇ MIDI</button>
         </div>
       </div>
-      <div class="panel hex-frame-transparent">
+      <div class="panel hex-frame-transparent" style="margin-top:-84px; max-height:calc(100vh - 20px); overflow-y:auto; overflow-x:hidden;">
         <div class="selection-strip" id="mapSelStrip" style="margin-bottom:10px;"></div>
         ${!state.mapSelectMode ? `` : ex.selectedOrder.length>0 ? `<p class="sub" style="max-width:none; display:inline-block; background:var(--panel-alt); border:1px solid var(--border); border-radius:6px; padding:6px 10px;">Root ${mod31(ex.selectedOrder[0])} · ${formatIvs(effectiveIntervals(canonicalIntervals(ex.selectedOrder[0], ex.selectedOrder)))}</p>${renderRecognitionHtml(assoc, {sideBySideWherePartOf:true})}` : `<p class="sub" style="max-width:none;">${t('word.nothingselected')}</p>`}
       </div>
@@ -8268,7 +8566,7 @@ function renderRecognitionHtml(assoc, opts={}){
         <div class="occ-list" style="max-height:260px;">
           ${groups.map(g=>`
             <div class="occ-group">
-              <div class="match-item small occ-group-head" onclick="jumpToMatch('${g.progId}')" onmouseenter="hoverPlayProgression('${g.progId}')" onmouseleave="stopHoverPlay()">
+              <div class="match-item small occ-group-head fit-content" onclick="jumpToMatch('${g.progId}')" onmouseenter="hoverPlayProgression('${g.progId}')" onmouseleave="stopHoverPlay()">
                 <span><span class="prog-dot" style="background:${progressionColor(g.progId)};"></span>${escapeHtml(g.progName)}${g.items.length>1?` <span class="pos">(${g.items.length}×)</span>`:''}</span>
               </div>
               <div class="occ-group-detail" ${g.items.length===1?'style="display:block;"':''}>
@@ -8339,17 +8637,24 @@ function showHoverPreview(el, clientX, clientY){
   const sp = species && sig ? species.map[sig] : null;
   const hex = document.getElementById('hoverPreviewHex');
   hex.innerHTML = '';
+  // This preview is shared by BOTH shape hovers (species-card, exact-match, includes/part-of)
+  // and progression hovers (prog-card, mini-chip, chord-chip) -- the gold "root ring/stroke" is
+  // only unwanted in the progression case, so decide per-hover based on what was actually hovered
+  // rather than a blanket on/off for every use of this shared function.
+  // Kept only for potential future context-specific tweaks; the ring-circle removal below
+  // doesn't need it -- showRootRing:false already applies everywhere it should, uniformly.
+  const isProgContext = !!el.closest('.prog-card, .mini-chip, .chord-chip');
   if(sp && sp.qrOffsets){
     // Exact clicked positions — no reconstruction/guessing, so nothing can be missing or duplicated.
     // Same grid/zoom whether octave equivalence is on or off; only the echo highlight changes.
     const cfg = chordHexConfigFromQr(sp.rawIntervals, sp.qrOffsets, root, new Set(sp.intervals));
-    hex.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:16, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, zeroLabelOnly:true, vividMarks:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs }));
+    hex.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:16, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:false, zeroLabelOnly:true, vividMarks:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
   } else {
     const { cols, rows } = centeredGridSize([root, ...tones]);
     const hpMode = state.octaveEquivalence ? 'pc' : 'raw';
     const hpRoot = state.octaveEquivalence ? mod31(root) : root;
     const hpTones = state.octaveEquivalence ? new Set(tones.map(mod31)) : new Set(tones);
-    hex.appendChild(buildHexSVG({ shape:'rect-centered', cols, rows, size:16, highlightRoot:hpRoot, tones:hpTones, mode:hpMode, showLabels:false, zeroLabelOnly:true, vividMarks:true }));
+    hex.appendChild(buildHexSVG({ shape:'rect-centered', cols, rows, size:16, highlightRoot:hpRoot, tones:hpTones, mode:hpMode, showLabels:false, zeroLabelOnly:true, vividMarks:true, showRootRing:false }));
   }
   document.getElementById('hoverPreviewSteps').innerHTML = buildStepLadderHtml(root, tones);
   const nickEl = document.getElementById('hoverPreviewNick');
@@ -8688,7 +8993,7 @@ function tryPlayIntro(){
 }
 function buildKaleidoscopeSVG(){
   const svgns = 'http://www.w3.org/2000/svg';
-  const N = 32, size = 600, cx = size/2, cy = size/2, R = size*0.46;
+  const N = 28, size = 600, cx = size/2, cy = size/2, R = size*0.46;
   const svg = document.createElementNS(svgns,'svg');
   svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
   const g = document.createElementNS(svgns,'g');
@@ -8782,6 +9087,9 @@ function dismissSplash(){
   if(splash) splash.classList.add('hidden');
   const ctx = getAudioCtx();
   if(ctx && ctx.state!=='running'){ try{ ctx.resume().catch(()=>{}); }catch(e){} }
+  // Pause the always-on full-viewport background animations for the whole pkmn+kaleidoscope
+  // sequence -- see the .intro-playing CSS rule for why.
+  document.body.classList.add('intro-playing');
   runPkmnSplash(()=>{
     const t = document.getElementById('transitionScreen');
     if(t){
@@ -8790,11 +9098,14 @@ function dismissSplash(){
       t.appendChild(buildKaleidoscopeSVG());
       setTimeout(()=>{
         t.classList.add('hidden'); positionHelpHint();
+        document.body.classList.remove('intro-playing');
         // Shown every time the app opens, right after the spinning kaleidoscope intro finishes and
         // the main window is up -- the earliest point it's safe to interrupt with a warning without
         // it getting lost behind the splash sequence itself.
         state.showEpilepsyWarning = true; render();
       }, 3400);
+    } else {
+      document.body.classList.remove('intro-playing');
     }
     playIntroChord();
   });
