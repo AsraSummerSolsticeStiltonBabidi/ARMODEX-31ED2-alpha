@@ -1822,23 +1822,34 @@ function startBuilderProgressionPlay(){
   stopBuilderProgressionPlay();
   if(builderShapePlayActive){ stopHoverPlay(); builderShapePlayActive=false; }
   builderProgLoopActive = true;
-  const timbre = state.progressionsTabTimbre;
-  const durMs = builderProgressionDurationMs();
   const tick = ()=>{
     if(!builderProgLoopActive) return;
-    const slots = builderChordsForPlayback();
-    playChordsAudio(slots, timbre);
-    // Mark, in real time, which slot is currently sounding -- the committed shape chips light up
-    // one at a time, and the still-in-progress shape (the extra slot playChordsAudio always
-    // appends) gets its own visible cue on the map instead of looking identical whether or not
-    // it's actually its turn.
-    const bpm = Math.max(20, Math.min(300, state.playBpm||100));
-    const secPerBeat = 60/bpm, beatsPerChord = 2;
-    slots.forEach((_,i)=>{
-      const th = setTimeout(()=>{ builderPlayingIdx = i; render(); }, i*beatsPerChord*secPerBeat*1000);
-      builderPlayingTimers.push(th);
-    });
-    builderProgLoopTimer = setTimeout(tick, durMs);
+    // Read BPM/timbre fresh on every pass (rather than once when the loop first started) so
+    // changing an Interpretation setting mid-loop doesn't leave it running on stale numbers --
+    // and, more importantly, so any error thrown while scheduling one pass's audio (which used to
+    // land AFTER the recursive setTimeout, silently killing the loop after just one repetition if
+    // it threw) can never stop the next pass from being scheduled: the reschedule now happens in
+    // a finally block, unconditionally, no matter what happens above it.
+    try{
+      const timbre = state.progressionsTabTimbre;
+      const slots = builderChordsForPlayback();
+      playChordsAudio(slots, timbre);
+      // Mark, in real time, which slot is currently sounding -- the committed shape chips light up
+      // one at a time, and the still-in-progress shape (the extra slot playChordsAudio always
+      // appends) gets its own visible cue on the map instead of looking identical whether or not
+      // it's actually its turn.
+      const bpm = Math.max(20, Math.min(300, state.playBpm||100));
+      const secPerBeat = 60/bpm, beatsPerChord = 2;
+      slots.forEach((_,i)=>{
+        const th = setTimeout(()=>{ builderPlayingIdx = i; render(); }, i*beatsPerChord*secPerBeat*1000);
+        builderPlayingTimers.push(th);
+      });
+    } finally {
+      if(builderProgLoopActive){
+        const durMs = builderProgressionDurationMs();
+        builderProgLoopTimer = setTimeout(tick, durMs);
+      }
+    }
   };
   // getAudioCtx() fires resume() but doesn't wait for it -- if the context was still suspended
   // (e.g. this is the first sound played after a page load, or it got auto-suspended by the
@@ -8007,7 +8018,7 @@ function renderBuilder(content){
               <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
                 <button class="btn mini ${state.showHearMenu?'primary':''}" style="white-space:nowrap;" onclick="toggleHearMenu()">${t('interp.btn')}</button>
                 ${state.showHearMenu ? `
-                  <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
+                  <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px; top:auto; bottom:calc(100% + 6px); max-height:min(75vh, calc(100vh - 40px));">
                     <span class="control-group">
                       <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
                       <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
