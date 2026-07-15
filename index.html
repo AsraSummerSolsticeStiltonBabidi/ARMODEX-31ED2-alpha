@@ -582,7 +582,11 @@
   .built-chord .drag-handle{ cursor:grab; color:var(--muted); font-size:15px; padding:2px 4px; flex-shrink:0; touch-action:none; }
   .built-chord .drag-handle:active{ cursor:grabbing; }
   .built-chord .drag-handle.locked{ cursor:default; opacity:.75; }
-  .built-chord.editing{ border-color:var(--accent2); box-shadow:0 0 0 2px rgba(94,196,186,.25); }
+  .built-chord.editing{ border-color:var(--accent2); box-shadow:0 0 0 2px rgba(94,196,186,.25); animation:builtChordBreathe 2.2s ease-in-out infinite; }
+  @keyframes builtChordBreathe{
+    0%, 100% { box-shadow:0 0 0 2px rgba(94,196,186,.25); }
+    50% { box-shadow:0 0 0 5px rgba(94,196,186,.55); }
+  }
   .built-chord .root, .built-chord .ivs, .built-chord-tag{ flex-shrink:0; }
   .built-chord input[type="text"]{ flex:0 0 auto; width:33%; max-width:33%; min-width:60px; margin-left:auto; }
   .built-chord .ctrls{ flex-shrink:0; }
@@ -857,18 +861,17 @@
   .hover-nick{text-align:center; margin-top:8px; font-size:12px;}
   .hover-num{font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--accent); font-weight:700;}
   .nav-history-fab{
-    position:fixed; right:24px; bottom:24px; z-index:2150; display:flex; flex-direction:column; align-items:center; gap:10px;
+    position:fixed; right:24px; bottom:24px; z-index:2150; display:flex; flex-direction:row; align-items:center; gap:10px;
   }
-  .nav-history-fab-row{ display:flex; gap:16px; }
+  .nav-history-fab-row{ display:flex; align-items:center; gap:16px; }
   .nav-history-fab button{
-    width:113px; height:113px; border-radius:50%; border:1.5px solid var(--border-strong);
-    background:#f4efe2; font-size:43px; cursor:pointer;
+    width:85px; height:85px; border-radius:50%; border:1.5px solid var(--border-strong);
+    background:#f4efe2; font-size:32px; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.4); transition:all .15s ease;
   }
-  /* The circle itself stays the same size -- just the arrow glyph inside back/forward grows,
-     since the thin ← → strokes read much smaller than the old solid ◀▶ triangles at the same
-     font-size. */
-  #navBackBtn, #navForwardBtn{ font-size:64px; }
+  /* Back/forward slightly smaller than before, and the home button now sits between them at
+     their same vertical center (align-items:center on the row) rather than stacked above. */
+  #navBackBtn, #navForwardBtn{ width:76px; height:76px; font-size:43px; }
   /* Same treatment as the ARMODEX title: animated hue-rotating fill with a thick black stroke,
      instead of a flat solid triangle. */
   .nav-history-fab button{
@@ -887,7 +890,7 @@
   .nav-history-fab button:disabled{opacity:.3; cursor:not-allowed;}
   /* Half the size of the back/forward buttons, sitting directly above them -- the two arrows
      keep their original side-by-side position, unmoved. */
-  .nav-history-fab .nav-home-btn{ width:67px; height:67px; font-size:26px; }
+  .nav-history-fab .nav-home-btn{ width:67px; height:67px; font-size:26px; flex-shrink:0; }
   .help-hint-layer{
     position:fixed; left:0; top:0; z-index:5500; pointer-events:none;
     display:flex; flex-direction:column; align-items:center; gap:4px;
@@ -1196,9 +1199,9 @@
 <div id="builtChordMinimapTooltip" class="built-chord-minimap-tooltip"></div>
 <div id="centsTooltip" class="cents-tooltip"></div>
 <div class="nav-history-fab">
-  <button id="navHomeBtn" class="nav-home-btn" data-hotkey="A" onclick="switchTab('catalog')" title="Progressions overview">🏠</button>
   <div class="nav-history-fab-row">
     <button id="navBackBtn" data-hotkey="Z" onclick="navBack()" title="Back to where you were" disabled>←</button>
+    <button id="navHomeBtn" class="nav-home-btn" data-hotkey="A" onclick="switchTab('catalog')" title="Progressions overview">🏠</button>
     <button id="navForwardBtn" data-hotkey="X" onclick="navForward()" title="Forward" disabled>→</button>
   </div>
 </div>
@@ -1800,6 +1803,19 @@ function playChordsAudio(chords, timbre){
 // entirely (skipping it would make the loop length keep changing depending on what's selected).
 function builderChordsForPlayback(){
   const b = state.builder;
+  if(b.editingChordIdx!=null){
+    // While actively editing an existing shape on the map, play the chords list with that one
+    // slot replaced live by whatever is currently marked on the map -- not the stale pre-edit
+    // version -- and do NOT also append an extra trailing slot for it (that would duplicate it).
+    // If every note has been cleared off the map mid-edit, that slot should go silent -- not fall
+    // back to playing the stale pre-edit chord, which would contradict "plays the shape as it
+    // currently stands" the moment it currently stands as nothing at all.
+    const editedRoot = b.chords[b.editingChordIdx] ? b.chords[b.editingChordIdx].root : 0;
+    const live = b.selectedOrder.length>0
+      ? { root: b.selectedOrder[0], intervals: canonicalIntervals(b.selectedOrder[0], b.selectedOrder), label: b.chords[b.editingChordIdx] ? (b.chords[b.editingChordIdx].label||'') : '' }
+      : { root: editedRoot, intervals: [], label:'' };
+    return b.chords.map((c,i)=> i===b.editingChordIdx ? live : c);
+  }
   const extra = b.selectedOrder.length>0
     ? { root: b.selectedOrder[0], intervals: canonicalIntervals(b.selectedOrder[0], b.selectedOrder), label:'' }
     : { root: b.chords.length ? b.chords[0].root : 0, intervals: [], label:'' };
@@ -1814,6 +1830,50 @@ function builderProgressionDurationMs(){
   const secPerBeat = 60/bpm, beatsPerChord = 2;
   return builderChordsForPlayback().length * beatsPerChord * secPerBeat * 1000;
 }
+// Pulled out of startBuilderProgressionPlay so it can also be invoked on demand (see
+// builderProgLoopKick below) rather than only ever firing on its own scheduled interval.
+function builderProgTick(){
+  if(!builderProgLoopActive) return;
+  // Cancel whatever's still pending from the previous pass first -- both its reschedule timer and
+  // its per-slot highlight timers -- so a kicked-early tick (triggered by a live map edit) can
+  // never end up racing the tail end of the pass it's replacing.
+  if(builderProgLoopTimer) clearTimeout(builderProgLoopTimer);
+  builderPlayingTimers.forEach(th=>clearTimeout(th));
+  builderPlayingTimers = [];
+  // Read BPM/timbre fresh on every pass (rather than once when the loop first started) so
+  // changing an Interpretation setting mid-loop doesn't leave it running on stale numbers --
+  // and, more importantly, so any error thrown while scheduling one pass's audio (which used to
+  // land AFTER the recursive setTimeout, silently killing the loop after just one repetition if
+  // it threw) can never stop the next pass from being scheduled: the reschedule now happens in
+  // a finally block, unconditionally, no matter what happens above it.
+  try{
+    const timbre = state.progressionsTabTimbre;
+    const slots = builderChordsForPlayback();
+    playChordsAudio(slots, timbre); // registerProgressionSession inside here also cuts off any still-ringing audio from the pass this one is replacing
+    // Mark, in real time, which slot is currently sounding -- the committed shape chips light up
+    // one at a time, and the still-in-progress shape (the extra slot playChordsAudio always
+    // appends) gets its own visible cue on the map instead of looking identical whether or not
+    // it's actually its turn.
+    const bpm = Math.max(20, Math.min(300, state.playBpm||100));
+    const secPerBeat = 60/bpm, beatsPerChord = 2;
+    slots.forEach((_,i)=>{
+      const th = setTimeout(()=>{ builderPlayingIdx = i; render(); }, i*beatsPerChord*secPerBeat*1000);
+      builderPlayingTimers.push(th);
+    });
+  } finally {
+    if(builderProgLoopActive){
+      const durMs = builderProgressionDurationMs();
+      builderProgLoopTimer = setTimeout(builderProgTick, durMs);
+    }
+  }
+}
+// Called whenever the shape currently being edited on the map changes (a note tapped/removed/
+// reordered) while Play progression is running: instead of leaving the stale pre-edit version
+// audible for however long is left of the current pass -- which is what made the old and the
+// edited version sound at once -- immediately cut to a fresh pass built from the live selection.
+function builderProgLoopKick(){
+  if(builderProgLoopActive) builderProgTick();
+}
 function startBuilderProgressionPlay(){
   const playback = builderChordsForPlayback();
   // Still require *something* real (either a committed shape or notes currently on the map) --
@@ -1822,43 +1882,14 @@ function startBuilderProgressionPlay(){
   stopBuilderProgressionPlay();
   if(builderShapePlayActive){ stopHoverPlay(); builderShapePlayActive=false; }
   builderProgLoopActive = true;
-  const tick = ()=>{
-    if(!builderProgLoopActive) return;
-    // Read BPM/timbre fresh on every pass (rather than once when the loop first started) so
-    // changing an Interpretation setting mid-loop doesn't leave it running on stale numbers --
-    // and, more importantly, so any error thrown while scheduling one pass's audio (which used to
-    // land AFTER the recursive setTimeout, silently killing the loop after just one repetition if
-    // it threw) can never stop the next pass from being scheduled: the reschedule now happens in
-    // a finally block, unconditionally, no matter what happens above it.
-    try{
-      const timbre = state.progressionsTabTimbre;
-      const slots = builderChordsForPlayback();
-      playChordsAudio(slots, timbre);
-      // Mark, in real time, which slot is currently sounding -- the committed shape chips light up
-      // one at a time, and the still-in-progress shape (the extra slot playChordsAudio always
-      // appends) gets its own visible cue on the map instead of looking identical whether or not
-      // it's actually its turn.
-      const bpm = Math.max(20, Math.min(300, state.playBpm||100));
-      const secPerBeat = 60/bpm, beatsPerChord = 2;
-      slots.forEach((_,i)=>{
-        const th = setTimeout(()=>{ builderPlayingIdx = i; render(); }, i*beatsPerChord*secPerBeat*1000);
-        builderPlayingTimers.push(th);
-      });
-    } finally {
-      if(builderProgLoopActive){
-        const durMs = builderProgressionDurationMs();
-        builderProgLoopTimer = setTimeout(tick, durMs);
-      }
-    }
-  };
   // getAudioCtx() fires resume() but doesn't wait for it -- if the context was still suspended
   // (e.g. this is the first sound played after a page load, or it got auto-suspended by the
   // browser), scheduling notes immediately meant the first one or two loop passes played into a
   // context that wasn't actually running yet and produced no sound at all. Waiting for resume()
   // to actually resolve before starting the loop guarantees the very first pass is audible.
   const ctx = getAudioCtx();
-  if(ctx && ctx.state==='suspended'){ ctx.resume().then(()=>{ tick(); render(); }).catch(()=>{ tick(); render(); }); }
-  else { tick(); render(); }
+  if(ctx && ctx.state==='suspended'){ ctx.resume().then(()=>{ builderProgTick(); render(); }).catch(()=>{ builderProgTick(); render(); }); }
+  else { builderProgTick(); render(); }
 }
 function stopBuilderProgressionPlay(){
   builderProgLoopActive = false;
@@ -2752,7 +2783,28 @@ function exportSingleProgression(progId){
   downloadBytes(JSON.stringify(payload,null,2), `31ed2-armodex-progression-${slug(p.name)}.json`, 'application/json');
 }
 function toggleFilesMenu(){ state.showFilesMenu = !state.showFilesMenu; render(); }
-function toggleHearMenu(){ state.showHearMenu = !state.showHearMenu; render(); }
+function toggleHearMenu(){ state.showHearMenu = !state.showHearMenu; render(); if(state.showHearMenu) clampBuilderHearMenu(); }
+// Keeps the builder's Interpretation dropdown fully on-screen: it always opens downward from its
+// button now, but depending on how far right/low the button sits, a fixed left:0 anchor could
+// still push its right edge or bottom edge off the viewport. Measure after paint and nudge it
+// back on-screen with an inline left offset + a max-height capped to the space actually below it.
+function clampBuilderHearMenu(){
+  try{
+    requestAnimationFrame(()=>{
+      const menu = document.getElementById('builderHearMenu');
+      if(!menu) return;
+      const pad = 10;
+      const rect = menu.getBoundingClientRect();
+      const overflowRight = rect.right - (window.innerWidth - pad);
+      if(overflowRight > 0) menu.style.left = (-overflowRight) + 'px';
+      const rect2 = menu.getBoundingClientRect();
+      if(rect2.left < pad) menu.style.left = (parseFloat(menu.style.left||'0') + (pad - rect2.left)) + 'px';
+      const rect3 = menu.getBoundingClientRect();
+      const availBelow = window.innerHeight - rect3.top - pad;
+      menu.style.maxHeight = Math.max(120, availBelow) + 'px';
+    });
+  }catch(e){}
+}
 // Closing Settings should also fold up anything opened from within it, so it doesn't come back
 // already-expanded (and cluttered) the next time it's opened -- whichever way it gets closed.
 function closeSettingsSubWindows(){
@@ -5576,7 +5628,13 @@ function refreshBuilderShapePlayIfActive(){
 function builderHexClick(raw, e, q, r){
   pushBuilderUndo();
   builderUserHasTapped = true;
-  playChordAudio([raw], state.mapTimbre);
+  // While a shape is being live-edited with Play progression running, the loop itself is about to
+  // be kicked to immediately re-voice the whole edited chord (see calls below) -- playing this
+  // single tapped note on top of that as well is what made the old and the edited version sound
+  // at once. Skip it in that specific case; every other case (not editing, or editing with the
+  // loop not running) keeps the instant per-note click feedback as before.
+  const liveEditingWhilePlaying = state.builder.editingChordIdx!=null && builderProgLoopActive;
+  if(!liveEditingWhilePlaying) playChordAudio([raw], state.mapTimbre);
   if(state.builderFreePlay){ state.builder.lastClicked = raw; pulseBuilderMapGlow(raw); return; }
   if(firstChordLocked() && raw===0) return; // root of the first chord is fixed, not toggleable
   const arr = state.builder.selectedOrder;
@@ -5587,6 +5645,7 @@ function builderHexClick(raw, e, q, r){
     arr.unshift(raw);
     state.builder.lastClicked = raw;
     refreshBuilderShapePlayIfActive();
+    builderProgLoopKick();
     render(); pulseBuilderMapGlow(raw); return;
   }
   const i = findSelectionMatchIndex(arr, raw);
@@ -5594,6 +5653,7 @@ function builderHexClick(raw, e, q, r){
   if(i>=0){ arr.splice(i,1); if(state.builder.lastClicked===raw) state.builder.lastClicked = null; delete state.builder.selectedOrderQr[raw]; }
   else { arr.push(raw); state.builder.lastClicked = raw; }
   refreshBuilderShapePlayIfActive();
+  builderProgLoopKick();
   render();
   // Only flash the marking-color glow when a note is being marked, not when it's being unmarked.
   if(wasAdded) pulseBuilderMapGlow(raw);
@@ -5640,12 +5700,12 @@ function builderSetRoot(raw){
   pushBuilderUndo();
   if(firstChordLocked()) return; // no reassigning root while building the progression's first chord
   const arr = state.builder.selectedOrder; const i = arr.indexOf(raw); if(i<=0) return;
-  arr.splice(i,1); arr.unshift(raw); render();
+  arr.splice(i,1); arr.unshift(raw); builderProgLoopKick(); render();
 }
 function builderRemoveNote(raw){
   pushBuilderUndo();
   if(firstChordLocked() && raw===0) return;
-  const arr=state.builder.selectedOrder; const i=findSelectionMatchIndex(arr, raw); if(i>=0){ arr.splice(i,1); delete state.builder.selectedOrderQr[raw]; } render();
+  const arr=state.builder.selectedOrder; const i=findSelectionMatchIndex(arr, raw); if(i>=0){ arr.splice(i,1); delete state.builder.selectedOrderQr[raw]; } builderProgLoopKick(); render();
 }
 function builderClearSelection(){ pushBuilderUndo(); state.builder.selectedOrder = firstChordLocked() ? [0] : []; state.builder.selectedOrderQr = firstChordLocked() ? {0:{q:0,r:0}} : {}; render(); }
 function builderAddChord(){
@@ -5682,16 +5742,27 @@ function builderAddChord(){
 }
 function builderDuplicateChord(idx){
   pushBuilderUndo();
+  // The shape currently being edited hasn't been saved back into state.builder.chords yet, so
+  // duplicating it here would copy the stale pre-edit version -- keep that one action blocked,
+  // but every OTHER shape stays fully duplicatable while an edit is in progress elsewhere.
+  if(idx===state.builder.editingChordIdx) return;
   const c = state.builder.chords[idx]; if(!c) return;
   const copy = { id:uid(), root:c.root, intervals:c.intervals.slice(), label:c.label||'', qrOffsets: c.qrOffsets ? c.qrOffsets.map(o=>o?{...o}:null) : null };
+  // Track the being-edited chord by identity (not index) across the splice, since inserting a
+  // duplicate before it would otherwise silently point editingChordIdx at the wrong chord.
+  const editedItem = state.builder.editingChordIdx!=null ? state.builder.chords[state.builder.editingChordIdx] : null;
   state.builder.chords.splice(idx+1, 0, copy);
+  if(editedItem) state.builder.editingChordIdx = state.builder.chords.indexOf(editedItem);
   try{ const ctx = getAudioCtx(); if(ctx) scheduleChordAudio(copy.intervals.map(iv=>copy.root+iv), state.progressionsTabTimbre, ctx.currentTime, 0.8, copy.root, false, false); }catch(e){}
   render();
 }
 function builderRemoveChord(idx){
   pushBuilderUndo();
+  if(idx===state.builder.editingChordIdx) return; // can't remove the shape currently being edited -- discard the edit first
   stopHoverPlay();
+  const editedItem = state.builder.editingChordIdx!=null ? state.builder.chords[state.builder.editingChordIdx] : null;
   state.builder.chords.splice(idx,1);
+  if(editedItem) state.builder.editingChordIdx = state.builder.chords.indexOf(editedItem);
   if(state.builder.chords.length===0){ state.builder.selectedOrder = [0]; state.builder.lastClicked = 0; } // back to first-chord rules
   render();
 }
@@ -5702,7 +5773,9 @@ function builderMoveChord(idx, dir){
 }
 let builderDragFromIdx = null;
 function builderDragChordStart(e, idx){
-  if(state.builder.editingChordIdx!=null || idx===0){ e.preventDefault(); return; }
+  // Only the shape actually being edited (and the always-locked first shape) is off-limits to
+  // drag -- reordering every other shape is fine while an edit is in progress elsewhere.
+  if(idx===0 || idx===state.builder.editingChordIdx){ e.preventDefault(); return; }
   builderDragFromIdx = idx;
   e.dataTransfer.effectAllowed = 'move';
   try{ e.dataTransfer.setData('text/plain', String(idx)); }catch(err){}
@@ -5714,9 +5787,12 @@ function builderDropChord(e, dropIdx){
   const from = builderDragFromIdx;
   builderDragFromIdx = null;
   if(from==null || from===dropIdx || from===0 || dropIdx===0) return;
+  if(from===state.builder.editingChordIdx || dropIdx===state.builder.editingChordIdx) return; // don't disturb the shape currently being edited
   const arr = state.builder.chords;
+  const editedItem = state.builder.editingChordIdx!=null ? arr[state.builder.editingChordIdx] : null;
   const [moved] = arr.splice(from, 1);
   arr.splice(dropIdx, 0, moved);
+  if(editedItem) state.builder.editingChordIdx = arr.indexOf(editedItem);
   render();
 }
 function builderChordLabel(idx, val){ state.builder.chords[idx].label = val; }
@@ -7973,7 +8049,6 @@ function renderBuilder(content){
               ${recognitionPanel ? `<span class="builder-nickname-inline" style="display:inline-flex; align-items:center; margin-left:auto;">${recognitionPanel}</span>` : ''}
           </div>
           <div class="row" style="margin-top:8px;">
-            ${state.builder.editingChordIdx!=null ? `<p class="sub" style="max-width:none; color:var(--accent2);">${t('builder.editingshape1')} ${state.builder.editingChordIdx+1} ${t('builder.editingshape2')}</p>` : ''}
           </div>
         </div>
       </div>
@@ -8018,7 +8093,7 @@ function renderBuilder(content){
               <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
                 <button class="btn mini ${state.showHearMenu?'primary':''}" style="white-space:nowrap;" onclick="toggleHearMenu()">${t('interp.btn')}</button>
                 ${state.showHearMenu ? `
-                  <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px; top:auto; bottom:calc(100% + 6px); max-height:min(75vh, calc(100vh - 40px));">
+                  <div class="help-dropdown-menu" id="builderHearMenu" style="min-width:280px; display:flex; flex-direction:column; gap:8px; top:calc(100% + 6px); bottom:auto; max-height:min(75vh, calc(100vh - 40px));">
                     <span class="control-group">
                       <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
                       <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
@@ -8063,9 +8138,9 @@ function renderBuilder(content){
                           <button title="save changes" onclick="builderSaveEditChord()">✓</button>
                           <button title="discard changes" onclick="builderCancelEditChord()">✕</button>
                         ` : `
-                          <button title="duplicate this shape" onclick="event.stopPropagation(); builderDuplicateChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>⧉</button>
+                          <button title="duplicate this shape" onclick="event.stopPropagation(); builderDuplicateChord(${idx})">⧉</button>
                           <button title="edit this shape on the hex map" onclick="builderStartEditChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>✎</button>
-                          <button title="remove" onclick="builderRemoveChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>✕</button>
+                          <button title="remove" onclick="builderRemoveChord(${idx})">✕</button>
                         `}
                       </div>
                     </div>
