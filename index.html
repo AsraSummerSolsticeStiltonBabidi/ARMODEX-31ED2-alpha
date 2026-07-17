@@ -83,7 +83,7 @@
     font-size:.33em; vertical-align:super; margin-left:.2em; letter-spacing:.02em;
     -webkit-text-stroke:.7px #0d0f11; opacity:.85;
   }
-  .hero-title-mini .title-sub{ -webkit-text-stroke:1.1px #0d0f11; opacity:1; }
+  .hero-title-mini .title-sub{ -webkit-text-stroke:.7px #0d0f11; opacity:1; }
   .hero-plate, .hero-plate *, .splash-screen, .splash-screen *{ text-shadow:0 0 3px rgba(255,255,255,.7), 0 0 7px rgba(255,255,255,.4); }
   /* This white glow was also landing on the mini header's title, washing its black stroke out
      into a grayish blur. The mini title doesn't need it -- it already sits directly on the white
@@ -100,6 +100,10 @@
     text-align:center; padding:24px;
   }
   .splash-screen.hidden{ display:none; }
+  /* Keep the splash's own content (eye, title, sub, continue) painted ABOVE the traveling-shapes
+     layer -- the layer is a positioned z-index:0 element, which would otherwise paint over the
+     splash's unpositioned in-flow children; and the shapes must pass UNDER the eye. */
+  .splash-screen > *:not(.eye-hex-anim){ position:relative; z-index:1; }
   .splash-logo{ width:min(46vw, 220px); height:auto; margin-bottom:4px; }
   .splash-title{
     font-family:'Chakra Petch',sans-serif; font-weight:700; text-transform:uppercase;
@@ -271,27 +275,56 @@
      SVG from bleeding out) but it was also clipping the settings/help/language dropdown menus,
      which pop out *below* this box -- so any open dropdown got cut off at the box's own edge
      instead of floating over the rest of the page like every other dropdown in the app. */
-  .hero-plate-mini{ padding:8px 16px 8px 10px; min-height:0; width:fit-content; max-width:100%; display:inline-flex; align-items:flex-start; gap:16px; flex-wrap:nowrap; overflow:visible; }
-  .hero-plate-mini .hero-logo{ min-height:92px; max-height:104px; flex-shrink:0; align-self:center; }
+  .hero-plate-mini{ position:relative; padding:6px 16px 6px 10px; min-height:0; width:fit-content; max-width:100%; display:inline-flex; align-items:flex-start; gap:16px; flex-wrap:nowrap; overflow:visible; }
+  /* Credit text and the eye share one row right under the title (eye to the RIGHT of Asra3),
+     killing the tall stacked column -- the eye keeps its exact size and just bleeds a little into
+     the title's space above and the plate's padding below via negative margins, so the header's
+     bottom dead band collapses. */
+  .hero-credit-row{ display:flex; flex-direction:row; align-items:flex-start; gap:12px; }
+  .hero-credit-row .eq-credit{ order:0; }
+  .hero-credit-row .hero-logo{ order:1; }
+  .hero-plate-mini .hero-logo{ height:104px; min-height:104px; max-height:104px; width:auto; flex-shrink:0; margin:-22px 0 -14px; }
+  /* The animation layer spans the WHOLE header box (inset:0 reaches its real edges since the plate
+     has no border) and clips to it (overflow:hidden), so the hexagons only appear/disappear at the
+     header's real edges. Everything else sits above it. */
+  .eye-hex-anim{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden; border-radius:14px; }
+  .hero-plate-mini > *:not(.eye-hex-anim){ position:relative; z-index:1; }
+  /* Each hexagon travels along its OWN curved path (set inline via offset-path) that sweeps from
+     the base of the marked area up to its top, following the area's curve -- not a straight
+     vertical rise. offset-distance 0%->100% carries it along that path; no opacity fade, so it
+     stays solid and is only clipped at the area's real edges. */
+  /* Two independent populations moved along offset-paths by the Web Animations API (per-shape
+     keyframe offsets can't live in shared CSS keyframes): .eye-orb (bigger, slower, sparser
+     circles / curvy blobs of ANY color that travel INTO the eye and vanish at its outline) and
+     .eye-hex (the usual hexagons that emerge OUT of the eye's pupil and exit the top). Splitting
+     them is what lets the circles be slower/bigger/rarer while the hexagons keep their exact
+     current size, speed and frequency. */
+  .eye-hex, .eye-orb{ position:absolute; top:0; left:0; display:block; offset-rotate:0deg; will-change:offset-distance; opacity:0; }
+  /* Outlines matching the title's own stroke (3px, near-black). The hexagon is drawn as an inline
+     SVG polygon (a CSS border can't follow a clip-path shape); the orbs use a plain border, which
+     does follow border-radius. */
+  .eye-orb{ background:var(--hx); border:3px solid #0d0f11; box-sizing:border-box; }
+  .eye-hex svg{ display:block; width:100%; height:100%; overflow:visible; }
+  @media (prefers-reduced-motion: reduce){ .eye-hex-anim{ display:none; } }
   /* The white-glow text-shadow below is meant for the title/logo area on a white background --
      it was also landing on the settings/help/language buttons once they moved inside this same
      white box, making their text read as a blurry glow instead of plain text. Cancel it there. */
   .hero-plate-mini .btn{ text-shadow:none; }
   .hero-plate-mini .eq-credit{ color:#3d434b; text-shadow:none; }
   .hero-plate-mini .eq-credit-name{ color:#c81b4a; text-shadow:none; }
-  .hero-title-col{ display:flex; flex-direction:column; gap:4px; justify-content:center; }
+  .hero-title-col{ display:flex; flex-direction:column; gap:2px; justify-content:center; }
   .hero-title-mini{
     font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:58px; line-height:1;
     letter-spacing:.005em; text-transform:uppercase; white-space:nowrap;
-    color:hsl(0 72% 42%); -webkit-text-stroke:3px #0d0f11; paint-order:stroke fill;
+    color:hsl(0 72% 42%); -webkit-text-stroke:1.5px #0d0f11; paint-order:stroke fill;
     animation:pupilHue 7s linear infinite;
     display:flex; align-items:center; flex-shrink:0;
   }
   @media (prefers-reduced-motion: reduce){ .hero-title-mini{animation:none;} }
   /* The three header buttons stacked one above another; their dropdowns open downward and
      toward the right (the default left:0 anchor), not toward the left. */
-  .hero-btn-stack{ display:flex; flex-direction:column; align-items:flex-start; align-self:stretch; justify-content:space-between; gap:6px; }
-  .hero-btn-stack > .help-dropdown-wrap{ display:flex; flex:1; }
+  .hero-btn-stack{ display:flex; flex-direction:column; align-items:flex-start; align-self:flex-start; justify-content:flex-start; gap:4px; }
+  .hero-btn-stack > .help-dropdown-wrap{ display:flex; }
   /* .btn's base background/color (a dark panel fill with light text, meant for the app's dark
      background) read as a jarring black box with barely-visible text once these buttons moved
      onto the white header. Plain outline + dark text instead, matching the rest of this box. */
@@ -299,7 +332,8 @@
      not `.hero-btn-stack .btn` generally -- that broader selector was also repainting every
      button INSIDE the opened dropdown menus (which sit on a dark panel background) with this
      light-card styling, making their text unreadable against that dark background. */
-  .hero-btn-stack > .help-dropdown-wrap > .btn{ background:transparent; border-color:#3d434b; color:#14181f; white-space:nowrap; flex:1 0 max-content; min-width:max-content; padding:6px 16px; font-size:13px; text-align:left; display:flex; align-items:center; justify-content:flex-start; box-shadow:none !important; }
+  .hero-btn-stack > .help-dropdown-wrap > .btn{ background:transparent; border-color:#3d434b; color:#14181f; white-space:nowrap; flex:0 0 auto; min-width:max-content; padding:2px 12px; font-size:13px; text-align:left; display:flex; align-items:center; justify-content:flex-start; box-shadow:none !important; }
+  .hero-btn-stack .header-btn-emoji{ font-size:19px; }
   .hero-btn-stack > .help-dropdown-wrap > .btn.primary{ background:#14181f; color:#f4efe2; box-shadow:none; }
   /* Only the emoji glyph gets an outer shadow (not the whole button label) so it reads clearly
      against the white card without darkening the plain black text next to it. */
@@ -315,6 +349,48 @@
       -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   }
   .hero-plate .sub{ color:#3d434b; max-width:560px; font-size:12px; line-height:1.35; margin-top:6px; }
+  /* The stats now live INSIDE the pupil of a big eye pinned to the screen's top-right. The eye
+     itself ignores the mouse (pointer-events:none) -- only the stats card inside is interactive. */
+  .stats-eye{
+    position:absolute; top:-10px; right:-8px; width:560px; z-index:150; pointer-events:none;
+    transform:scale(.2); transform-origin:top right; opacity:0;
+    transition:transform .38s cubic-bezier(.2,.85,.3,1.05), opacity .3s ease;
+  }
+  /* Expanded state: floats OVER whatever cards sit beneath (absolute + high z-index, so nothing
+     gets pushed), and the eye surface itself catches the mouse -- which is also what gives the
+     stats' own hovers (most common pair etc) priority over card hovers underneath. */
+  .stats-eye.open{ transform:scale(1); opacity:1; }
+  .stats-eye-svg{ display:block; width:100%; height:auto; }
+  .stats-eye.open .stats-eye-svg{ pointer-events:auto; cursor:pointer; }
+  /* The close button IS the hexagon's little white highlight dot (same spot, same size): the
+     circle at (97,22) of the 130x100 viewBox, promoted to a clickable button with a black cross. */
+  .stats-eye-close{
+    position:absolute; left:calc(100% * 97 / 130); top:22%; right:auto; transform:translate(-50%,-50%);
+    pointer-events:none;
+    width:34px; height:34px; border-radius:50%; padding:0;
+    background:#f4efe2; color:#0d0f11; border:1.5px solid #0d0f11;
+    font-size:16px; font-weight:800; line-height:1; cursor:pointer;
+    box-shadow:0 3px 10px rgba(0,0,0,.35); transition:all .15s ease;
+    display:flex; align-items:center; justify-content:center; text-shadow:none;
+  }
+  .stats-eye-close:hover{ border-color:var(--accent2); color:var(--accent2); }
+  .stats-eye.open .stats-eye-close{ pointer-events:auto; }
+  /* Stats text: bigger (still inside the hexagon) with a black outer stroke on everything. */
+  .stats-eye .stats-plate, .stats-eye .stats-plate *{ -webkit-text-stroke:.7px #000; paint-order:stroke fill; }
+  .stats-eye .stats-plate{ width:300px !important; max-width:300px !important; }
+  .stats-eye .stats-plate .stats-title{ font-size:16px; }
+  .stats-eye .stats-plate .stat-row{ font-size:13px; }
+  .stats-eye .stats-plate .stat-chip{ font-size:12px; }
+  .stats-eye .stats-plate{ position:absolute; left:50%; top:50%; right:auto; transform:translate(-50%,-50%); width:250px; min-width:0; max-width:250px; pointer-events:none; background:transparent; border:none; box-shadow:none; }
+  .stats-eye.open .stats-plate{ pointer-events:auto; }
+  /* Default (not clicked): the original small eye with its normal pupil, "Stats" underneath. */
+  .stats-eye-mini{ position:absolute; top:-4px; right:6px; z-index:2; width:118px; display:flex; flex-direction:column; align-items:center; cursor:pointer; pointer-events:auto; transition:transform .15s ease; }
+  .stats-eye-mini:hover{ transform:scale(1.07); }
+  .stats-eye-mini.hidden{ display:none; }
+  .stats-eye-mini svg{ display:block; width:100%; height:auto; }
+  .stats-eye-mini .stats-eye-label{ font-family:'Chakra Petch',sans-serif; font-weight:800; font-size:12.5px; letter-spacing:.04em; color:#fff; -webkit-text-stroke:.8px #000; paint-order:stroke fill; margin-top:-8px; text-shadow:none; }
+  @media (max-width:1100px){ .stats-eye{ width:440px; } .stats-eye .stats-plate{ width:210px; max-width:210px; } }
+  @media (max-width:820px){ .stats-eye{ position:static; width:100%; pointer-events:auto; } .stats-eye-svg{ display:none; } .stats-eye .stats-plate{ position:static; transform:none; width:100%; max-width:none; margin-top:12px; background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); } }
   .stats-plate{
     position:absolute; top:0; right:0;
     z-index:1;
@@ -337,6 +413,15 @@
   .stats-plate .stat-row:nth-of-type(5) button.stat-chip{ background:#ef4b4b; color:#2a0a0a; border-color:#ef4b4b; }
   .stats-plate .stat-row:nth-of-type(6) span{color:#d9a8f0;} .stats-plate .stat-row:nth-of-type(6) b{color:#c261e8;}
   .stat-dot.filled{ background:#28c8e0; }
+  /* Strong colored flash of the whole stats plate, tinted to the just-saved progression's card
+     color, that eases itself fully out over ~2.6s -- triggered each time a new progression lands
+     you back on the Progressions overview. */
+  @keyframes statsPlateNewProgFlash{
+    0%   { box-shadow:0 0 0 3px var(--flash-color), 0 0 46px 10px var(--flash-color), 0 4px 16px rgba(0,0,0,.4); border-color:var(--flash-color); }
+    100% { box-shadow:0 4px 16px rgba(0,0,0,.4); border-color:var(--border-card); }
+  }
+  .stats-plate.new-prog-flash{ animation:statsPlateNewProgFlash 2.6s ease-out forwards; }
+  @media (prefers-reduced-motion: reduce){ .stats-plate.new-prog-flash{ animation:none; } }
   @media (max-width:820px){ .stats-plate{ position:static; width:100%; max-width:none; margin-top:12px; } }
   h1{
     font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:clamp(42px,6.2vw,64px); margin:0; line-height:0.94;
@@ -354,9 +439,14 @@
   .help-dropdown-menu{
     position:absolute; top:calc(100% + 6px); left:0; z-index:400; display:flex; flex-direction:column; gap:6px;
     background:var(--panel-raised); border:1px solid var(--border-strong); border-radius:10px; padding:8px;
-    box-shadow:0 12px 28px rgba(0,0,0,.5); min-width:220px; max-height:75vh; overflow-y:auto;
+    box-shadow:0 12px 28px rgba(0,0,0,.5); width:fit-content; max-width:min(96vw, 640px); max-height:75vh; overflow-y:auto; align-items:flex-start;
   }
   .help-dropdown-menu .btn{ text-align:left; white-space:nowrap; }
+  .help-dropdown-menu p.sub{ color:#d8dee6; }
+  /* Option boxes hug their own text instead of stretching to the menu's full width. */
+  .help-dropdown-menu > .btn, .help-dropdown-menu > .eq-toggle{ align-self:flex-start; width:auto; }
+  /* These were the elements actually wrapping to 2 lines (buttons already had nowrap). */
+  .help-dropdown-menu .eq-toggle, .help-dropdown-menu .field-label{ white-space:nowrap; }
   .eq-toggle{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; cursor:pointer; border-radius:999px; padding:4px 10px; border:1px solid var(--border-strong); background:var(--panel-alt); color:var(--text); transition:all .15s ease; }
   .eq-toggle:hover{border-color:var(--accent2);}
   .eq-toggle.on{background:var(--accent2); border-color:var(--accent2); color:#0a201d;}
@@ -432,7 +522,7 @@
   .chord-chip:hover{border-color:var(--accent2); transform:translateY(-2px); box-shadow:0 10px 20px rgba(0,0,0,.4), 0 0 0 3px var(--accent2);}
   .chord-chip .clickzone{cursor:pointer; display:flex; flex-direction:column; gap:2px;}
   .chord-chip .root{font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; color:var(--accent);}
-  .chord-chip .ivs{font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted);}
+  .chord-chip .ivs{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#fff;}
   .chord-chip .lbl{font-size:10px; color:var(--text); font-style:italic; opacity:.85;}
   .chord-chip .num{font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; color:#f4efe2;}
   .chord-nick{ font-weight:800; color:#5b9dea; font-size:1.15em; letter-spacing:.01em; background:#0a0b0d; padding:2px 7px; border-radius:5px; display:inline-block; }
@@ -447,6 +537,24 @@
   @media (max-width:900px){ .chord-flow{ grid-template-columns:repeat(2, 1fr); } }
   @media (max-width:520px){ .chord-flow{ grid-template-columns:1fr; } }
   .seq-order-badge{ font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); }
+  /* Order number lifted OUT of the card, sitting right on top of it. */
+  .chip-wrap{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; min-width:0; }
+  .seq-order-badge.outside{ font-size:10.5px; font-weight:700; color:var(--text); margin-left:6px; }
+  /* Progressions-overview chip: the root reads as THE root -- yellow, bold, black-stroked. */
+  .root-hex-chip{ position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; width:27px; min-width:27px; max-width:27px; height:30px; padding:0; font-family:'JetBrains Mono',monospace; font-weight:900; font-size:11.5px; color:#0d0f11; -webkit-text-stroke:.6px #f4e04d; paint-order:stroke fill; vertical-align:middle; text-shadow:none; overflow:visible; }
+  .root-hex-chip::before{ content:''; position:absolute; inset:0; z-index:-1; clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); background:var(--chip-c); }
+  /* Progressions-overview variant: a notch bigger and bolder, with a thicker yellow stroke. */
+  .root-hex-chip.mini-chip-root{ width:35px; min-width:35px; max-width:35px; height:38px; font-size:16px; font-weight:900; -webkit-text-stroke:1.8px #f4e04d; paint-order:stroke fill; }
+  .mini-chip.now-sounding{ box-shadow:0 0 0 2.5px #f4e04d; border-radius:6px; }
+  .built-chord .builder-card-chip{ cursor:inherit; }
+  /* Live insertion preview while dragging to reorder: a real gap opens BETWEEN cards at the
+     computed slot, with an accent bar marking the seam -- the list is literally showing the
+     order that would result. */
+  .built-chord{ transition:margin .12s ease; }
+  .built-chord.drop-before{ margin-top:26px; position:relative; }
+  .built-chord.drop-before::before{ content:''; position:absolute; top:-17px; left:4px; right:4px; height:6px; border-radius:3px; background:var(--accent2); }
+  .built-chord.drop-after{ margin-bottom:26px; position:relative; }
+  .built-chord.drop-after::after{ content:''; position:absolute; bottom:-17px; left:4px; right:4px; height:6px; border-radius:3px; background:var(--accent2); }
   .prog-detail-grid{ display:grid; grid-template-columns: 1.3fr 315px minmax(420px, 2.05fr); gap:20px; align-items:start; margin-top:16px; }
   .prog-detail-middle .field-label[onclick]{ white-space:nowrap; }
   .prog-detail-middle{ display:flex; flex-direction:column; gap:8px; position:sticky; top:16px; }
@@ -852,7 +960,11 @@
   .built-chord-minimap-tooltip.visible{ display:block; opacity:1; }
   .built-chord-minimap-tooltip svg{ width:100%; height:100%; display:block; }
   .step-ladder{display:flex; align-items:center; flex-wrap:wrap; gap:6px 7px; margin-top:8px; font-family:'JetBrains Mono',monospace; font-size:11px; justify-content:center;}
+  .focus-main-wrap .step-ladder{ margin-bottom:14px; }
+  .focus-main-wrap .count{ margin-top:10px; }
   .step-num{ background:#f4efe2; color:#14181f; font-weight:900; font-size:11px; padding:3px 6px; border-radius:5px; line-height:1.2; text-shadow:0 0 3px rgba(255,255,255,.85), 0 0 6px rgba(255,255,255,.5); }
+  .step-num.step-root{ background:#f4e04d; } /* the root box is yellow, showing 0 instead of R */
+  .step-root-text{ font-weight:900; color:#000; -webkit-text-stroke:.6px #f4e04d; paint-order:stroke fill; }
   /* The bigger step-number size (as previously requested) only makes sense in the single-shape
      detail window, where there's room and the numbers are the point of focus -- the general
      Shapes overview grid packs many cards at once, so it keeps the smaller, denser size above. */
@@ -890,7 +1002,10 @@
   .nav-history-fab button:disabled{opacity:.3; cursor:not-allowed;}
   /* Half the size of the back/forward buttons, sitting directly above them -- the two arrows
      keep their original side-by-side position, unmoved. */
-  .nav-history-fab .nav-home-btn{ width:67px; height:67px; font-size:26px; flex-shrink:0; }
+  .nav-history-fab .nav-home-btn{ width:67px; height:67px; font-size:30px; flex-shrink:0;
+    text-shadow:-2px 0 0 #0d0f11, 2px 0 0 #0d0f11, 0 -2px 0 #0d0f11, 0 2px 0 #0d0f11,
+      -1px -1px 0 #0d0f11, 1px -1px 0 #0d0f11, -1px 1px 0 #0d0f11, 1px 1px 0 #0d0f11;
+  }
   .help-hint-layer{
     position:fixed; left:0; top:0; z-index:5500; pointer-events:none;
     display:flex; flex-direction:column; align-items:center; gap:4px;
@@ -1171,7 +1286,9 @@
   <div class="help-hint-bubble" id="helpHintBubble"></div>
 </div>
 <div class="splash-screen" id="splashScreen" onclick="dismissSplash()">
+  <div class="eye-hex-anim" id="splashHexAnimLayer"></div>
   <svg class="splash-logo" viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <path d="M8,65 Q65,16 122,65 Q65,114 8,65 Z" fill="#f4efe2"/>
     <path d="M8,65 Q65,16 122,65 Q65,114 8,65 Z" fill="none" stroke="#181c22" stroke-width="3.2" stroke-linejoin="round"/>
     <polygon class="pupil-hex" points="87,65 76,84.1 54,84.1 43,65 54,45.9 76,45.9" stroke="#181c22" stroke-width="2" stroke-linejoin="round"/>
     <circle cx="71.5" cy="57" r="3.4" fill="#f4efe2" opacity="0.85"/>
@@ -1407,7 +1524,7 @@ function buildHexSVG(opts){
       if(interactive) t.style.pointerEvents='none';
       g.appendChild(t);
     }
-    if(showCents && (isRoot || isTone)) markedCells.push({ raw:c.raw, poly, isRoot });
+    if(showCents && (isRoot || isTone)) markedCells.push({ raw:c.raw, poly, isRoot, x:c.x, y:c.y, size });
     (isRoot ? rootLayer : isTone ? toneLayer : plainLayer).push(g);
   });
   plainLayer.forEach(g=>svg.appendChild(g));
@@ -1426,23 +1543,58 @@ function buildHexSVG(opts){
       const lower = idx>0 ? sorted[idx-1] : null;
       const higher = idx<sorted.length-1 ? sorted[idx+1] : null;
       entry.poly.style.cursor = 'default';
+      const lowestEntry = sorted[0];
+      // Outline colors matched EXACTLY to the cents-tooltip text colors below:
+      //   lowest note -> green, note below -> blue, note above -> lilac.
+      const C_LOWEST = '#3ddc73', C_BELOW = '#28c8e0', C_ABOVE = '#d9a8f0';
       entry.poly.addEventListener('mouseenter', (e)=>{
         const fromRoot = (entry.raw-rootRaw)*centsPerStep;
         let lines = [`<span style="color:#f5a623;">${fromRoot>=0?'+':''}${fromRoot.toFixed(1)}¢ ${t('cents.fromroot')}</span>`];
         if(entry.raw!==lowestRaw){
           const fromLowest = (entry.raw-lowestRaw)*centsPerStep;
-          lines.push(`<span style="color:#3ddc73;">${fromLowest.toFixed(1)}¢ ${t('cents.abovelowest')}</span>`);
+          lines.push(`<span style="color:${C_LOWEST};">${fromLowest.toFixed(1)}¢ ${t('cents.abovelowest')}</span>`);
         }
-        if(lower) lines.push(`<span style="color:#28c8e0;">${((entry.raw-lower.raw)*centsPerStep).toFixed(1)}¢ ${t('cents.abovebelow')}</span>`);
-        if(higher) lines.push(`<span style="color:#d9a8f0;">${((higher.raw-entry.raw)*centsPerStep).toFixed(1)}¢ ${t('cents.belowabove')}</span>`);
-        if(lower) lower.poly.style.filter = 'brightness(1.35)';
-        if(higher) higher.poly.style.filter = 'brightness(1.35)';
+        if(lower) lines.push(`<span style="color:${C_BELOW};">${((entry.raw-lower.raw)*centsPerStep).toFixed(1)}¢ ${t('cents.abovebelow')}</span>`);
+        if(higher) lines.push(`<span style="color:${C_ABOVE};">${((higher.raw-entry.raw)*centsPerStep).toFixed(1)}¢ ${t('cents.belowabove')}</span>`);
+        // Colored RINGS around each reference note (not recolored cells) -- distinct radii per
+        // relation, so a note that is e.g. both "lowest" and "note below" shows two clearly
+        // separate concentric circles.
+        const touched = [];
+        const rings = [];
+        const addRing = (cell, color, rMult)=>{
+          if(!cell) return;
+          const ring = document.createElementNS(svgns,'circle');
+          ring.setAttribute('cx', cell.x.toFixed(1)); ring.setAttribute('cy', cell.y.toFixed(1));
+          ring.setAttribute('r', (cell.size*rMult).toFixed(1));
+          ring.setAttribute('fill','none'); ring.setAttribute('stroke', color);
+          ring.setAttribute('stroke-width', 2.2); ring.style.pointerEvents = 'none';
+          svg.appendChild(ring); rings.push(ring);
+        };
+        if(lowestEntry && lowestEntry!==entry) addRing(lowestEntry, C_LOWEST, 1.12);
+        if(lower) addRing(lower, C_BELOW, 1.5);
+        if(higher) addRing(higher, C_ABOVE, 1.88);
+        entry._centsRings = rings;
+        // The hovered hexagon mirrors the cents window itself: same background fill and the same
+        // 1px accent-colored border, so the readout and its subject visually pair up.
+        let recH = touched.find(r=>r.p===entry.poly);
+        if(!recH){ recH = { p: entry.poly, stroke: entry.poly.getAttribute('stroke'), sw: entry.poly.getAttribute('stroke-width') }; touched.push(recH); }
+        recH.fill = entry.poly.getAttribute('fill');
+        entry.poly.setAttribute('fill', 'var(--panel)');
+        entry.poly.setAttribute('stroke', 'var(--accent2)');
+        entry.poly.setAttribute('stroke-width', '1');
+        entry._centsTouched = touched;
         showCentsTooltip(e, lines.join('<br>'));
       });
       entry.poly.addEventListener('mousemove', (e)=> moveCentsTooltip(e));
       entry.poly.addEventListener('mouseleave', ()=>{
-        if(lower) lower.poly.style.filter = '';
-        if(higher) higher.poly.style.filter = '';
+        (entry._centsTouched||[]).forEach(({p, stroke, sw, fill})=>{
+          if(stroke!=null) p.setAttribute('stroke', stroke); else p.removeAttribute('stroke');
+          if(sw!=null) p.setAttribute('stroke-width', sw); else p.removeAttribute('stroke-width');
+          if(fill!==undefined){ if(fill!=null) p.setAttribute('fill', fill); else p.removeAttribute('fill'); }
+        });
+        entry._centsTouched = null;
+        (entry._centsRings||[]).forEach(r=>{ try{ r.remove(); }catch(e){} });
+        entry._centsRings = null;
         hideCentsTooltip();
       });
     });
@@ -1468,6 +1620,38 @@ function mountZoomableSVG(holderEl, svgEl, zoomKey){
 /* ============================ AUDIO ============================ */
 let audioCtx = null;
 let masterLimiter = null;
+let gentleMasterBus = null;
+function makeSoftCeilingCurve(knee, ceil){
+  const c = new Float32Array(4096);
+  for(let i=0;i<4096;i++){
+    const x = (i/2047.5)-1;
+    const ax = Math.abs(x);
+    const y = ax<=knee ? ax : knee + (ceil-knee)*Math.tanh((ax-knee)/(ceil-knee));
+    c[i] = Math.sign(x)*y;
+  }
+  return c;
+}
+// Every non-MIDI voice now routes through this instead of raw ctx.destination: a GENTLE bus --
+// wide soft knee, low ratio, threshold high enough that normal single-chord playback passes
+// through completely untouched (so nothing gets quieter), only shaving the summed peaks of many
+// simultaneous voices that were audibly clipping. A tanh soft-clip ceiling behind it makes true
+// overs mathematically impossible without the pumping a hard limiter would cause.
+function getGentleBus(ctx){
+  if(gentleMasterBus && gentleMasterBus.context===ctx) return gentleMasterBus;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.setValueAtTime(-8, ctx.currentTime);
+  comp.knee.setValueAtTime(24, ctx.currentTime);
+  comp.ratio.setValueAtTime(2.5, ctx.currentTime);
+  comp.attack.setValueAtTime(0.006, ctx.currentTime);
+  comp.release.setValueAtTime(0.25, ctx.currentTime);
+  const clipper = ctx.createWaveShaper();
+  clipper.curve = makeSoftCeilingCurve(0.75, 0.95); // identity below 0.75 -- zero distortion in the normal range
+  clipper.oversample = '4x';
+  comp.connect(clipper);
+  clipper.connect(ctx.destination);
+  gentleMasterBus = comp;
+  return comp;
+}
 function getAudioCtx(){
   if(!audioCtx){ const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return null; audioCtx = new AC(); }
   if(audioCtx.state==='suspended') audioCtx.resume();
@@ -1490,12 +1674,13 @@ function getMasterOutput(ctx){
   // non-clipping signal passes through completely unchanged in level) and only bends as it nears the
   // ceiling, so a true peak can never exceed it.
   const clipper = ctx.createWaveShaper();
-  const curve = new Float32Array(2048);
-  for(let i=0;i<2048;i++){ const x = (i/1023.5)-1; curve[i] = Math.tanh(x*1.35)/Math.tanh(1.35); }
-  clipper.curve = curve;
+  clipper.curve = makeSoftCeilingCurve(0.7, 0.95); // identity below 0.7 -- zero distortion in the normal range
   clipper.oversample = '4x';
   limiter.connect(clipper);
-  clipper.connect(ctx.destination);
+  // Into the gentle master bus rather than straight to the destination: previously this path and
+  // the gentle bus ran in PARALLEL, so their two 0.9 ceilings could still sum to ~1.8 at the DAC
+  // when live MIDI played at the same time as app playback. One final ceiling now guards the sum.
+  clipper.connect(getGentleBus(ctx));
   masterLimiter = limiter;
   return masterLimiter;
 }
@@ -1612,16 +1797,18 @@ function bumpWaveSpeed(durSec){
     if(waveSpeedActive===0) setWaveSpeed(1);
   }, Math.max(250, (durSec||1)*1000));
 }
-function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassIntroGuard, skipRootBass, releaseMult, useLimiter, gainMult){
+function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassIntroGuard, skipRootBass, releaseMult, useLimiter, gainMult, bypassModalGuard){
   // The shared limiter/soft-clipper only ever runs for audio triggered live by an incoming MIDI
   // controller (many notes can land in the same instant there). Everything else — clicks, hovers,
   // progression playback, the intro chord — goes straight to the destination, same as before.
   if(state.muted) return [];
   if(introActive && !bypassIntroGuard) return [];
-  // While a help text window (Software / Tuning / Hexagons / Shortcuts) is open, nothing should
-  // sound -- the reading experience shouldn't be interrupted or overlapped by hover/click audio
-  // firing underneath the modal.
-  if(state.showInfoSoftware || state.showInfoTuning || state.showInfoHexagons || state.showInfoShortcuts) return [];
+  // While a help text window (Software / Tuning / Hexagons / Shortcuts) is open, background audio
+  // shouldn't sound underneath it -- BUT the help windows' own intentional hover-to-play features
+  // (interval table rows, prime-ratio hovers, the 12ED2-vs-31ED2 comparison, chord hints, etc) are
+  // exactly the thing the modal-open state was accidentally silencing too, since they all funnel
+  // through this same function. Those callers pass bypassModalGuard=true to opt back in.
+  if(!bypassModalGuard && (state.showInfoSoftware || state.showInfoTuning || state.showInfoHexagons || state.showInfoShortcuts)) return [];
   const ctx = getAudioCtx(); if(!ctx || rawNotes.length===0) return [];
   releaseMult = releaseMult || 1;
   gainMult = (gainMult===undefined||gainMult===null) ? 1 : gainMult;
@@ -1632,9 +1819,17 @@ function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassInt
     const root = (rootRaw!==undefined && rootRaw!==null) ? rootRaw : rawNotes[0];
     notes = rawNotes.concat([root-62]); // 2 octaves down (31ED2: 31 steps = 1 octave)
   }
+  // Polyphony-aware gain: per-voice levels were fixed (0.22-0.28), so a 6-note block chord summed
+  // to ~1.7 and drove the output bus's soft-clipper deep into saturation -- THAT distortion is the
+  // "clipping" heard on no-strum chords and the intro, even with the ceiling below 0dBFS. Scaling
+  // each voice down as the chord gets denser keeps the sum in the bus's clean range; 1-2 note
+  // sounds are untouched.
+  const polyScale = Math.min(1, Math.pow(2/Math.max(2, notes.length), 0.55) * 1.12);
+  gainMult = gainMult * polyScale;
   const delayMs = Math.max(0, (startTime - ctx.currentTime) * 1000);
   const inBuilderNow = state.tab==='catalog' && state.view==='builder';
-  if(!inBuilderNow) notePulseTimers.push(setTimeout(()=> pulseNoteColor(notes, dur), delayMs));
+  const inProgDetailNow = state.tab==='catalog' && state.view==='detail'; // background pulses disabled there by request
+  if(!inBuilderNow && !inProgDetailNow) notePulseTimers.push(setTimeout(()=> pulseNoteColor(notes, dur), delayMs));
   const STRUM_GAP = 0.055; // seconds between successive notes when strumming, low to high
   const ordered = state.strumMode ? notes.slice().sort((a,b)=>a-b) : notes;
   const created = [];
@@ -1656,7 +1851,7 @@ function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassInt
       filter.frequency.exponentialRampToValueAtTime(Math.max(200,freq*1.8), noteStart+decayDur*0.85);
       gain.gain.exponentialRampToValueAtTime(0.28*gainMult, noteStart+0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, noteStart+decayDur);
-      osc.connect(filter).connect(gain).connect(useLimiter ? getMasterOutput(ctx) : ctx.destination);
+      osc.connect(filter).connect(gain).connect(useLimiter ? getMasterOutput(ctx) : getGentleBus(ctx));
       osc.start(noteStart); osc.stop(noteStart+decayDur+0.05);
       created.push({osc, gain});
     } else {
@@ -1664,7 +1859,7 @@ function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassInt
       osc.type='sine'; osc.frequency.value=freq;
       gain.gain.exponentialRampToValueAtTime(0.22*gainMult, noteStart+0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, noteStart+decayDur);
-      osc.connect(gain).connect(useLimiter ? getMasterOutput(ctx) : ctx.destination);
+      osc.connect(gain).connect(useLimiter ? getMasterOutput(ctx) : getGentleBus(ctx));
       osc.start(noteStart); osc.stop(noteStart+decayDur+0.05);
       created.push({osc, gain});
     }
@@ -1768,18 +1963,21 @@ function scheduleRandomTopline(notes, timbre, startTime, chordDur, rootRaw, full
   }
   return allNodes;
 }
-function playProgressionAudio(progId, timbre){
+function playProgressionAudio(progId, timbre, startAtCtxTime){
   const p = state.progressions.find(x=>x.id===progId); if(!p || p.chords.length===0) return;
-  playChordsAudio(p.chords, timbre);
+  playChordsAudio(p.chords, timbre, startAtCtxTime);
 }
-function playChordsAudio(chords, timbre){
+function playChordsAudio(chords, timbre, startAtCtxTime){
   if(!chords || chords.length===0) return;
   const ctx = getAudioCtx(); if(!ctx) return;
   const anchor = chords[0].root; // rebase so every progression's playback starts at the same reference pitch, regardless of where its root happened to be recorded
   const bpm = Math.max(20, Math.min(300, state.playBpm||100));
   const secPerBeat = 60/bpm, beatsPerChord = 2;
   const chordDur = secPerBeat*beatsPerChord*0.92;
-  const now = ctx.currentTime + 0.05;
+  // Loops pass an explicit start time on the AUDIO clock so every pass butts up exactly against
+  // the previous one -- with the default (fresh ctx.currentTime), each restart inherited the JS
+  // timer's wake-up jitter as an audible few-ms gap.
+  const now = (startAtCtxTime!=null && startAtCtxTime > ctx.currentTime) ? startAtCtxTime : ctx.currentTime + 0.05;
   let allNodes = [];
   chords.forEach((c,ci)=>{
     const startTime = now + ci*beatsPerChord*secPerBeat;
@@ -1789,6 +1987,9 @@ function playChordsAudio(chords, timbre){
       const padDur = beatsPerChord*secPerBeat; // full slot, right up to the next chord — not the slightly-shortened chordDur
       const pad = schedulePad(notes, startTime, padDur);
       if(pad) allNodes = allNodes.concat(pad.nodes);
+      // The articulated voices all skip the root bass individually -- without this, turning
+      // Auto-articulation on silently killed Root bass for the whole progression.
+      if(state.rootBass) allNodes = allNodes.concat(scheduleChordAudio([(c.root-anchor)-62], timbre, startTime, chordDur, c.root-anchor, false, true, 1.9));
     }
     else allNodes = allNodes.concat(scheduleChordAudio(notes, timbre, startTime, chordDur, c.root-anchor, false, false, 1.9));
     if(state.randomTopline) allNodes = allNodes.concat(scheduleRandomTopline(notes, timbre, startTime, chordDur, c.root-anchor, beatsPerChord*secPerBeat));
@@ -1825,6 +2026,7 @@ let builderProgLoopActive = false;
 let builderProgLoopTimer = null;
 let builderPlayingIdx = null;
 let builderPlayingTimers = [];
+let builderNextPassAt = null; // audio-clock time the next pass is anchored to
 function builderProgressionDurationMs(){
   const bpm = Math.max(20, Math.min(300, state.playBpm||100));
   const secPerBeat = 60/bpm, beatsPerChord = 2;
@@ -1847,23 +2049,58 @@ function builderProgTick(){
   // it threw) can never stop the next pass from being scheduled: the reschedule now happens in
   // a finally block, unconditionally, no matter what happens above it.
   try{
-    const timbre = state.progressionsTabTimbre;
+    // Per-slot scheduling instead of pre-scheduling the whole pass: each chord's audio is built at
+    // its own moment, reading the chord list (live edits included) AND every Interpretation
+    // setting fresh -- so a mid-pass settings change is audible from the very next chord, not
+    // only after the pass restarts. Slot TIMING stays fixed for the pass (bpm read once here).
+    const ctx = getAudioCtx();
     const slots = builderChordsForPlayback();
-    playChordsAudio(slots, timbre); // registerProgressionSession inside here also cuts off any still-ringing audio from the pass this one is replacing
-    // Mark, in real time, which slot is currently sounding -- the committed shape chips light up
-    // one at a time, and the still-in-progress shape (the extra slot playChordsAudio always
-    // appends) gets its own visible cue on the map instead of looking identical whether or not
-    // it's actually its turn.
     const bpm = Math.max(20, Math.min(300, state.playBpm||100));
     const secPerBeat = 60/bpm, beatsPerChord = 2;
-    slots.forEach((_,i)=>{
-      const th = setTimeout(()=>{ builderPlayingIdx = i; render(); }, i*beatsPerChord*secPerBeat*1000);
+    const slotSec = beatsPerChord*secPerBeat;
+    // Anchored pass start: continue exactly where the previous pass ended on the audio clock
+    // (unless we're late/fresh, then now+0.05) -- the restart seam is sample-accurate.
+    const passStart = (builderNextPassAt!=null && ctx && builderNextPassAt > ctx.currentTime) ? builderNextPassAt : (ctx ? ctx.currentTime + 0.05 : 0);
+    builderNextPassAt = passStart + slots.length*slotSec;
+    const anchor = slots.length ? slots[0].root : 0;
+    // One shared session for the whole pass; opening it cuts whatever the previous pass left ringing.
+    activeProgressionSessions.forEach(sn=>stopAudioSession(sn));
+    activeProgressionSessions = [];
+    const passSession = { nodes: [], endTime: (ctx?ctx.currentTime:0) + slots.length*slotSec + 0.2 };
+    activeProgressionSessions.push(passSession);
+    const scheduleSlot = (i)=>{
+      builderPlayingIdx = i; render();
+      const freshSlots = builderChordsForPlayback();
+      const c = freshSlots[Math.min(i, freshSlots.length-1)];
+      if(!c || !ctx) return;
+      const timbre = state.progressionsTabTimbre;
+      const notes = c.intervals.map(iv=>(c.root-anchor)+iv);
+      const chordDur = slotSec*0.92;
+      // This slot's own absolute time on the audio clock -- not "now", so neither the per-slot JS
+      // timers' jitter nor the pass boundary can open audible seams.
+      const startTime = Math.max(ctx.currentTime + 0.015, passStart + i*slotSec);
+      let nodes = [];
+      if(state.autoArticulation){
+        nodes = nodes.concat(scheduleArticulatedChord(notes, timbre, startTime, chordDur, c.root-anchor, slotSec));
+        const pad = schedulePad(notes, startTime, slotSec);
+        if(pad) nodes = nodes.concat(pad.nodes);
+        if(notes.length && state.rootBass) nodes = nodes.concat(scheduleChordAudio([(c.root-anchor)-62], timbre, startTime, chordDur, c.root-anchor, false, true, 1.9));
+      } else {
+        nodes = nodes.concat(scheduleChordAudio(notes, timbre, startTime, chordDur, c.root-anchor, false, false, 1.9));
+      }
+      if(state.randomTopline) nodes = nodes.concat(scheduleRandomTopline(notes, timbre, startTime, chordDur, c.root-anchor, slotSec));
+      passSession.nodes.push(...nodes);
+    };
+    scheduleSlot(0);
+    for(let i=1;i<slots.length;i++){
+      const th = setTimeout(()=>scheduleSlot(i), i*slotSec*1000);
       builderPlayingTimers.push(th);
-    });
+    }
   } finally {
     if(builderProgLoopActive){
-      const durMs = builderProgressionDurationMs();
-      builderProgLoopTimer = setTimeout(builderProgTick, durMs);
+      const ctx2 = audioCtx;
+      const waitMs = (ctx2 && builderNextPassAt!=null) ? Math.max(10, (builderNextPassAt - ctx2.currentTime)*1000 - 40) : Math.max(10, builderProgressionDurationMs() - 35);
+      builderProgLoopTimer = setTimeout(builderProgTick, waitMs); // wake ~40ms early; the audio itself is scheduled at the exact anchored time
     }
   }
 }
@@ -1872,7 +2109,7 @@ function builderProgTick(){
 // audible for however long is left of the current pass -- which is what made the old and the
 // edited version sound at once -- immediately cut to a fresh pass built from the live selection.
 function builderProgLoopKick(){
-  if(builderProgLoopActive) builderProgTick();
+  if(builderProgLoopActive){ builderNextPassAt = null; builderProgTick(); } // re-anchor: the kicked pass starts NOW by design
 }
 function startBuilderProgressionPlay(){
   const playback = builderChordsForPlayback();
@@ -1893,6 +2130,7 @@ function startBuilderProgressionPlay(){
 }
 function stopBuilderProgressionPlay(){
   builderProgLoopActive = false;
+  builderNextPassAt = null;
   if(builderProgLoopTimer) clearTimeout(builderProgLoopTimer);
   builderProgLoopTimer = null;
   builderPlayingTimers.forEach(th=>clearTimeout(th));
@@ -1978,7 +2216,9 @@ function startHoverPlay(playFn, loopMs){
   stopHoverPlay();
   hoverPlayTimeout = setTimeout(()=>{
     playFn();
-    hoverPlayInterval = setInterval(playFn, Math.max(200, loopMs));
+    // 35ms early wake compensates the JS timer's typical lateness, which was audible as a tiny
+    // gap every time a hover-played progression restarted.
+    hoverPlayInterval = setInterval(playFn, Math.max(200, loopMs - 35));
   }, 500);
 }
 let primePreviewToken = 0;
@@ -2010,7 +2250,7 @@ function startEdoScalePreview(edoSteps){
       const raw = i * (31/edoSteps);
       edoScaleTimers.push(setTimeout(()=>{
         if(myToken !== edoScaleToken) return;
-        scheduleChordAudio([raw], timbre, ctx.currentTime, 0.4, raw, false, true);
+        scheduleChordAudio([raw], timbre, ctx.currentTime, 0.4, raw, false, true, undefined, undefined, undefined, true);
       }, i*GAP));
     }
     edoScaleTimers.push(setTimeout(cycle, (edoSteps+1)*GAP + 900));
@@ -2033,7 +2273,7 @@ function startRatioIntervalPreview(secondRaw){
   const CYCLE = 2800;
   const cycle = ()=>{
     if(myToken !== ratioPreviewToken) return;
-    scheduleChordAudio([0, secondRaw], timbre, ctx.currentTime, 1.6, 0, false, true, 2.6);
+    scheduleChordAudio([0, secondRaw], timbre, ctx.currentTime, 1.6, 0, false, true, 2.6, undefined, undefined, true);
     ratioPreviewTimers.push(setTimeout(cycle, CYCLE));
   };
   cycle();
@@ -2046,7 +2286,7 @@ function stopRatioIntervalPreview(){ ratioPreviewToken++; clearRatioPreviewTimer
 function scheduleStrummedNotes(notes, timbre, startTime, dur, releaseMult, gapSec){
   const ctx = getAudioCtx(); if(!ctx) return;
   notes.forEach((raw, idx)=>{
-    scheduleChordAudio([raw], timbre, startTime + idx*gapSec, dur, raw, false, true, releaseMult);
+    scheduleChordAudio([raw], timbre, startTime + idx*gapSec, dur, raw, false, true, releaseMult, false, undefined, true);
   });
 }
 let stackedThirdsToken = 0;
@@ -2129,8 +2369,8 @@ function startTranslateWellPreview(){
     // plus the same two notes one octave above at lower volume
     const withBass = baseNotes.concat([-31, -62]);
     const upperOctave = baseNotes.map(n=>n+62);
-    const main = scheduleChordAudio(withBass, timbre, t, DUR, 0, false, true, RELEASE);
-    const high = scheduleChordAudio(upperOctave, timbre, t, DUR, 0, false, true, RELEASE, false, 0.35);
+    const main = scheduleChordAudio(withBass, timbre, t, DUR, 0, false, true, RELEASE, false, undefined, true);
+    const high = scheduleChordAudio(upperOctave, timbre, t, DUR, 0, false, true, RELEASE, false, 0.35, true);
     return main.concat(high);
   };
   const cycle = ()=>{
@@ -2160,10 +2400,10 @@ function startPrimeIntervalPreview(step2){
   const NOTE_GAP = 850; // ms between note 1 and note 2 — a touch tighter than before
   const cycle = ()=>{
     if(myToken !== primePreviewToken) return;
-    scheduleChordAudio([0], timbre, ctx.currentTime, 2.2, 0, false, true);
+    scheduleChordAudio([0], timbre, ctx.currentTime, 2.2, 0, false, true, undefined, undefined, undefined, true);
     primePreviewTimers.push(setTimeout(()=>{
       if(myToken !== primePreviewToken) return;
-      scheduleChordAudio([step2], timbre, ctx.currentTime, 1.6, step2, false, true);
+      scheduleChordAudio([step2], timbre, ctx.currentTime, 1.6, step2, false, true, undefined, undefined, undefined, true);
     }, NOTE_GAP));
     primePreviewTimers.push(setTimeout(cycle, NOTE_GAP+1800));
   };
@@ -2183,18 +2423,24 @@ function startChordHintPreview(raw){
   const timbre = state.chordsTabTimbre || 'sine';
   const cycle = ()=>{
     if(myToken !== chordHintPreviewToken) return;
-    scheduleChordAudio([raw], timbre, ctx.currentTime, 1.4, raw, false, true);
+    scheduleChordAudio([raw], timbre, ctx.currentTime, 1.4, raw, false, true, undefined, undefined, undefined, true);
     setTimeout(()=>{ if(myToken===chordHintPreviewToken) cycle(); }, 1400);
   };
   cycle();
 }
 function stopChordHintPreview(){ chordHintPreviewToken++; }
 function stopHoverPlay(){
+  hoverPlayingProgId = null;
   if(hoverPlayTimeout){ clearTimeout(hoverPlayTimeout); hoverPlayTimeout=null; }
-  if(hoverPlayInterval){ clearInterval(hoverPlayInterval); hoverPlayInterval=null; }
+  if(hoverPlayInterval){ clearInterval(hoverPlayInterval); clearTimeout(hoverPlayInterval); hoverPlayInterval=null; }
   stopChordHoverAudio();
   resetWaveSpeed();
-  clearNotePulseTimers();
+  clearHoverChipHighlights();
+  // While a progression loop (detail view or builder) is running, its scheduled background-hex
+  // pulses live in this same notePulseTimers array -- a stray hover cleanup (mouse drifting off a
+  // chip right after pressing Play) was wiping the whole first pass's pulses, which is why the
+  // background animation only showed on chord 1 until the second repetition.
+  if(!state.loopingProgId && !builderProgLoopActive) clearNotePulseTimers();
   // Progression-card hover-play (playProgressionAudio/playChordsAudio) tracks its own nodes in
   // activeProgressionSessions, separate from the chord-hover session stopChordHoverAudio()
   // handles above -- this loop was never actually stopping it on mouseleave, only preventing the
@@ -2237,7 +2483,55 @@ function hoverPlayProgression(progId){
     mapShapeHoverResumeTimer = setTimeout(()=>{ mapShapeHoverResumeTimer=null; refreshMapShapePlayIfActive(); }, 2000);
     return;
   }
-  startHoverPlay(()=>playProgressionAudio(progId, state.progressionsTabTimbre), progressionDurationMs(p));
+  if(hoverPlayingProgId===progId && (hoverPlayTimeout || hoverPlayInterval)) return; // already hover-playing this exact card -- don't reset it mid-listen
+  stopHoverPlay();
+  hoverPlayingProgId = progId;
+  hoverPlayTimeout = setTimeout(()=>{
+    const ctx = getAudioCtx();
+    // Anchored loop: every pass starts at EXACTLY (previous start + exact duration) on the audio
+    // clock; the JS timer only wakes ~40ms early to schedule it, so timer lateness can't leak
+    // into the sound as a restart gap.
+    let nextAt = ctx ? ctx.currentTime + 0.05 : null;
+    const pass = ()=>{
+      if(hoverPlayingProgId!==progId) return;
+      const pp = state.progressions.find(x=>x.id===progId); if(!pp) return;
+      playProgressionAudio(progId, state.progressionsTabTimbre, nextAt);
+      scheduleHoverChipHighlights(progId);
+      const durS = progressionDurationMs(pp)/1000;
+      if(ctx && nextAt!=null){
+        nextAt += durS;
+        hoverPlayInterval = setTimeout(pass, Math.max(10, (nextAt-ctx.currentTime)*1000 - 40));
+      } else {
+        hoverPlayInterval = setTimeout(pass, durS*1000);
+      }
+    };
+    pass();
+  }, 500);
+}
+let hoverPlayingProgId = null;
+// While a card hover-plays its progression, outline the chip of whichever shape is currently
+// sounding in that card's own list, in yellow, chord by chord (re-armed on every loop pass).
+let hoverProgChipTimers = [];
+function clearHoverChipHighlights(){
+  hoverProgChipTimers.forEach(t=>clearTimeout(t));
+  hoverProgChipTimers = [];
+  document.querySelectorAll('.mini-chip.now-sounding').forEach(el=>el.classList.remove('now-sounding'));
+}
+function scheduleHoverChipHighlights(progId){
+  clearHoverChipHighlights();
+  const p = state.progressions.find(x=>x.id===progId); if(!p) return;
+  const bpm = Math.max(20, Math.min(300, state.playBpm||100));
+  const slotMs = (60/bpm)*2*1000;
+  p.chords.forEach((c,ci)=>{
+    hoverProgChipTimers.push(setTimeout(()=>{
+      document.querySelectorAll('.mini-chip.now-sounding').forEach(el=>el.classList.remove('now-sounding'));
+      const chip = document.getElementById(`miniChip-${progId}-${ci}`);
+      if(chip) chip.classList.add('now-sounding');
+    }, ci*slotMs));
+  });
+  hoverProgChipTimers.push(setTimeout(()=>{
+    document.querySelectorAll('.mini-chip.now-sounding').forEach(el=>el.classList.remove('now-sounding'));
+  }, p.chords.length*slotMs));
 }
 function hoverPlayStatChip(absNotes, timbre, displayRoot){
   if(mapShapePlayActive){
@@ -2294,13 +2588,25 @@ function hoverPlayChordInProg(progId, idx){
   highlightBigMapForChord(progId, idx);
   startHoverPlay(()=>playChordFromProg(progId, idx, state.progressionsTabTimbre), chordDurationMs(state.progressionsTabTimbre, c.intervals.length));
 }
+let builderLastDropAt = 0;
 function showBuiltChordMinimap(idx, e){
-  const c = state.builder.chords[idx]; if(!c) return;
+  // Never during a reorder drag, nor in the instant right after the drop (the re-render lands the
+  // pointer on a card, firing a spurious mouseenter that popped the tooltip).
+  if(builderDragFromIdx!=null || (Date.now()-builderLastDropAt) < 450) return;
+  let c = state.builder.chords[idx]; if(!c) return;
+  // While this shape is being edited, the tooltip mirrors the LIVE selection instead of the
+  // stale saved chord.
+  if(state.builder.editingChordIdx===idx && state.builder.selectedOrder.length>0){
+    const liveRoot = state.builder.selectedOrder[0];
+    c = { root: liveRoot, intervals: canonicalIntervals(liveRoot, state.builder.selectedOrder), qrOffsets: null };
+  }
   const el = document.getElementById('builtChordMinimapTooltip');
   if(!el) return;
+  // Unlike every other minimap (which shows shapes abstractly on 0), THIS tooltip shows the
+  // shape at the actual root it sits on within the progression.
   const cfg = (c.qrOffsets && c.qrOffsets.length===c.intervals.length)
-    ? chordHexConfigFromQr(c.intervals, c.qrOffsets, 0, null)
-    : chordHexConfig(c.intervals);
+    ? chordHexConfigFromQr(c.intervals, c.qrOffsets, c.root, null)
+    : chordHexConfig(c.intervals.map(iv=>c.root+iv));
   el.innerHTML = '';
   const svg = buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:22, highlightRoot:cfg.root, tones:cfg.tones, mode:cfg.mode, showLabels:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs });
   el.appendChild(svg);
@@ -2329,7 +2635,11 @@ function hoverPlayBuiltChord(idx){
   // stacked/clashing sound. Simplest fix: hover-play is disabled entirely while the loop runs
   // (the minimap tooltip on hover still works fine, this only skips the audio).
   if(builderProgLoopActive) return;
-  const c = state.builder.chords[idx]; if(!c) return;
+  let c = state.builder.chords[idx]; if(!c) return;
+  if(state.builder.editingChordIdx===idx && state.builder.selectedOrder.length>0){
+    const liveRoot = state.builder.selectedOrder[0];
+    c = { root: liveRoot, intervals: canonicalIntervals(liveRoot, state.builder.selectedOrder) }; // live edit: hover plays what's on the map right now
+  }
   const timbre = state.progressionsTabTimbre;
   if(builderShapePlayActive){
     // "Play shape" is sounding the in-progress selection on a loop -- rather than let a hovered
@@ -2362,8 +2672,13 @@ function builderChordCardMouseLeave(){
   hideBuiltChordMinimap();
 }
 function stopHoverPlayChordInProg(progId){
+  // While this progression's own loop is playing, hover-enter did nothing (see the guard in
+  // hoverPlayChordInProg) -- so hover-LEAVE must equally do nothing, or it wipes the loop's own
+  // chip highlight and map state mid-playback.
+  if(state.loopingProgId===progId) return;
   stopHoverPlay();
   highlightBigMapForAll(progId);
+  clearChordChipPlaying(progId); // hover uses the same yellow .now-playing mark -- clear it on leave
 }
 function playChordFromProg(progId, idx, timbre){
   const p = state.progressions.find(x=>x.id===progId); if(!p) return;
@@ -2400,7 +2715,7 @@ function schedulePad(rawNotes, startTime, durSec){
     const lfoGain = ctx.createGain();
     lfoGain.gain.value = freq*0.003;
     lfo.connect(lfoGain).connect(osc.frequency);
-    osc.connect(gain).connect(ctx.destination); // pads are never MIDI-triggered -- always bypass the limiter
+    osc.connect(gain).connect(getGentleBus(ctx)); // pads: gentle bus (never the aggressive MIDI limiter)
     osc.start(startTime); lfo.start(startTime);
     if(durSec){ osc.stop(startTime+durSec+0.05); lfo.stop(startTime+durSec+0.05); }
     return { osc, gain, lfo };
@@ -2726,6 +3041,100 @@ document.addEventListener('drop', (e)=>{
   importMidiFileObject(midiFile);
   scrollBuilderIntoView();
 });
+/* ---------- Minimal ZIP writer (store/no-compression) for bundling multiple exported files
+   into one download with real folders -- used by the "export every shape/progression as its own
+   .mid file" buttons below. Good enough for a handful of small MIDI files; not a general-purpose
+   compressor. ---------- */
+const CRC32_TABLE = (()=>{
+  const table = new Uint32Array(256);
+  for(let n=0;n<256;n++){
+    let c = n;
+    for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
+    table[n] = c>>>0;
+  }
+  return table;
+})();
+function crc32(bytes){
+  let c = 0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++) c = CRC32_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c>>>8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function dosDateTimeNow(){
+  const d = new Date();
+  const time = ((d.getHours()&0x1f)<<11) | ((d.getMinutes()&0x3f)<<5) | ((d.getSeconds()>>1)&0x1f);
+  const date = (((d.getFullYear()-1980)&0x7f)<<9) | (((d.getMonth()+1)&0xf)<<5) | (d.getDate()&0x1f);
+  return { time, date };
+}
+// entries: [{ name: 'folder/file.mid', data: Uint8Array }]
+function buildZipFile(entries){
+  const { time, date } = dosDateTimeNow();
+  const chunks = []; // local file headers + data, in order
+  const central = []; // central directory records, in order
+  let offset = 0;
+  entries.forEach(({name, data})=>{
+    const nameBytes = new TextEncoder().encode(name);
+    const crc = crc32(data);
+    const size = data.length;
+    const local = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0, true);
+    lv.setUint16(8, 0, true); // store, no compression
+    lv.setUint16(10, time, true);
+    lv.setUint16(12, date, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, size, true);
+    lv.setUint32(22, size, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    local.set(nameBytes, 30);
+    chunks.push(local, data);
+
+    const centralRec = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(centralRec.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, time, true);
+    cv.setUint16(14, date, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    centralRec.set(nameBytes, 46);
+    central.push(centralRec);
+
+    offset += local.length + data.length;
+  });
+  const centralStart = offset;
+  let centralSize = 0;
+  central.forEach(c=> centralSize += c.length);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(4, 0, true);
+  ev.setUint16(6, 0, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralStart, true);
+  ev.setUint16(20, 0, true);
+  const total = new Uint8Array(offset + centralSize + end.length);
+  let p = 0;
+  chunks.forEach(c=>{ total.set(c, p); p += c.length; });
+  central.forEach(c=>{ total.set(c, p); p += c.length; });
+  total.set(end, p);
+  return total;
+}
 function downloadBytes(bytes, filename, mime){
   const blob = new Blob([bytes], {type:mime});
   const url = URL.createObjectURL(blob);
@@ -2763,6 +3172,40 @@ function exportSelectionMidi(which){
   const arr = which==='builder' ? state.builder.selectedOrder : state.explorer.selectedOrder;
   if(arr.length===0) return;
   exportChordMidi(arr, 'chord.mid');
+}
+// A .zip containing one separate .mid file per catalogued shape, all inside a "shapes/" folder --
+// each file is exactly what the single-shape MIDI export button produces for that shape.
+function exportAllShapesMidi(){
+  const species = computeSpecies(state.progressions);
+  const list = Object.values(species.map).sort((a,b)=>a.num-b.num);
+  if(list.length===0) return;
+  const usedNames = new Set();
+  const entries = list.map(sp=>{
+    let name = `chord-${String(sp.num).padStart(3,'0')}.mid`;
+    let n=2; while(usedNames.has(name)){ name = `chord-${String(sp.num).padStart(3,'0')}-${n++}.mid`; }
+    usedNames.add(name);
+    return { name: `shapes/${name}`, data: buildMidiFile(midiEventsForChord(sp.intervals)) };
+  });
+  downloadBytes(buildZipFile(entries), 'all-shapes.zip', 'application/zip');
+}
+// A .zip containing one separate .mid file per progression, all inside a "progressions/" folder --
+// each file is exactly what the single-progression MIDI export button produces for it (non-
+// articulated, same as clicking the plain MIDI export on each progression individually).
+function exportAllProgressionsMidi(){
+  if(state.progressions.length===0) return;
+  const usedNames = new Set();
+  const entries = [];
+  state.progressions.forEach(p=>{
+    if(!p.chords || p.chords.length===0) return;
+    const anchor = p.chords[0].root;
+    const rebased = p.chords.map(c=>({ ...c, root: c.root-anchor }));
+    let name = `${slug(p.name)}.mid`;
+    let n=2; while(usedNames.has(name)){ name = `${slug(p.name)}-${n++}.mid`; }
+    usedNames.add(name);
+    entries.push({ name: `progressions/${name}`, data: buildMidiFile(midiEventsForProgression(rebased)) });
+  });
+  if(entries.length===0) return;
+  downloadBytes(buildZipFile(entries), 'all-progressions.zip', 'application/zip');
 }
 
 /* ============================ LIBRARY IMPORT / EXPORT ============================ */
@@ -2821,7 +3264,7 @@ function toggleFullscreen(){
 document.addEventListener('fullscreenchange', ()=>{ if(state.showSettingsMenu) render(); });
 function toggleSettingsMenu(){
   state.showSettingsMenu = !state.showSettingsMenu;
-  if(state.showSettingsMenu){ state.showHelpMenu=false; } else { closeSettingsSubWindows(); }
+  if(state.showSettingsMenu){ state.showHelpMenu=false; state.showHearMenu=false; state.showSortMenu=false; } else { closeSettingsSubWindows(); }
   render();
 }
 function toggleSortMenu(){ state.showSortMenu = !state.showSortMenu; render(); }
@@ -2959,7 +3402,7 @@ function formatIvs(ivs){
     return idx===0 ? `<span class="first-iv">${label}</span>` : label;
   }).join('  ');
 }
-function formatIvsPlain(ivs){ return ivs.map(i=> i===0 ? 'R' : (i>0 ? '+'+i : String(i))).join('  '); }
+function formatIvsPlain(ivs){ return ivs.map(i=> i===0 ? '<span class="step-root-text">0</span>' : (i>0 ? '+'+i : String(i))).join('  '); }
 // For when the root is displayed separately and this list never includes it — no first-item emphasis needed.
 function formatIvsRest(ivs){ return ivs.map(i=> i>0 ? '+'+i : String(i)).join('  '); }
 // All (q,r) pairs reaching a given raw value within a small range of octave-shifts — since
@@ -3302,15 +3745,19 @@ function highlightBigMapForAll(progId){
   renderBigProgressionMap(0, tonesArr, true);
 }
 // Plays the progression AND advances the big map's highlight chord-by-chord in sync.
-function playProgressionWithVisual(progId, timbre){
+let progVisualTimers = [];
+function clearProgVisualTimers(){ progVisualTimers.forEach(t=>clearTimeout(t)); progVisualTimers = []; }
+function playProgressionWithVisual(progId, timbre, startAtCtxTime){
   const p = state.progressions.find(x=>x.id===progId); if(!p || p.chords.length===0) return;
-  playProgressionAudio(progId, timbre);
+  playProgressionAudio(progId, timbre, startAtCtxTime);
   const bpm = Math.max(20, Math.min(300, state.playBpm||100));
   const secPerBeat = 60/bpm, beatsPerChord = 2;
+  // Tracked so pausing can cancel them instantly -- untracked, they kept advancing the map
+  // highlight/chip animation for seconds after the loop was already stopped.
   p.chords.forEach((c,idx)=>{
-    setTimeout(()=>highlightBigMapForChord(progId, idx), idx*beatsPerChord*secPerBeat*1000);
+    progVisualTimers.push(setTimeout(()=>highlightBigMapForChord(progId, idx), idx*beatsPerChord*secPerBeat*1000));
   });
-  setTimeout(()=>{ highlightBigMapForAll(progId); clearChordChipPlaying(progId); }, p.chords.length*beatsPerChord*secPerBeat*1000);
+  progVisualTimers.push(setTimeout(()=>{ highlightBigMapForAll(progId); clearChordChipPlaying(progId); }, p.chords.length*beatsPerChord*secPerBeat*1000));
 }
 function startPlayLoop(progId, timbre){
   stopPlayLoop();
@@ -3318,10 +3765,21 @@ function startPlayLoop(progId, timbre){
   state.loopingProgId = progId;
   state.loopingTimbre = timbre;
   const durMs = progressionDurationMs(p);
+  const ctx = getAudioCtx();
+  // Every pass is scheduled at an EXACT audio-clock time (previous pass start + exact duration),
+  // and the JS timer only wakes ~40ms early to do the scheduling -- so timer jitter can no longer
+  // leak into the audio as a gap at each restart.
+  let nextStartAt = ctx ? ctx.currentTime + 0.05 : null;
   const tick = ()=>{
     if(state.loopingProgId!==progId || state.loopingTimbre!==timbre) return;
-    playProgressionWithVisual(progId, timbre);
-    state.loopingTimer = setTimeout(tick, durMs);
+    playProgressionWithVisual(progId, timbre, nextStartAt);
+    if(ctx && nextStartAt!=null){
+      nextStartAt += durMs/1000;
+      const waitMs = Math.max(10, (nextStartAt - ctx.currentTime)*1000 - 40);
+      state.loopingTimer = setTimeout(tick, waitMs);
+    } else {
+      state.loopingTimer = setTimeout(tick, durMs);
+    }
   };
   tick();
   render();
@@ -3333,6 +3791,8 @@ function stopPlayLoop(){
 function clearPlayLoopState(){
   if(state.loopingTimer) clearTimeout(state.loopingTimer);
   state.loopingTimer = null;
+  clearProgVisualTimers();
+  clearNotePulseTimers();
   if(state.loopingProgId){
     activeProgressionSessions.forEach(s=>stopAudioSession(s));
     activeProgressionSessions = [];
@@ -3826,6 +4286,14 @@ const I18N = {
     "en": "⬆ Import collection",
     "es": "⬆ Importar colección"
   },
+  "files.exportshapesmidi": {
+    "en": "Export all shapes as MIDI (.zip)",
+    "es": "Exportar todas las formas a MIDI (.zip)"
+  },
+  "files.exportprogsmidi": {
+    "en": "Export all progressions as MIDI (.zip)",
+    "es": "Exportar todas las progresiones a MIDI (.zip)"
+  },
   "files.importprogs.label": {
     "en": "Import progressions",
     "es": "Importar progresiones"
@@ -3899,8 +4367,8 @@ const I18N = {
     "es": "Borra todas las progresiones, apodos y etiquetas"
   },
   "midi.panel.btn": {
-    "en": "🔌 MIDI ▾",
-    "es": "🔌 MIDI ▾"
+    "en": "🔌 MIDI In/Out ▾",
+    "es": "🔌 MIDI In/Out ▾"
   },
   "mute.title": {
     "en": "Mute all sound",
@@ -4566,6 +5034,10 @@ const I18N = {
     "en": "📊 Stats",
     "es": "📊 Estadísticas"
   },
+  "stats.eyelabel": {
+    "en": "Stats",
+    "es": "Estadísticas"
+  },
   "stats.stepsused": {
     "en": "✦ 31ED2 steps used",
     "es": "✦ Steps de 31ED2 usados"
@@ -4715,16 +5187,16 @@ const I18N = {
     "es": "desde la root"
   },
   "cents.abovelowest": {
-    "en": "above the lowest note",
-    "es": "por encima de la nota más grave"
+    "en": "from the lowest note",
+    "es": "desde la nota más grave"
   },
   "cents.abovebelow": {
-    "en": "above the note below",
-    "es": "por encima de la nota de abajo"
+    "en": "from the note below",
+    "es": "desde la nota de abajo"
   },
   "cents.belowabove": {
-    "en": "below the note above",
-    "es": "por debajo de la nota de arriba"
+    "en": "from the note above",
+    "es": "desde la nota de arriba"
   },
   "rank.mostcommonpairs": {
     "en": "📊 MOST COMMON PAIRS",
@@ -5131,12 +5603,12 @@ const I18N = {
     "es": "Cada nota que reproduce esta app también se envía en vivo, en tiempo real, al puerto elegido"
   },
   "midi.sendingtodaw.on": {
-    "en": "🎛 Sending to DAW: ON",
-    "es": "🎛 Enviando al DAW: ON"
+    "en": "🎛 ON",
+    "es": "🎛 ON"
   },
   "midi.sendingtodaw.off": {
-    "en": "🎛 Sending to DAW: OFF",
-    "es": "🎛 Enviando al DAW: OFF"
+    "en": "🎛 OFF",
+    "es": "🎛 OFF"
   },
   "midi.routehint": {
     "en": "Route that port to a track in your DAW (or a virtual MIDI cable) and it'll receive every note this app plays, live, with the same pitch-bend correction used for file export.",
@@ -5316,7 +5788,7 @@ const state = {
   tab:'catalog', view:'list',
   progressions: [], nicknames: {}, octaveEquivalence: false,
   selectedProgId:null, selectedChordKey:null, chordSeqSelection:[],
-  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showEcosystemNeedShapeMsg:false, showNicknameDupeMsg:false, showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, seenMainTutorial:true, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false,
+  filterText:'', confirmDeleteId:null, zoom:{}, importMsg:'', importDuplicateMode:'skip', showEcosystemNeedShapeMsg:false, showNicknameDupeMsg:false, showFilesMenu:false, filesSelectionType:'progressions', showHearMenu:false, showSettingsMenu:false, showSortMenu:false, playBpm:100, generalPitch:0, autoArticulation:false, polyrhythmA:3, polyrhythmB:2, randomTopline:false, showInfoSoftware:false, showInfoTuning:false, showInfoHexagons:false, showInfoShortcuts:false, showHelpMenu:false, showLangMenu:false, showHelpHint:false, showEpilepsyWarning:false, epilepsySafeMode:false, seenBuilderTutorial:false, seenMainTutorial:true, showTutorialSaveMessage:false, showSaveNameModal:false, saveNameModalMode:null, newlySavedProgId:null, showSeqSearchHint:false, statsEyeOpen:false,
   lang: 'en', // default; a saved preference (if any) overrides this once loadData() resolves
   mapMode:'write', playModeNotes:[], mapTimbre:'guitar', chordsTabTimbre:'guitar', strumMode:true,
   progressionsTabTimbre:'guitar', hexExpandLevel:0, emergentHighlight:null, bigMapBoardSize:null, bigMapExactPoints:null,
@@ -5460,8 +5932,8 @@ async function toggleOctaveEquivalence(){
 }
 
 /* ============================ ACTIONS ============================ */
-function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopMapShapePlayWatchdog(); stopBuilderProgressionPlay(); builderShapePlayActive=false; stopBuilderShapePlayWatchdog(); stopPrimeIntervalPreview(); clearNotePulseTimers(); }
-function switchTab(t){ stopAllAudioActivity(); const leavingCatalog = state.tab==='catalog' && t!=='catalog'; const leavingBuilder = state.tab==='catalog' && state.view==='builder' && (t!=='catalog' || state.view!=='builder'); state.tab=t; if(t==='catalog') state.view='list'; if(t==='species') state.expandedChordSig=null; state.selectedChordKey=null; if(leavingCatalog) state.showTutorialSaveMessage=false; if(leavingCatalog) state.showBuilderGearMenu=false; state.showSettingsMenu=false; state.showHelpMenu=false; state.showLangMenu=false; closeSettingsSubWindows(); render(); if(t==='map') scrollMapIntoView(); }
+function stopAllAudioActivity(){ stopHoverPlay(); clearPlayLoopState(); mapShapePlayActive=false; stopMapShapePlayWatchdog(); stopBuilderProgressionPlay(); builderShapePlayActive=false; stopBuilderShapePlayWatchdog(); stopPrimeIntervalPreview(); clearNotePulseTimers(); state.showHearMenu=false; /* every view/window jump routes through here -- the Interpretation dropdown never survives a navigation */ }
+function switchTab(t){ stopAllAudioActivity(); state.showHearMenu=false; state.showSortMenu=false; const leavingCatalog = state.tab==='catalog' && t!=='catalog'; const leavingBuilder = state.tab==='catalog' && state.view==='builder' && (t!=='catalog' || state.view!=='builder'); state.tab=t; if(t==='catalog') state.view='list'; if(t==='species') state.expandedChordSig=null; state.selectedChordKey=null; if(leavingCatalog) state.showTutorialSaveMessage=false; if(leavingCatalog) state.showBuilderGearMenu=false; state.showSettingsMenu=false; state.showHelpMenu=false; state.showLangMenu=false; closeSettingsSubWindows(); render(); if(t==='map') scrollMapIntoView(); }
 function newProgression(){
   stopAllAudioActivity();
   // Every progression's first chord is forced to root 0 — a fixed, always-findable reference
@@ -5557,7 +6029,11 @@ function builderStartEditChord(idx){
   const onBoard = new Set(boardCells.map(cell=>cell.q+','+cell.r));
   const qr = {};
   if(c.qrOffsets && c.qrOffsets.length===c.intervals.length){
-    const rootQr = qrShiftForDelta(c.root); // a real board position whose own lattice value is c.root — not just (0,0), which always means raw 0
+    // Prefer the REMEMBERED absolute board position the user originally marked the root on --
+    // deriving a position from the pitch value alone (qrShiftForDelta) can land on a different
+    // repetition of the same number, silently teleporting the whole shape elsewhere on the layout
+    // the moment editing starts, which is exactly the disorienting jump being fixed here.
+    const rootQr = (c.rootQr && onBoard.has(c.rootQr.q+','+c.rootQr.r)) ? c.rootQr : qrShiftForDelta(c.root);
     c.intervals.forEach((iv,i)=>{
       const raw = c.root+iv;
       const naive = { q: rootQr.q + c.qrOffsets[i].q, r: rootQr.r + c.qrOffsets[i].r };
@@ -5587,7 +6063,7 @@ function builderSaveEditChord(){
     if(offsets.every(o=>o!==null)) qrOffsets = offsets;
   }
   const old = state.builder.chords[idx];
-  state.builder.chords[idx] = { id: old.id, root, intervals, label: old.label||'', qrOffsets };
+  state.builder.chords[idx] = { id: old.id, root, intervals, label: old.label||'', qrOffsets, rootQr: rootQr ? { q:rootQr.q, r:rootQr.r } : null };
   state.builder.editingChordIdx = null;
   state.builder.editingChordBackup = null;
   state.builder.selectedOrder = []; state.builder.selectedOrderQr = {};
@@ -5724,7 +6200,7 @@ function builderAddChord(){
     });
     if(offsets.every(o=>o!==null)) qrOffsets = offsets;
   }
-  state.builder.chords.push({ id:uid(), root, intervals, label:'', qrOffsets });
+  state.builder.chords.push({ id:uid(), root, intervals, label:'', qrOffsets, rootQr: rootQr ? { q:rootQr.q, r:rootQr.r } : null });
   try{ const ctx = getAudioCtx(); if(ctx) scheduleChordAudio(intervals.map(iv=>root+iv), state.progressionsTabTimbre, ctx.currentTime, 0.8, root, false, false); }catch(e){} // quick audible confirmation of what just got added
   // lastClicked drives the octave-echo highlight on the minimap -- it must be cleared here too,
   // not just selectedOrder, otherwise it keeps pointing at a note from the chord that was just
@@ -5747,7 +6223,7 @@ function builderDuplicateChord(idx){
   // but every OTHER shape stays fully duplicatable while an edit is in progress elsewhere.
   if(idx===state.builder.editingChordIdx) return;
   const c = state.builder.chords[idx]; if(!c) return;
-  const copy = { id:uid(), root:c.root, intervals:c.intervals.slice(), label:c.label||'', qrOffsets: c.qrOffsets ? c.qrOffsets.map(o=>o?{...o}:null) : null };
+  const copy = { id:uid(), root:c.root, intervals:c.intervals.slice(), label:c.label||'', qrOffsets: c.qrOffsets ? c.qrOffsets.map(o=>o?{...o}:null) : null, rootQr: c.rootQr ? {...c.rootQr} : null };
   // Track the being-edited chord by identity (not index) across the splice, since inserting a
   // duplicate before it would otherwise silently point editingChordIdx at the wrong chord.
   const editedItem = state.builder.editingChordIdx!=null ? state.builder.chords[state.builder.editingChordIdx] : null;
@@ -5769,7 +6245,7 @@ function builderRemoveChord(idx){
 function builderClearAllChords(){ pushBuilderUndo(); state.builder.chords = []; state.builder.selectedOrder = [0]; state.builder.selectedOrderQr = {0:{q:0,r:0}}; state.builder.lastClicked = 0; render(); }
 function builderMoveChord(idx, dir){
   const arr = state.builder.chords; const j = idx+dir; if(j<0 || j>=arr.length) return;
-  [arr[idx], arr[j]] = [arr[j], arr[idx]]; render();
+  [arr[idx], arr[j]] = [arr[j], arr[idx]]; builderProgLoopKick(); render();
 }
 let builderDragFromIdx = null;
 function builderDragChordStart(e, idx){
@@ -5777,22 +6253,69 @@ function builderDragChordStart(e, idx){
   // drag -- reordering every other shape is fine while an edit is in progress elsewhere.
   if(idx===0 || idx===state.builder.editingChordIdx){ e.preventDefault(); return; }
   builderDragFromIdx = idx;
+  // Kill any minimap/preview already on screen the instant the drag begins -- and while
+  // builderDragFromIdx is set, showBuiltChordMinimap refuses to open a new one.
+  hideBuiltChordMinimap();
+  try{ hideHoverPreview(); }catch(err){}
   e.dataTransfer.effectAllowed = 'move';
   try{ e.dataTransfer.setData('text/plain', String(idx)); }catch(err){}
 }
-function builderDragChordOver(e){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-function builderDropChord(e, dropIdx){
-  pushBuilderUndo();
-  e.preventDefault();
-  const from = builderDragFromIdx;
+// dragend fires for BOTH completed and cancelled drags -- resetting here guarantees the "no
+// minimaps while dragging" block can never get stuck on after an aborted drag.
+function builderDragEnded(){
   builderDragFromIdx = null;
-  if(from==null || from===dropIdx || from===0 || dropIdx===0) return;
-  if(from===state.builder.editingChordIdx || dropIdx===state.builder.editingChordIdx) return; // don't disturb the shape currently being edited
+  builderLastDropAt = Date.now();
+  builderClearDragTargets();
+}
+// Reordering drags now insert BETWEEN cards, not onto them: the list computes the insertion slot
+// from the pointer's Y position (above a card's midline = before it, below = after), and a gap
+// visibly opens at exactly that slot in real time -- an honest preview of the resulting order.
+let builderDragInsertIdx = null;
+function builderDragOverList(e){
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  if(builderDragFromIdx==null) return;
+  const list = e.currentTarget;
+  const cards = Array.from(list.querySelectorAll('.built-chord'));
+  if(cards.length===0) return;
+  let insertIdx = cards.length;
+  for(let i=0;i<cards.length;i++){
+    const r = cards[i].getBoundingClientRect();
+    if(e.clientY < r.top + r.height/2){ insertIdx = i; break; }
+  }
+  if(insertIdx===0) insertIdx = 1; // nothing can go before the locked first shape
+  // Dropping back into its own slot (either side of itself) is a no-op -- show no gap.
+  if(insertIdx===builderDragFromIdx || insertIdx===builderDragFromIdx+1){
+    builderDragInsertIdx = null;
+    builderClearDragTargets();
+    return;
+  }
+  builderDragInsertIdx = insertIdx;
+  cards.forEach((el,i)=>{
+    el.classList.toggle('drop-before', i===insertIdx);
+    el.classList.toggle('drop-after', insertIdx===cards.length && i===cards.length-1);
+  });
+}
+function builderClearDragTargets(){
+  builderDragInsertIdx = null;
+  document.querySelectorAll('.built-chord').forEach(el=>{ el.classList.remove('drag-target'); el.classList.remove('drop-before'); el.classList.remove('drop-after'); });
+}
+function builderDropOnList(e){
+  e.preventDefault();
+  builderLastDropAt = Date.now();
+  const from = builderDragFromIdx;
+  let to = builderDragInsertIdx;
+  builderDragFromIdx = null;
+  builderClearDragTargets();
+  if(from==null || to==null || from===0) return;
+  pushBuilderUndo();
   const arr = state.builder.chords;
   const editedItem = state.builder.editingChordIdx!=null ? arr[state.builder.editingChordIdx] : null;
   const [moved] = arr.splice(from, 1);
-  arr.splice(dropIdx, 0, moved);
+  if(to>from) to--;
+  arr.splice(to, 0, moved);
   if(editedItem) state.builder.editingChordIdx = arr.indexOf(editedItem);
+  // Re-voice the loop immediately from the new order (see the old drop handler's note).
+  builderProgLoopKick();
   render();
 }
 function builderChordLabel(idx, val){ state.builder.chords[idx].label = val; }
@@ -5864,6 +6387,9 @@ function openSaveNameModal(mode){
   // save itself. Saving is a good, unambiguous moment to silence everything.
   stopAllAudioActivity();
   const b = state.builder;
+  // A shape still being edited on the map counts as-is: commit the live edit automatically, no
+  // need to press ✓ first.
+  if(state.builder.editingChordIdx!=null) builderSaveEditChord();
   if(b.chords.length===0){ b.error = 'Add at least one chord before saving.'; render(); return; }
   b.error = '';
   // Pre-fill the actual name field (not just a placeholder) with the auto-generated
@@ -5901,7 +6427,7 @@ async function confirmSaveProgression(){
     state.progressions.push(p); savedId = p.id;
   }
   state.selectedProgId = savedId;
-  playExternalAudio(SAVE_SOUND_SOURCES, 0.8);
+  playExternalAudio(SAVE_SOUND_SOURCES, 0.55); // <audio> bypasses the WebAudio bus; keep hardware-sum headroom
   markBuilderTutorialComplete(b);
   await persistProgressions();
   state.showSaveNameModal = false;
@@ -5909,6 +6435,7 @@ async function confirmSaveProgression(){
   state.tab = 'catalog'; state.view = 'list'; state.chordSeqSelection = []; state.showBuilderGearMenu = false;
   state.builderChordSearch = ''; // clear the "use registered shapes" search box for the next time the builder is opened
   flagNewlySavedProgression(savedId);
+  pendingStatsFlashColor = progressionColor(savedId); // flash the stats plate in this progression's card color
   render();
 }
 // Scrolls so the progression detail view's top row (← Back to progressions) sits at the very top
@@ -6007,7 +6534,7 @@ function jumpToMatch(progId){
 async function setNickname(sig, val){
   const trimmed = val.trim();
   if(trimmed){
-    const dupe = Object.entries(state.nicknames).some(([s,n])=> s!==sig && (n||'').trim().toLowerCase()===trimmed.toLowerCase());
+    const dupe = Object.entries(state.nicknames).some(([s,n])=> s!==sig && (n||'').trim()===trimmed); // case-sensitive: "Foo" and "foo" are different nicknames
     if(dupe){ state.showNicknameDupeMsg = true; render(); return; }
   }
   state.nicknames[sig]=val;
@@ -6205,11 +6732,20 @@ function explorerClear(){ state.explorer.selectedOrder=[]; state.explorer.select
 
 /* ---------- Connect: drag progressions/chords together into one chain ---------- */
 // Drag payload is a small JSON blob describing either a whole progression or a single chord.
+// Selecting text INSIDE a draggable card was impossible: the drag gesture always won, yanking the
+// card into a drag ghost the moment the mouse moved (which read as "the window collapses" and
+// killed the selection before Ctrl+C could happen). If there's a live text selection, cancel the
+// drag and let the browser treat it as plain text selection.
+function textSelectionActive(){
+  try{ const sel = window.getSelection && window.getSelection(); return !!(sel && !sel.isCollapsed); }catch(e){ return false; }
+}
 function dragProgressionStart(e, progId){
+  if(textSelectionActive()){ e.preventDefault(); return; }
   e.dataTransfer.setData('application/json', JSON.stringify({ type:'progression', progId }));
   e.dataTransfer.effectAllowed = 'copy';
 }
 function dragChordStart(e, progId, idx){
+  if(textSelectionActive()){ e.preventDefault(); e.stopPropagation(); return; }
   e.dataTransfer.setData('application/json', JSON.stringify({ type:'chord', progId, idx }));
   e.dataTransfer.effectAllowed = 'copy';
   e.stopPropagation();
@@ -6532,7 +7068,7 @@ function renderMostPitchRichHtml(color){
       <b style="color:${color};">${best.count}/31</b>
     </div>
     <div class="row" style="margin:2px 0 4px;">
-      <button class="btn small primary stat-chip" onclick="jumpToMatch('${best.progId}')" title="${t('word.open')} ${escapeHtml(best.name)}">${escapeHtml(best.name)} →</button>
+      <button class="btn small primary stat-chip" style="box-shadow:none;" onclick="jumpToMatch('${best.progId}')" title="${t('word.open')} ${escapeHtml(best.name)}">${escapeHtml(best.name)} →</button>
     </div>`;
 }
 function computeMostCommonChordPair(){
@@ -6617,6 +7153,108 @@ function renderStatsPlate(){
     ${renderMostPitchRichHtml(COLORS[4])}
     ${renderMostCommonPairHtml(COLORS[5])}
   `;
+  // A pending "new progression just saved" flash: tint the whole plate with that progression's
+  // own card color and (re)trigger the CSS animation. Consumed once, so it doesn't replay on the
+  // next unrelated render. Re-adding the class after a reflow restarts the animation reliably.
+  if(pendingStatsFlashColor){
+    const color = pendingStatsFlashColor;
+    pendingStatsFlashColor = null;
+    holder.style.setProperty('--flash-color', color);
+    holder.classList.remove('new-prog-flash');
+    void holder.offsetWidth; // force reflow so re-adding the class restarts the animation
+    holder.classList.add('new-prog-flash');
+  }
+}
+let pendingStatsFlashColor = null;
+// Splash-screen intro animation: circles / curvy blobs of any color drift in from the LEFT edge
+// of the start screen, travel rightward to the eye logo, vanish as they cross its outline
+// (swallowed), and re-emerge on the far side as the small stroked hexagons, continuing right until
+// they leave through the screen's right edge. Same populations/tuning as the old header version
+// (orbs: sparser, bigger, slower, any hue+sat at fixed lightness; hexagons: the usual palette,
+// size, speed and frequency; both with the title's 3px near-black stroke) -- just retargeted to
+// the splash screen with a horizontal left-to-right trajectory. Geometry is measured for real.
+function mountSplashHexAnim(){
+  try{
+    const layer = document.getElementById('splashHexAnimLayer');
+    if(!layer) return;
+    const splash = document.getElementById('splashScreen');
+    if(!splash || splash.classList.contains('hidden')) return;
+    const w = layer.clientWidth, h = layer.clientHeight;
+    if(!w || !h) return;
+    const key = w+'x'+h;
+    if(layer.dataset.hexKey===key && layer.childElementCount>0) return;
+    layer.dataset.hexKey = key;
+    layer.innerHTML = '';
+    const lr = layer.getBoundingClientRect();
+    const eyeEl = splash.querySelector('.splash-logo');
+    let eye;
+    if(eyeEl){
+      const er = eyeEl.getBoundingClientRect();
+      // In the 130-box eye SVG the lens spans y=16..114 => half-height ~0.377 of the element.
+      eye = { cx: er.left + er.width/2 - lr.left, cy: er.top + er.height/2 - lr.top, rx: er.width*0.49, ry: er.height*0.377 };
+    } else {
+      eye = { cx: w/2, cy: h*0.3, rx: 110, ry: 83 };
+    }
+    const rnd = (a,b)=> a + Math.random()*(b-a);
+    // No fade in/out anymore: the eye's lens interior is painted opaque in the splash background
+    // color (see the splash SVG), so it sits over this layer like an upper Photoshop layer --
+    // shapes are progressively covered/revealed exactly at its border as they cross it.
+    const spawn = (cls, size, color, path, durMs)=>{
+      const el = document.createElement('span');
+      el.className = cls;
+      el.style.width = size.toFixed(1)+'px'; el.style.height = size.toFixed(1)+'px';
+      el.style.setProperty('--hx', color);
+      el.style.offsetPath = `path('${path}')`; el.style.webkitOffsetPath = `path('${path}')`;
+      if(cls==='eye-orb'){
+        const isCircle = Math.random() < 0.5;
+        const blobR = ()=> isCircle ? '50%' : `${rnd(42,68).toFixed(0)}% ${rnd(38,62).toFixed(0)}% ${rnd(46,70).toFixed(0)}% ${rnd(36,60).toFixed(0)}% / ${rnd(40,64).toFixed(0)}% ${rnd(44,68).toFixed(0)}% ${rnd(38,62).toFixed(0)}% ${rnd(46,66).toFixed(0)}%`;
+        el.style.borderRadius = blobR();
+        // A slow, independent breathing morph while it travels: size drifts gently (scale) and,
+        // for the blobs, the curvature itself melts between three random states -- subtle, its
+        // own duration/phase, so it never syncs visibly with the travel loop.
+        const morphMs = rnd(3800, 6800);
+        el.__morph = { frames: [
+          { transform:'scale(1)',                          borderRadius: el.style.borderRadius },
+          { transform:`scale(${rnd(0.82, 0.94).toFixed(2)})`, borderRadius: blobR() },
+          { transform:`scale(${rnd(1.06, 1.2).toFixed(2)})`,  borderRadius: blobR() },
+          { transform:'scale(1)',                          borderRadius: el.style.borderRadius }
+        ], timing: { duration: morphMs, delay: -rnd(0, morphMs), iterations: Infinity, easing:'ease-in-out' } };
+      } else if(cls==='eye-hex'){
+        // Same 3px near-black stroke as the title's text outline.
+        const S = size;
+        el.innerHTML = `<svg viewBox="0 0 ${S} ${S}" xmlns="http://www.w3.org/2000/svg"><polygon points="${(S*0.5).toFixed(1)},0 ${S},${(S*0.25).toFixed(1)} ${S},${(S*0.75).toFixed(1)} ${(S*0.5).toFixed(1)},${S} 0,${(S*0.75).toFixed(1)} 0,${(S*0.25).toFixed(1)}" fill="${color}" stroke="#0d0f11" stroke-width="3" stroke-linejoin="round"/></svg>`;
+      }
+      layer.appendChild(el);
+      const timing = { duration: durMs, delay: -rnd(0, durMs), iterations: Infinity, easing: 'linear' };
+      el.style.opacity = '1';
+      el.animate([{ offsetDistance:'0%' }, { offsetDistance:'100%' }], timing);
+      if(el.__morph) el.animate(el.__morph.frames, el.__morph.timing);
+    };
+    // ---- ORBS: left edge -> eye (swallowed at its outline).
+    const N_ORB = 6;
+    for(let i=0;i<N_ORB;i++){
+      const color = `hsl(${Math.floor(rnd(0,360))} ${Math.floor(rnd(18,100))}% 55%)`;
+      const size = rnd(30, 42);
+      const durMs = rnd(15000, 24000);
+      const B = { x: -size*1.6, y: eye.cy + rnd(-1.6, 1.6)*eye.ry };
+      const P = { x: eye.cx + rnd(-6, 6), y: eye.cy + rnd(-5, 5) };
+      const C1 = { x: (B.x+P.x)*rnd(0.35, 0.65), y: eye.cy + rnd(-2.2, 2.2)*eye.ry }; // gentle per-orb bow in the approach
+      const path = `M ${B.x.toFixed(0)} ${B.y.toFixed(0)} Q ${C1.x.toFixed(0)} ${C1.y.toFixed(0)} ${P.x.toFixed(0)} ${P.y.toFixed(0)}`;
+      spawn('eye-orb', size, color, path, durMs);
+    }
+    // ---- HEXAGONS: born at the pupil, continue rightward out through the right edge.
+    const N_HEX = 16;
+    for(let i=0;i<N_HEX;i++){
+      const color = `hsl(${Math.floor(rnd(0,360))} 72% 56%)`;
+      const size = rnd(13, 18);
+      const durMs = rnd(8000, 15000);
+      const P = { x: eye.cx + rnd(-6, 6), y: eye.cy + rnd(-5, 5) };
+      const T = { x: w + size*1.6, y: eye.cy + rnd(-1.8, 1.8)*eye.ry };
+      const C2 = { x: (P.x+T.x)*rnd(0.4, 0.6), y: eye.cy + rnd(-2.4, 2.4)*eye.ry }; // gentle per-hex bow on the way out
+      const path = `M ${P.x.toFixed(0)} ${P.y.toFixed(0)} Q ${C2.x.toFixed(0)} ${C2.y.toFixed(0)} ${T.x.toFixed(0)} ${T.y.toFixed(0)}`;
+      spawn('eye-hex', size, color, path, durMs);
+    }
+  }catch(e){}
 }
 function render(){
   const app = document.getElementById('app');
@@ -6647,15 +7285,7 @@ function render(){
 <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showSettingsMenu?'primary':''}" onclick="toggleSettingsMenu()" title="${t('word.settings')}"><span class="header-btn-emoji header-btn-emoji-stroke">⚙️</span></button>
         ${state.showSettingsMenu ? `
-          <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:10px;">
-            <span class="row" style="gap:6px;">
-              <button class="eq-toggle ${state.octaveEquivalence?'on':''}" onclick="toggleOctaveEquivalence()">${t('eq.label')}: ${state.octaveEquivalence ? t('word.on') : t('word.off')}</button>
-              <button class="btn mini ghost" onclick="toggleEqInfo()" title="${t('word.whatdoes')}">?</button>
-            </span>
-            ${state.showEqInfo ? `<p class="sub" style="max-width:none; font-size:10.5px;">${state.octaveEquivalence
-              ? t('eq.info.on')
-              : t('eq.info.off')}</p>` : ''}
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
+          <div class="help-dropdown-menu" style="display:flex; flex-direction:column; gap:10px;">
             <button class="btn small ${state.showFilesMenu?'primary':''}" onclick="toggleFilesMenu()">${t('word.files')}</button>
             ${state.showFilesMenu ? `
               <div style="padding-left:4px; display:flex; flex-direction:column; gap:8px;">
@@ -6666,6 +7296,8 @@ function render(){
                 ${state.showLibInfo ? `<p class="sub" style="max-width:none; margin:2px 0 6px; font-size:10.5px;">${t('files.libinfo')}</p>` : ''}
                 <button class="btn small" onclick="exportLibrary()">${t('files.export')}</button>
                 <button class="btn small" onclick="triggerImport()">${t('files.import')}</button>
+                <button class="btn small" onclick="exportAllShapesMidi()">${t('files.exportshapesmidi')}</button>
+                <button class="btn small" onclick="exportAllProgressionsMidi()">${t('files.exportprogsmidi')}</button>
                 <div class="row" style="justify-content:space-between; align-items:center; margin-top:8px;">
                   <div class="field-label" style="margin:0;">${t('files.importprogs.label')}</div>
                   <button class="btn mini ghost" onclick="toggleProgImportInfo()" title="${t('word.whatdoes.3')}">?</button>
@@ -6690,14 +7322,22 @@ function render(){
               </div>
             ` : ''}
             <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <button class="btn small ${state.showMidiPanel?'primary':''}" onclick="toggleMidiPanel()"><span class="help-menu-emoji">🔌</span>MIDI ▾</button>
+            <button class="btn small ${state.showMidiPanel?'primary':''}" onclick="toggleMidiPanel()"><span class="help-menu-emoji">🔌</span>${state.lang==='es'?'MIDI Entrada/Salida':'MIDI In/Out'} ▾</button>
             ${renderMidiPanel()}
+            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
+            <button class="btn small ${state.muted?'primary':''}" onclick="toggleMuted()" title="${t('mute.title')}">${state.muted?t('mute.muted'):t('mute.mute')}</button>
+            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
+            <span class="row" style="gap:6px;">
+              <button class="eq-toggle ${state.octaveEquivalence?'on':''}" onclick="toggleOctaveEquivalence()">${t('eq.label')}: ${state.octaveEquivalence ? t('word.on') : t('word.off')}</button>
+              <button class="btn mini ghost" onclick="toggleEqInfo()" title="${t('word.whatdoes')}">?</button>
+            </span>
+            ${state.showEqInfo ? `<p class="sub" style="max-width:none; font-size:10.5px;">${state.octaveEquivalence
+              ? t('eq.info.on')
+              : t('eq.info.off')}</p>` : ''}
             <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
             <button class="btn small" onclick="toggleFullscreen()">${document.fullscreenElement ? t('fullscreen.exit') : t('fullscreen.enter')}</button>
             <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
             <button class="eq-toggle ${state.epilepsySafeMode?'on':''}" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">${t('epilepsy.toggle')}: ${state.epilepsySafeMode ? t('word.on') : t('word.off')}</button>
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <button class="btn small ${state.muted?'primary':''}" onclick="toggleMuted()" title="${t('mute.title')}">${state.muted?t('mute.muted'):t('mute.mute')}</button>
           </div>
         ` : ''}
       </span>
@@ -6746,7 +7386,6 @@ function render(){
           <div class="hero-title-mini">ARMODEX<span class="title-sub">31ED2</span></div>
           ${eqCreditHtml}
         </div>
-        ${heroLogoSvg}
         <div class="hero-btn-stack">${eqBtnStack}</div>
         ${eqExtrasHtml}
       </div>
@@ -7230,6 +7869,13 @@ function toggleJargonPopup(e, popupId){
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.jargon-popup.show').forEach(popup=>popup.classList.remove('show'));
 });
+// Selecting text inside a nickname/tags input (or any text) fires a click that bubbles up to the
+// card underneath, toggling it open/closed mid-selection. Capture-phase guard: clicks originating
+// in text fields, or clicks that conclude an active text selection, never reach card handlers.
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.closest && e.target.closest('input[type="text"], input:not([type]), textarea')){ e.stopPropagation(); return; }
+  if(typeof textSelectionActive==='function' && textSelectionActive()) e.stopPropagation();
+}, {capture:true});
 function toggleSwSection(id){
   closeAllJargonPopups();
   state.swSectionOpen = state.swSectionOpen || {};
@@ -7541,7 +8187,7 @@ function renderCatalogList(content){
       <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
         ${state.showHearMenu ? `
-          <div class="help-dropdown-menu" style="min-width:320px; display:flex; flex-direction:column; gap:8px;">
+          <div class="help-dropdown-menu" style="display:flex; flex-direction:column; gap:8px;">
             <span class="control-group">
               <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
               <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
@@ -7590,7 +8236,7 @@ function renderCatalogList(content){
                 const sp = species.map[sig];
                 const ad = anchoredDisplay(p, ci);
                 const absTones = eff.filter(i=>i!==0).map(iv=>c.root+iv);
-                return `<span class="mini-chip" onclick="event.stopPropagation(); openProgressionAtChord('${p.id}', ${ci})" data-hover-root="${ad.root}" data-hover-tones='${JSON.stringify(ad.tones)}' data-hover-sig="${sig}"><span class="first-iv">${c.root}</span>${absTones.length ? ' · '+absTones.join('  ') : ''} <span class="chord-nick">${nick?`"${escapeHtml(nick)}"`:`chord #${sp?sp.num:'?'}`}</span></span>`;
+                return `<span class="mini-chip" id="miniChip-${p.id}-${ci}" onclick="event.stopPropagation(); openProgressionAtChord('${p.id}', ${ci})" data-hover-root="${ad.root}" data-hover-tones='${JSON.stringify(ad.tones)}' data-hover-sig="${sig}"><span class="root-hex-chip mini-chip-root" style="--chip-c:hsl(${Math.round(mod31(c.root)*(360/31))} 72% 56%);">${c.root}</span>${absTones.length ? ' '+absTones.join('  ') : ''} <span class="chord-nick">${nick?`"${escapeHtml(nick)}"`:`shape #${sp?sp.num:'?'}`}</span></span>`;
               }).join('')}
             </div>
           </div>
@@ -7664,7 +8310,7 @@ function renderCatalogDetail(content){
           <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
               <button class="btn mini ${state.showHearMenu?'primary':''}" style="white-space:nowrap;" onclick="toggleHearMenu()">${t('interp.btn')}</button>
             ${state.showHearMenu ? `
-              <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
+              <div class="help-dropdown-menu" style="display:flex; flex-direction:column; gap:8px;">
                 <span class="control-group">
                   <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
                   <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
@@ -7720,14 +8366,13 @@ function renderCatalogDetail(content){
               const nick = state.nicknames[sig];
               const seqPos = state.chordSeqSelection.indexOf(idx);
               const ad = anchoredDisplay(p, idx);
-              return `<div class="chord-chip ${seqPos>=0?'seq-picked':''}" id="chordChip-${p.id}-${idx}" style="zoom:${chipScale};" draggable="true" ondragstart="dragChordStart(event, '${p.id}', ${idx})" onmouseenter="hoverPlayChordInProg('${p.id}', ${idx})" onmouseleave="stopHoverPlayChordInProg('${p.id}')" data-hover-root="${ad.root}" data-hover-tones='${JSON.stringify(ad.tones)}' data-hover-sig="${sig}">
+              return `<div class="chip-wrap" style="zoom:${chipScale};"><span class="seq-order-badge outside">${idx+1}</span><div class="chord-chip ${seqPos>=0?'seq-picked':''}" id="chordChip-${p.id}-${idx}" draggable="true" ondragstart="dragChordStart(event, '${p.id}', ${idx})" onmouseenter="hoverPlayChordInProg('${p.id}', ${idx})" onmouseleave="stopHoverPlayChordInProg('${p.id}')" data-hover-root="${ad.root}" data-hover-tones='${JSON.stringify(ad.tones)}' data-hover-sig="${sig}">
                 <div class="clickzone" onclick="handleChordChipClick(event, '${p.id}', ${idx}, '${sig}')">
-                  <span class="seq-order-badge">${idx+1}</span>
                   ${seqPos>=0 ? `<span class="seq-badge">${seqPos+1}</span>` : ''}
-                  <span class="root">${c.root}</span>
+                  <span class="root-hex-chip mini-chip-root" style="--chip-c:hsl(${Math.round(mod31(c.root)*(360/31))} 72% 56%);">${c.root}</span>
                   <span class="ivs">${eff.filter(i=>i!==0).map(iv=>c.root+iv).join('  ')}</span>
                   ${c.label ? `<span class="lbl">${escapeHtml(c.label)}</span>` : ''}
-                  <span class="num">${nick ? `<span class="chord-nick">"${escapeHtml(nick)}"</span>` : `#${sp.num}`}${sp.count>1 ? ' · '+sp.count+'×' : ''}</span>
+                  <span class="num"><span class="chord-nick">${nick ? `"${escapeHtml(nick)}"` : `shape #${sp.num}`}</span></span>
                   <div class="chip-hex-mini" id="chipHex-${p.id}-${idx}"></div>
                 </div>
                 ${state.emergentHighlight && state.emergentHighlight.progId===p.id ? `
@@ -7735,7 +8380,7 @@ function renderCatalogDetail(content){
                     ${c.intervals.map(iv=>mod31(c.root+iv)).map(pc=>`<span class="note-badge ${state.emergentHighlight.pcs.includes(pc)?'on':''}">${pc}</span>`).join('')}
                   </div>
                 ` : ''}
-              </div>`;
+              </div></div>`;
             }).join('')}
           </div>`;
           })()}
@@ -8046,6 +8691,17 @@ function renderBuilder(content){
               </span>
               <button class="btn small ghost" style="background:rgba(201,82,74,.15); border-color:#c9524a; color:#f0a49e;" onclick="builderClearSelection()">${t('word.clearselection')}</button>
               <button class="btn mini" style="background:#ff2fb0; border-color:#ff2fb0; color:#fff; font-size:10.5px; padding:5px 9px;" onclick="restartBuilderTutorial()" title="${t('tut.restart.title')}">${t('tut.restart')}</button>
+              <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
+                <button class="btn mini ${state.showHelpMenu?'primary':''}" onclick="toggleHelpMenu()"><span class="header-btn-emoji" style="font-size:18px;">🙋‍♀️</span> ${t('word.help')}</button>
+                ${state.showHelpMenu ? `
+                  <div class="help-dropdown-menu" style="top:auto; bottom:calc(100% + 6px);">
+                    <button class="btn small" onclick="toggleInfoSoftware(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🤖</span>${t('help.menu.software')}</button>
+                    <button class="btn small" onclick="toggleInfoTuning(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🎼</span>${t('help.menu.tuning')}</button>
+                    <button class="btn small" onclick="toggleInfoHexagons(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">⬡</span>${t('help.menu.hexagons')}</button>
+                    <button class="btn small" onclick="toggleInfoShortcuts(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🐇</span>${t('help.menu.faster')}</button>
+                  </div>
+                ` : ''}
+              </span>
               ${recognitionPanel ? `<span class="builder-nickname-inline" style="display:inline-flex; align-items:center; margin-left:auto;">${recognitionPanel}</span>` : ''}
           </div>
           <div class="row" style="margin-top:8px;">
@@ -8093,7 +8749,7 @@ function renderBuilder(content){
               <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
                 <button class="btn mini ${state.showHearMenu?'primary':''}" style="white-space:nowrap;" onclick="toggleHearMenu()">${t('interp.btn')}</button>
                 ${state.showHearMenu ? `
-                  <div class="help-dropdown-menu" id="builderHearMenu" style="min-width:280px; display:flex; flex-direction:column; gap:8px; top:calc(100% + 6px); bottom:auto; max-height:min(75vh, calc(100vh - 40px));">
+                  <div class="help-dropdown-menu" id="builderHearMenu" style="display:flex; flex-direction:column; gap:8px; top:calc(100% + 6px); bottom:auto; max-height:min(75vh, calc(100vh - 40px)); max-width:min(92vw, 380px);">
                     <span class="control-group">
                       <span class="bpm-control"><label class="field-label" style="margin:0;">${t('interp.bpm')}</label><input type="number" min="20" max="300" value="${state.playBpm}" oninput="setPlayBpm(this.value)"></span>
                       <span class="bpm-control" title="${t('interp.pitch.title')}"><label class="field-label" style="margin:0;">${t('interp.pitch')}</label><input type="range" min="-1200" max="1200" step="10" value="${state.generalPitch||0}" oninput="setGeneralPitch(this.value)"><span class="pitch-fader-val" style="font-family:'JetBrains Mono',monospace; font-size:11px; min-width:38px; display:inline-block;">${(state.generalPitch>0?'+':'')+(state.generalPitch||0)}¢</span></span>
@@ -8119,19 +8775,24 @@ function renderBuilder(content){
             </span>
             <button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>
           </div>
-          <div class="chords-built">
+          <div class="chords-built" ondragover="builderDragOverList(event)" ondrop="builderDropOnList(event)">
             ${(()=>{
                 const species = computeSpecies(state.progressions);
-                return b.chords.map((c,idx)=>{
+                return b.chords.map((cRaw,idx)=>{
+                  // While THIS shape is being edited on the map, its card mirrors the live
+                  // selection in real time (root, intervals, recognized shape tag, color) rather
+                  // than freezing on the stale pre-edit chord until save.
+                  const isLiveEditing = state.builder.editingChordIdx===idx && state.builder.selectedOrder.length>0;
+                  const c = isLiveEditing
+                    ? { ...cRaw, root: state.builder.selectedOrder[0], intervals: canonicalIntervals(state.builder.selectedOrder[0], state.builder.selectedOrder) }
+                    : cRaw;
                   const eff = effectiveIntervals(c.intervals);
                   const sp = species.map[signatureOf(eff)];
                   const nick = sp ? state.nicknames[sp.signature] : null;
                   return `
-                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragover="builderDragChordOver(event)" ondrop="builderDropChord(event, ${idx})">
+                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragend="builderDragEnded()">
                       ${idx===0 ? `<span class="drag-handle locked" title="The first shape is always rooted at 0 and can't be moved">🔒</span>` : `<span class="drag-handle" draggable="true" ondragstart="builderDragChordStart(event, ${idx})" title="Drag to reorder">⠿</span>`}
-                      <span class="root">${c.root}</span>
-                      <span class="ivs">${formatIvs(eff)}</span>
-                      ${sp ? `<span class="built-chord-tag">#${sp.num}${nick?` <span class="chord-nick">"${escapeHtml(nick)}"</span>`:''}</span>` : ''}
+                      <span class="mini-chip builder-card-chip"><span class="root-hex-chip mini-chip-root" style="--chip-c:hsl(${Math.round(mod31(c.root)*(360/31))} 72% 56%);">${c.root}</span>${eff.filter(i=>i!==0).map(iv=>c.root+iv).join('  ')} <span class="chord-nick">${nick?`"${escapeHtml(nick)}"`:(sp?`shape #${sp.num}`:'?')}</span></span>
                       <input type="text" placeholder="optional label" class="built-chord-label-input" style="flex:0 1 auto; width:14ch; min-width:0; max-width:100%; box-sizing:content-box; field-sizing:content;" value="${escapeHtml(c.label)}" oninput="builderChordLabel(${idx}, this.value); this.style.width=Math.max(14,this.value.length+1)+'ch';" ${state.builder.editingChordIdx===idx?'disabled':''}>
                       <div class="ctrls">
                         ${state.builder.editingChordIdx===idx ? `
@@ -8241,7 +8902,11 @@ function syncBuilderSearchPanelHeight(){}
 // Hidden entirely (returns '') when there's nothing to show.
 function renderIdenticRootsHtml(sp, speciesList){
   const Fpc = canonicalShapeSignature(sp.intervals);
-  const siblings = (speciesList||[]).filter(other=>canonicalShapeSignature(other.intervals)===Fpc);
+  // Same abstract shape (rotation-invariant pitch-class signature) but a DIFFERENT species --
+  // i.e. a different one of its keys is marked as root. The shape's own species is excluded on
+  // purpose: those occurrences are just transpositions with the same abstract root, which is not
+  // what this feature is about.
+  const siblings = (speciesList||[]).filter(other=>other.signature!==sp.signature && canonicalShapeSignature(other.intervals)===Fpc);
   const grouped = {};
   siblings.forEach(other=>{
     (other.occurrences||[]).forEach(o=>{
@@ -8255,7 +8920,7 @@ function renderIdenticRootsHtml(sp, speciesList){
     });
   });
   const groups = Object.values(grouped).sort((a,b)=>a.root-b.root);
-  if(groups.length<=1) return '';
+  if(groups.length===0) return '';
   return `
     <div class="rel-block" style="margin-top:10px;" onclick="event.stopPropagation()">
       <div class="rel-label">${t('recog.identicroot.title')}</div>
@@ -8410,7 +9075,7 @@ function renderSpecies(content){
       <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
         ${state.showHearMenu ? `
-          <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
+          <div class="help-dropdown-menu" style="display:flex; flex-direction:column; gap:8px;">
             <span class="control-group" title="${t('interp.strum.title')}">
               <label class="field-label" style="margin:0;">${t('interp.timbre')}</label>
               <button class="btn mini ${state.chordsTabTimbre==='sine'?'primary':''}" onclick="setChordsTabTimbre('sine')">${t('word.sine')}</button>
@@ -8617,7 +9282,7 @@ function renderMap(content){
             <span class="help-dropdown-wrap">
               <button class="btn mini ${state.showHearMenu?'primary':''}" onclick="toggleHearMenu()">${t('interp.btn')}</button>
               ${state.showHearMenu ? `
-                <div class="help-dropdown-menu" style="min-width:280px; display:flex; flex-direction:column; gap:8px;">
+                <div class="help-dropdown-menu" style="display:flex; flex-direction:column; gap:8px;">
                   <span class="control-group" title="Listen on hover / play">
                     <label class="field-label" style="margin:0;">${t('interp.timbre')}</label>
                     <button class="btn mini ${state.mapTimbre==='sine'?'primary':''}" onclick="setMapTimbre('sine')">${t('word.sine')}</button>
@@ -8790,10 +9455,12 @@ function builderRecognitionSnippet(assoc){
 ========================================================================= */
 function buildStepLadderHtml(root, tones){
   const vals = [root, ...tones].sort((a,b)=>a-b);
-  const rootIdx = vals.indexOf(0);
+  // The ROOT is whatever value came in as `root` -- not necessarily 0 (progression chords pass
+  // absolute pitches). Its box shows its real number; 0 only when the root really is 0.
+  const rootIdx = vals.indexOf(root);
   let html = '<div class="step-ladder">';
   vals.forEach((v,i)=>{
-    html += `<span class="step-num">${v===0?'R':(v>0?'+'+v:v)}</span>`;
+    html += i===rootIdx ? `<span class="step-num step-root">${v}</span>` : `<span class="step-num">${v>0?'+'+v:v}</span>`;
     if(i<vals.length-1 && i!==rootIdx){
       const gap = vals[i+1]-v;
       html += `<span class="step-gap-num">${gap}</span>`;
@@ -9056,7 +9723,7 @@ function playUiClick(){
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.05, now);
   gain.gain.exponentialRampToValueAtTime(0.0001, now+0.06);
-  osc.connect(gain).connect(ctx.destination); // UI click is never MIDI-triggered -- always bypass the limiter
+  osc.connect(gain).connect(getGentleBus(ctx)); // through the guarded master bus (tiny, but it sums with everything else)
   osc.start(now); osc.stop(now+0.07);
 }
 document.addEventListener('click', (e)=>{
@@ -9093,6 +9760,10 @@ function dismissStaleFloatingPreviews(){
     const centsBox = document.getElementById('centsTooltip');
     const stillOnCentsTarget = atPoint && atPoint.closest && atPoint.closest('polygon, .hexsvg');
     if(centsBox && centsBox.classList.contains('visible') && !stillOnCentsTarget) hideCentsTooltip();
+    // Same stale-check for the builder's built-chord minimap tooltip: if it's showing but the
+    // mouse isn't actually over a card anymore (DOM replaced mid-hover, fast exits), hide it.
+    const bcm = document.getElementById('builtChordMinimapTooltip');
+    if(bcm && bcm.classList.contains('visible') && !(atPoint && atPoint.closest && atPoint.closest('.built-chord'))) hideBuiltChordMinimap();
   }catch(e){}
 }
 document.addEventListener('mouseout', (e)=>{
@@ -9143,7 +9814,7 @@ function playIntroChord(){
     const strumGap = 0.16, dur = 4.5; // slow strum, long release
     const now = ctx.currentTime + 0.05;
     introActive = true;
-    notes.forEach((raw,idx)=> scheduleChordAudio([raw], 'guitar', now + idx*strumGap, dur, undefined, true));
+    notes.forEach((raw,idx)=> scheduleChordAudio([raw], 'guitar', now + idx*strumGap, dur, undefined, true, false, 1, false, 0.45));
     setTimeout(()=>{ introActive = false; }, (notes.length*strumGap + dur + 0.2)*1000);
   };
   if(ctx.state==='running') fire();
@@ -9167,6 +9838,10 @@ function tryPlayIntro(){
   if(s && s.classList && !s.classList.contains('hidden')) return; // the click-to-continue click: dismissSplash orchestrates the audio timing itself so the intro chord waits for the pkmn splash
   playIntroChord();
 }
+// The splash screen is visible from the very first paint -- start its traveling-shapes animation
+// as soon as layout is ready (and re-measure if the window is resized while it's still up).
+requestAnimationFrame(()=> mountSplashHexAnim());
+window.addEventListener('resize', ()=>{ const sp = document.getElementById('splashScreen'); if(sp && !sp.classList.contains('hidden')) mountSplashHexAnim(); });
 function buildKaleidoscopeSVG(){
   const svgns = 'http://www.w3.org/2000/svg';
   const N = 28, size = 600, cx = size/2, cy = size/2, R = size*0.46;
@@ -9251,7 +9926,7 @@ function playWhiteNoise(durSec){
       g.gain.exponentialRampToValueAtTime(0.06, now+0.06); // reasonable, deliberately quiet
       g.gain.setValueAtTime(0.06, now+Math.max(0.1, durSec-0.3));
       g.gain.exponentialRampToValueAtTime(0.0001, now+durSec);
-      src.connect(g); g.connect(ctx.destination); // never MIDI-triggered -- always bypass the limiter
+      src.connect(g); g.connect(getGentleBus(ctx)); // through the single guarded output chain
       src.start(now); src.stop(now+durSec+0.05);
     };
     if(ctx.state==='running') run(); else ctx.resume().then(run).catch(()=>{});
@@ -9261,12 +9936,16 @@ function runPkmnSplash(done){
   const el = document.getElementById('pkmnSplash');
   if(!el){ done(); return; }
   el.classList.remove('hidden');
-  playExternalAudio(PKMN_INTRO_SOUND_SOURCES, 0.75, ()=>playWhiteNoise(PKMN_SPLASH_MS/1000));
+  playExternalAudio(PKMN_INTRO_SOUND_SOURCES, 0.55, ()=>playWhiteNoise(PKMN_SPLASH_MS/1000));
   setTimeout(()=>{ el.classList.add('hidden'); try{ done(); }catch(e){} positionHelpHint(); }, PKMN_SPLASH_MS);
 }
 function dismissSplash(){
   const splash = document.getElementById('splashScreen');
   if(splash) splash.classList.add('hidden');
+  // Entering the app goes fullscreen -- this click is a real user gesture, so the request is allowed.
+  try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){}
+  // Stop and drop the splash's traveling-shapes animation -- it's never coming back this session.
+  try{ const hexLayer = document.getElementById('splashHexAnimLayer'); if(hexLayer){ hexLayer.getAnimations({subtree:true}).forEach(a=>a.cancel()); hexLayer.innerHTML=''; } }catch(e){}
   const ctx = getAudioCtx();
   if(ctx && ctx.state!=='running'){ try{ ctx.resume().catch(()=>{}); }catch(e){} }
   // Pause the always-on full-viewport background animations for the whole pkmn+kaleidoscope
