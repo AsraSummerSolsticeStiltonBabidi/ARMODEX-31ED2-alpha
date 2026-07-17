@@ -545,6 +545,13 @@
   .root-hex-chip::before{ content:''; position:absolute; inset:0; z-index:-1; clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); background:var(--chip-c); }
   /* Progressions-overview variant: a notch bigger and bolder, with a thicker yellow stroke. */
   .root-hex-chip.mini-chip-root{ width:35px; min-width:35px; max-width:35px; height:38px; font-size:16px; font-weight:900; -webkit-text-stroke:1.8px #f4e04d; paint-order:stroke fill; }
+  /* Progressions-overview cards: the chip collapses to exactly the hexagon's own height (no
+     vertical padding, hex overlapping the 1px borders) and the wrap rows have zero row-gap --
+     so each root hexagon's top/bottom tips TOUCH the hexagons above/below, reclaiming all the
+     dead vertical space per card. */
+  .prog-card .chip-row{ row-gap:0; column-gap:5px; }
+  .prog-card .mini-chip{ display:inline-flex; align-items:center; gap:5px; padding-top:0; padding-bottom:0; }
+  .prog-card .root-hex-chip.mini-chip-root{ margin:-1px 0; }
   .mini-chip.now-sounding{ box-shadow:0 0 0 2.5px #f4e04d; border-radius:6px; }
   .built-chord .builder-card-chip{ cursor:inherit; }
   /* Live insertion preview while dragging to reorder: a real gap opens BETWEEN cards at the
