@@ -6723,6 +6723,33 @@ function capBuilderProgressionHeight(){
   apply();
   if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(apply);
 }
+// The Hex Map results panel is pulled up by a fixed -98px margin and capped with a static
+// calc(100vh - 20px). On shorter laptop viewports that combination both cut its top off-screen
+// AND left a big empty gap underneath (the cap doesn't know where the panel actually starts).
+// This measures the real geometry instead: back the negative pull off until the top is visible,
+// then cap the height to exactly the room remaining below it.
+function fitMapResultsPanel(){
+  try{
+    const el = document.getElementById('mapResultsPanel');
+    if(!el) return;
+    const BASE_PULL = -98, TOP_MARGIN = 10, BOTTOM_MARGIN = 12;
+    const apply = ()=>{
+      if(!document.body.contains(el)) return;
+      el.style.marginTop = BASE_PULL + 'px';
+      let top = el.getBoundingClientRect().top;
+      if(top < TOP_MARGIN){
+        // Give back just enough of the pull to bring the top fully on-screen.
+        el.style.marginTop = Math.min(0, BASE_PULL + (TOP_MARGIN - top)) + 'px';
+        top = el.getBoundingClientRect().top;
+      }
+      el.style.maxHeight = Math.max(160, window.innerHeight - top - BOTTOM_MARGIN) + 'px';
+    };
+    apply();
+    if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(apply);
+    setTimeout(apply, 140); // after late reflow (map svg, fonts)
+  }catch(e){}
+}
+window.addEventListener('resize', ()=>{ if(state.tab==='map') fitMapResultsPanel(); });
 function capExactMatchCardHeight(){
   const el = document.getElementById('exactMatchCardWrap');
   if(!el) return;
@@ -9317,7 +9344,7 @@ function renderMap(content){
           <button class="btn small" style="flex-shrink:0;" onclick="exportSelectionMidi('map')">⬇ MIDI</button>
         </div>
       </div>
-      <div class="panel hex-frame-transparent" style="margin-top:-98px; max-height:calc(100vh - 20px); overflow-y:auto; overflow-x:hidden;">
+      <div class="panel hex-frame-transparent" id="mapResultsPanel" style="margin-top:-98px; max-height:calc(100vh - 20px); overflow-y:auto; overflow-x:hidden;">
         <div class="selection-strip" id="mapSelStrip" style="margin-bottom:10px;"></div>
         ${!state.mapSelectMode ? `` : ex.selectedOrder.length>0 ? `<p class="sub" style="max-width:none; display:inline-block; background:var(--panel-alt); border:1px solid var(--border); border-radius:6px; padding:6px 10px;">Root ${mod31(ex.selectedOrder[0])} · ${formatIvs(effectiveIntervals(canonicalIntervals(ex.selectedOrder[0], ex.selectedOrder)))}</p>${renderRecognitionHtml(assoc, {sideBySideWherePartOf:true})}` : `<p class="sub" style="max-width:none;">${t('word.nothingselected')}</p>`}
       </div>
@@ -9332,6 +9359,7 @@ function renderMap(content){
   if(captionHolder) captionHolder.textContent = '';
   if(assoc.exact) mountChordCardHex(assoc.exact, 'mapcard');
   capExactMatchCardHeight();
+  fitMapResultsPanel();
   // Removed per explicit request: the little numbered "root #N with an X to remove it" chips
   // that used to appear here while marking notes were considered redundant clutter on the Hex Map
   // (the hexagons themselves already show which notes are marked -- clicking a marked hex again
