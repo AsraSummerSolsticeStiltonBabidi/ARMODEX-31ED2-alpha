@@ -74,6 +74,21 @@
     text-shadow:0 2px 5px rgba(0,0,0,.95);
   }
   @media (min-width:1000px){ body{ padding-left:10px; padding-right:10px; } }
+  /* ARMODEX's UI text is not meant to be selected: nearly every bit of it doubles as a control
+     (cards toggle, chips hover-play, shift-click reorders/multi-selects), and an accidental text
+     selection was actively BREAKING those interactions -- a live selection made the app's
+     capture-phase click guard swallow clicks, so shift-click multi-select in the builder never
+     reached its handler at all, among other stuck-state bugs.
+     Text you'd actually want to copy stays selectable via the opt-in rule right below. */
+  /* Applied to every element, not just body: `user-select` inherits, but any descendant rule
+     setting it back to auto/text re-enables selection for that whole subtree -- a universal
+     selector is the only way to be sure nothing slips through. */
+  html, body, *{ user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+  /* The genuinely copy-worthy places opt back in explicitly. */
+  input, textarea, select, .selectable, .selectable *,
+  .modal-panel p, .modal-panel li, .modal-panel td, .modal-panel th, .prog-notes{
+    user-select:text; -webkit-user-select:text; -ms-user-select:text;
+  }
   .btn, input[type="text"], input[type="number"], textarea, select{
     box-shadow:0 2px 6px rgba(0,0,0,.3);
   }
@@ -314,11 +329,13 @@
   .hero-plate-mini .eq-credit-name{ color:#c81b4a; text-shadow:none; }
   .hero-title-col{ display:flex; flex-direction:column; gap:2px; justify-content:center; }
   .hero-title-mini{
-    font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:58px; line-height:1;
+    font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:66px; line-height:1;
     letter-spacing:.005em; text-transform:uppercase; white-space:nowrap;
     color:hsl(0 72% 42%); -webkit-text-stroke:1.5px #0d0f11; paint-order:stroke fill;
     animation:pupilHue 7s linear infinite;
-    display:flex; align-items:center; flex-shrink:0;
+    /* Bigger lettering, identical box: the height is pinned to what the old 58px title occupied
+       and the glyphs are centred inside it, so the white plate around it doesn't grow at all. */
+    display:flex; align-items:center; flex-shrink:0; height:58px;
   }
   @media (prefers-reduced-motion: reduce){ .hero-title-mini{animation:none;} }
   /* The three header buttons stacked one above another; their dropdowns open downward and
@@ -451,6 +468,38 @@
   .eq-toggle:hover{border-color:var(--accent2);}
   .eq-toggle.on{background:var(--accent2); border-color:var(--accent2); color:#0a201d;}
   .eq-note{color:var(--muted); font-size:12.5px; line-height:1.5;}
+  /* Sized to match #chordSearchInput exactly (same font-size and vertical padding), so the two
+     sit as equals side by side instead of the button looking like an afterthought. */
+  /* Settings menu hierarchy: top-level SECTIONS carry an all-caps accent heading and a divider,
+     sub-groups inside an expanded section are indented behind a vertical rule, so at a glance you
+     can tell what belongs to what instead of reading one flat list of buttons. */
+  .settings-menu{ max-width:min(94vw, 400px); }
+  .settings-section{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; width:100%; padding-bottom:10px; border-bottom:1px solid var(--border); }
+  .settings-section-last{ border-bottom:none; padding-bottom:0; }
+  .settings-section-title{ font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent2); opacity:.95; margin-top:2px; }
+  .settings-sub{ display:flex; flex-direction:column; gap:12px; width:100%; padding-left:10px; margin-left:2px; border-left:2px solid var(--border); }
+  .settings-subgroup{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; width:100%; }
+  .settings-sub-title{ font-family:'Inter',sans-serif; font-size:11.5px; font-weight:700; color:#e6ebf2; letter-spacing:.02em; }
+  .settings-field-label{ font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+  .settings-note{ max-width:none; margin:2px 0 0; font-size:10.5px; color:#c3ccd8; }
+  .settings-danger .settings-sub-title{ color:var(--danger); }
+  /* The Google sync controls are the only ones here that reach outside the app entirely, so they
+     get a white treatment that sets them clearly apart from every other button in the menu. */
+  .btn.gdrive-btn{ background:#f4efe2; color:#14181f; border-color:#f4efe2; font-weight:700; }
+  .btn.gdrive-btn:hover{ background:#ffffff; border-color:#ffffff; color:#14181f; }
+  .btn.gdrive-btn:disabled{ opacity:.55; cursor:default; }
+  .gdrive-status{ font-size:11px; line-height:1.5; color:#bde8c9; background:rgba(94,196,186,.1); border:1px solid rgba(94,196,186,.35); border-radius:8px; padding:7px 9px; width:100%; box-sizing:border-box; }
+  .hexmap-jump-btn{ font-size:16px; padding:12px 22px; white-space:nowrap; flex:0 0 auto; align-self:stretch; display:inline-flex; align-items:center; }
+
+  .builder-ctx-menu{ position:fixed; z-index:900; display:flex; flex-direction:column; gap:4px; background:var(--panel-raised); border:1px solid var(--border-strong); border-radius:10px; padding:6px; box-shadow:0 12px 28px rgba(0,0,0,.5); }
+  .builder-ctx-menu .btn{ text-align:left; white-space:nowrap; }
+  /* Light blue, deliberately NOT the yellow used by .now-playing -- selection and "currently
+     sounding" are different states and must never be confusable at a glance.
+     Drawn as an INSET ring rather than an outline: the card list scrolls vertically, and a
+     scroll container clips its other axis too, which was slicing the outline off at the left and
+     right edges. An inset ring paints inside the card's own box, so there is nothing to clip. */
+  .built-chord.multi-selected{ box-shadow:inset 0 0 0 2.5px #7fd4ff; }
+  .built-chord.drag-block-member{ box-shadow:inset 0 0 0 2.5px rgba(127,212,255,.55); }
 
   nav.tabs{display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap;}
   nav.tabs button{ font-family:'Inter',sans-serif; font-weight:700; font-size:19px; background:var(--panel); color:var(--muted); border:1.5px solid var(--border); padding:15px 30px; border-radius:999px; cursor:pointer; transition:all .15s ease; }
@@ -1970,14 +2019,57 @@ function scheduleRandomTopline(notes, timbre, startTime, chordDur, rootRaw, full
   }
   return allNodes;
 }
+/* ---------- Connect progressions ----------
+   With this ON (the default), progressions chain into each other instead of every one restarting
+   from the same fixed reference pitch. When a progression finishes/plays, the absolute pitch its
+   LAST shape's root landed on is remembered; the next (different) progression is then transposed
+   as a whole so its own root-0 starts exactly there, making the hand-off sound like one continuous
+   piece of music rather than two unrelated excerpts.
+   Replaying the SAME progression keeps whatever transposition it already had, so a loop stays put
+   instead of drifting further away with every repeat.
+   The octave guard keeps that chaining from wandering off the useful register: if the resulting
+   shift would drop the whole progression more than 49 steps below where it was written, it's
+   folded back up by whole octaves (31 steps) -- and symmetrically for shifts upward. */
+const CONNECT_MAX_DRIFT = 49, OCTAVE_STEPS = 31;
+let progConnectLastId = null;      // which progression the current offset belongs to
+let progConnectOffset = 0;         // steps currently applied to that progression
+let progConnectNextStart = null;   // absolute pitch the NEXT different progression should start on
+function resetProgressionConnection(){ progConnectLastId = null; progConnectOffset = 0; progConnectNextStart = null; }
+// Folds by AS MANY whole octaves as it takes to land back inside +/-49 -- not a single fixed
+// octave. A shift of -200 steps, for instance, comes back up five octaves to -45. Always the
+// minimum number of octaves that does the job, so the music moves as little as possible.
+function foldConnectOffset(off){
+  let guard = 0;
+  while(off < -CONNECT_MAX_DRIFT && guard++ < 500) off += OCTAVE_STEPS;
+  guard = 0;
+  while(off >  CONNECT_MAX_DRIFT && guard++ < 500) off -= OCTAVE_STEPS;
+  return off;
+}
+function connectOffsetForProgression(p){
+  if(!state.connectProgressions){ resetProgressionConnection(); return 0; }
+  if(progConnectLastId===p.id) return progConnectOffset; // same progression repeating -- don't drift
+  const off = (progConnectNextStart==null) ? 0 : foldConnectOffset(progConnectNextStart);
+  progConnectLastId = p.id;
+  progConnectOffset = off;
+  return off;
+}
+function rememberProgressionConnection(p, offset){
+  if(!state.connectProgressions) return;
+  const anchor = p.chords[0].root;
+  const last = p.chords[p.chords.length-1];
+  progConnectNextStart = (last.root - anchor) + offset; // where this progression's final root actually sounded
+}
 function playProgressionAudio(progId, timbre, startAtCtxTime){
   const p = state.progressions.find(x=>x.id===progId); if(!p || p.chords.length===0) return;
-  playChordsAudio(p.chords, timbre, startAtCtxTime);
+  const offset = connectOffsetForProgression(p);
+  playChordsAudio(p.chords, timbre, startAtCtxTime, offset);
+  rememberProgressionConnection(p, offset);
 }
-function playChordsAudio(chords, timbre, startAtCtxTime){
+function playChordsAudio(chords, timbre, startAtCtxTime, transposeSteps){
   if(!chords || chords.length===0) return;
   const ctx = getAudioCtx(); if(!ctx) return;
-  const anchor = chords[0].root; // rebase so every progression's playback starts at the same reference pitch, regardless of where its root happened to be recorded
+  const tr = transposeSteps || 0;
+  const anchor = chords[0].root - tr; // rebase so every progression's playback starts at the same reference pitch, regardless of where its root happened to be recorded
   const bpm = Math.max(20, Math.min(300, state.playBpm||100));
   const secPerBeat = 60/bpm, beatsPerChord = 2;
   const chordDur = secPerBeat*beatsPerChord*0.92;
@@ -3276,6 +3368,252 @@ function toggleSettingsMenu(){
 }
 function toggleSortMenu(){ state.showSortMenu = !state.showSortMenu; render(); }
 function setFilesSelectionType(t){ state.filesSelectionType = t; render(); }
+/* ==========================================================================================
+   GOOGLE DRIVE COLLECTION SYNC
+   ------------------------------------------------------------------------------------------
+   Keeps one copy of your collection in your own Google Drive so several devices can share it.
+
+   SETUP (one-time, by whoever hosts ARMODEX -- takes about 10 minutes):
+     1. console.cloud.google.com -> create a project.
+     2. APIs & Services -> Library -> enable "Google Drive API".
+     3. APIs & Services -> OAuth consent screen -> External. Add yourself (and anyone else who
+        will use it) under "Test users" while the app is unverified.
+     4. Credentials -> Create credentials -> OAuth client ID -> Web application.
+        Under "Authorized JavaScript origins" add the exact origin ARMODEX is served from,
+        e.g. https://yourname.github.io  (no path, no trailing slash).
+     5. Paste the client ID below.
+
+   The file lives in Drive's hidden per-app folder (appDataFolder): invisible in the user's Drive,
+   impossible for them to move or break by accident, and the permission granted covers ONLY this
+   app's own data -- never the rest of their Drive.
+
+   Saving is deliberately MANUAL (an explicit button), never automatic, so nothing is ever
+   overwritten in the cloud without the person choosing to.
+   ========================================================================================== */
+const GDRIVE_CLIENT_ID = '577802130977-jaiquupm75lcje45s75fom1bcr9o2g89.apps.googleusercontent.com';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email';
+const GDRIVE_FILENAME = 'armodex-collection.json';
+let gdriveTokenClient = null;
+let gdriveAccessToken = null;
+let gdriveTokenExpiresAt = 0;
+let gdriveScriptPromise = null;
+
+function gdriveConfigured(){ return !!GDRIVE_CLIENT_ID; }
+// Loads Google's Identity Services library on demand -- never at boot, so people who don't use
+// sync never pay for the request and nothing third-party runs unless it's asked for.
+function gdriveLoadScript(){
+  if(gdriveScriptPromise) return gdriveScriptPromise;
+  gdriveScriptPromise = new Promise((resolve, reject)=>{
+    if(window.google && window.google.accounts && window.google.accounts.oauth2) return resolve();
+    const sc = document.createElement('script');
+    sc.src = 'https://accounts.google.com/gsi/client';
+    sc.async = true; sc.defer = true;
+    sc.onload = ()=> resolve();
+    sc.onerror = ()=> reject(new Error('script'));
+    document.head.appendChild(sc);
+  });
+  return gdriveScriptPromise;
+}
+// `interactive:false` asks for a token WITHOUT showing anything, which works once consent has
+// already been given -- that's what makes a previous session resume silently on the next visit.
+function gdriveRequestToken(interactive){
+  return new Promise((resolve, reject)=>{
+    try{
+      if(!gdriveTokenClient){
+        gdriveTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GDRIVE_CLIENT_ID,
+          scope: GDRIVE_SCOPES,
+          callback: ()=>{}, // replaced per request below
+        });
+      }
+      gdriveTokenClient.callback = (resp)=>{
+        if(resp && resp.access_token){
+          gdriveAccessToken = resp.access_token;
+          gdriveTokenExpiresAt = Date.now() + ((resp.expires_in||3600)-60)*1000;
+          resolve(resp.access_token);
+        } else reject(new Error(resp && resp.error ? resp.error : 'no_token'));
+      };
+      gdriveTokenClient.error_callback = (err)=> reject(new Error((err && err.type) || 'oauth_error'));
+      gdriveTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    }catch(e){ reject(e); }
+  });
+}
+async function gdriveToken(interactive){
+  if(gdriveAccessToken && Date.now() < gdriveTokenExpiresAt) return gdriveAccessToken;
+  await gdriveLoadScript();
+  return gdriveRequestToken(!!interactive);
+}
+async function gdriveFetchEmail(token){
+  try{
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers:{ Authorization:'Bearer '+token } });
+    if(!r.ok) return null;
+    const j = await r.json();
+    return j.email || null;
+  }catch(e){ return null; }
+}
+async function gdriveSignIn(){
+  if(!gdriveConfigured()){ state.gdrive.msg = t('gd.notconfigured'); render(); return; }
+  state.gdrive.busy = true; state.gdrive.msg = ''; render();
+  try{
+    const token = await gdriveToken(true);
+    const email = await gdriveFetchEmail(token);
+    state.gdrive.signedIn = true;
+    state.gdrive.email = email;
+    state.gdrive.msg = '';
+    storageSet('gdriveSession', JSON.stringify({ signedIn:true, email })).catch(()=>{});
+    // Connecting is itself a request to be in sync -- pull whatever is already in Drive right away
+    // instead of making the person hunt for a second button.
+    try{
+      const data = await gdriveDownloadCollection(token);
+      if(data){
+        const r = await gdriveApplyCollection(data);
+        if(r.added || r.replaced) state.gdrive.msg = `${t('gd.autoloaded')} ${r.added}/${r.replaced}/${r.skipped}`;
+      }
+    }catch(err){}
+  }catch(e){
+    state.gdrive.signedIn = false;
+    state.gdrive.msg = t('gd.err.signin');
+  }
+  state.gdrive.busy = false; render();
+}
+function gdriveSignOut(){
+  try{ if(gdriveAccessToken && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(gdriveAccessToken, ()=>{}); }catch(e){}
+  gdriveAccessToken = null; gdriveTokenExpiresAt = 0;
+  state.gdrive = { signedIn:false, email:null, busy:false, msg:'', lastSyncAt:null };
+  storageSet('gdriveSession', JSON.stringify({ signedIn:false, email:null })).catch(()=>{});
+  render();
+}
+// Restores the "you're connected" state across reloads. It does NOT touch the network -- the
+// actual token is fetched silently the first time a Save/Load is asked for.
+async function gdriveRestoreSession(){
+  try{
+    const raw = await storageGet('gdriveSession');
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d && d.signedIn){ state.gdrive.signedIn = true; state.gdrive.email = d.email || null; }
+  }catch(e){}
+}
+async function gdriveFindFileId(token){
+  const url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&pageSize=10';
+  const r = await fetch(url, { headers:{ Authorization:'Bearer '+token } });
+  if(!r.ok) throw new Error('list_failed');
+  const j = await r.json();
+  const f = (j.files||[]).find(x=>x.name===GDRIVE_FILENAME);
+  return f ? f.id : null;
+}
+function gdriveCollectionPayload(){
+  return {
+    format:'31ed2-armodex-library', version:1, exportedAt:new Date().toISOString(),
+    progressions: state.progressions, nicknames: state.nicknames, octaveEquivalence: state.octaveEquivalence,
+  };
+}
+async function gdriveSaveCollection(){
+  if(!state.gdrive.signedIn) return;
+  state.gdrive.busy = true; state.gdrive.msg = ''; render();
+  try{
+    const token = await gdriveToken(false);
+    const body = JSON.stringify(gdriveCollectionPayload(), null, 2);
+    const existingId = await gdriveFindFileId(token);
+    const boundary = 'armodex' + Math.random().toString(36).slice(2);
+    const metadata = existingId ? { name: GDRIVE_FILENAME } : { name: GDRIVE_FILENAME, parents:['appDataFolder'] };
+    const multipart =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      JSON.stringify(metadata) +
+      `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+      body +
+      `\r\n--${boundary}--`;
+    const url = existingId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const r = await fetch(url, {
+      method: existingId ? 'PATCH' : 'POST',
+      headers:{ Authorization:'Bearer '+token, 'Content-Type':`multipart/related; boundary=${boundary}` },
+      body: multipart,
+    });
+    if(!r.ok) throw new Error('upload_failed');
+    state.gdrive.lastSyncAt = Date.now();
+    state.gdrive.msg = t('gd.saved');
+  }catch(e){
+    state.gdrive.msg = t('gd.err.save');
+  }
+  state.gdrive.busy = false; render();
+}
+// Pulling uses exactly the same merge rules as importing a .json by hand (matched by progression
+// name, honouring the "On duplicate" choice), so bringing a second device's collection in behaves
+// identically to the file-based flow people already know.
+// Merges a downloaded collection into the local one. Shared by the manual Load button and the
+// automatic pull on startup so both behave identically.
+async function gdriveApplyCollection(data){
+  if(!data || !Array.isArray(data.progressions)) throw new Error('bad_format');
+  const overwrite = state.importDuplicateMode==='overwrite';
+  let added=0, replaced=0, skipped=0;
+  data.progressions.forEach(p=>{
+    const existingIdx = state.progressions.findIndex(ex=>ex.name===p.name);
+    const fresh = { ...p, chords:(p.chords||[]).map(c=>({...c, id:uid()})) };
+    if(existingIdx>=0){
+      if(overwrite){ fresh.id = state.progressions[existingIdx].id; state.progressions[existingIdx] = fresh; replaced++; }
+      else skipped++;
+    } else { fresh.id = uid(); state.progressions.push(fresh); added++; }
+  });
+  if(data.nicknames && typeof data.nicknames==='object'){
+    Object.entries(data.nicknames).forEach(([sig,nick])=>{
+      const exists = Object.prototype.hasOwnProperty.call(state.nicknames, sig);
+      if(!exists || overwrite) state.nicknames[sig] = nick;
+    });
+    await persistNicknames();
+  }
+  await persistProgressions();
+  state.gdrive.lastSyncAt = Date.now();
+  return { added, replaced, skipped };
+}
+async function gdriveDownloadCollection(token){
+  const fileId = await gdriveFindFileId(token);
+  if(!fileId) return null;
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers:{ Authorization:'Bearer '+token } });
+  if(!r.ok) throw new Error('download_failed');
+  return r.json();
+}
+async function gdriveLoadCollection(){
+  if(!state.gdrive.signedIn) return;
+  state.gdrive.busy = true; state.gdrive.msg = ''; render();
+  try{
+    const token = await gdriveToken(false);
+    const data = await gdriveDownloadCollection(token);
+    if(!data){ state.gdrive.msg = t('gd.nofile'); state.gdrive.busy=false; render(); return; }
+    const r = await gdriveApplyCollection(data);
+    state.gdrive.msg = `${t('gd.loaded')} ${r.added}/${r.replaced}/${r.skipped}`;
+  }catch(e){
+    state.gdrive.msg = t('gd.err.load');
+  }
+  state.gdrive.busy = false; render();
+}
+// Automatic pull, run once on startup whenever a Google session is still active. It only ever
+// MERGES (same rules as the manual Load), so a device coming online can gain what the others
+// added but can never silently lose its own work. Uploading stays manual, as asked.
+async function gdriveAutoLoadOnBoot(){
+  if(!gdriveConfigured() || !state.gdrive.signedIn) return;
+  try{
+    // Silent (non-interactive) token: no popup, no interruption. If consent has lapsed this
+    // throws, and we say so rather than yanking a sign-in dialog in front of someone who just
+    // opened the app.
+    const token = await gdriveToken(false);
+    if(!state.gdrive.email){
+      const email = await gdriveFetchEmail(token);
+      if(email){
+        state.gdrive.email = email;
+        storageSet('gdriveSession', JSON.stringify({ signedIn:true, email })).catch(()=>{});
+      }
+    }
+    const data = await gdriveDownloadCollection(token);
+    if(!data) return; // nothing saved in Drive yet -- silent no-op
+    const r = await gdriveApplyCollection(data);
+    if(r.added || r.replaced) state.gdrive.msg = `${t('gd.autoloaded')} ${r.added}/${r.replaced}/${r.skipped}`;
+    render();
+  }catch(e){
+    state.gdrive.msg = t('gd.needreauth');
+    render();
+  }
+}
 function exportLibrary(){
   const payload = {
     format:'31ed2-armodex-library', version:1, exportedAt:new Date().toISOString(),
@@ -3759,12 +4097,34 @@ function playProgressionWithVisual(progId, timbre, startAtCtxTime){
   playProgressionAudio(progId, timbre, startAtCtxTime);
   const bpm = Math.max(20, Math.min(300, state.playBpm||100));
   const secPerBeat = 60/bpm, beatsPerChord = 2;
+  // Chord 0's highlight is applied immediately/synchronously rather than through a 0ms timer.
+  // Scheduling it as a "real" (async) timer raced against this same call's caller re-rendering
+  // right afterward (startPlayLoop calls render() immediately after kicking off this pass, and
+  // the progression-detail view's own mount code defaults the map to "show all notes") -- that
+  // render could land AFTER this function returns but BEFORE the queued 0ms timer fired,
+  // occasionally leaving the map stuck on "all notes" right as chord 1 started sounding.
+  // Setting state.loopingCurrentIdx synchronously means even that intervening render() already
+  // knows which single chord to show (see the guard in the progression-detail view render).
+  // Every pass starts by wiping the PREVIOUS pass's leftover timers. The one that mattered is the
+  // end-of-progression "back to all notes" reset, scheduled at exactly the moment the next pass
+  // begins -- so on a loop it fired in the same millisecond as this pass's chord-0 highlight and,
+  // depending on which won the race, left the map showing the whole progression's notes during
+  // chord 1. That's the intermittent "sometimes on repeat" version of this bug.
+  clearProgVisualTimers();
+  state.loopingCurrentIdx = 0;
+  highlightBigMapForChord(progId, 0);
   // Tracked so pausing can cancel them instantly -- untracked, they kept advancing the map
   // highlight/chip animation for seconds after the loop was already stopped.
   p.chords.forEach((c,idx)=>{
-    progVisualTimers.push(setTimeout(()=>highlightBigMapForChord(progId, idx), idx*beatsPerChord*secPerBeat*1000));
+    if(idx===0) return; // already applied above, synchronously
+    progVisualTimers.push(setTimeout(()=>{ state.loopingCurrentIdx = idx; highlightBigMapForChord(progId, idx); }, idx*beatsPerChord*secPerBeat*1000));
   });
-  progVisualTimers.push(setTimeout(()=>{ highlightBigMapForAll(progId); clearChordChipPlaying(progId); }, p.chords.length*beatsPerChord*secPerBeat*1000));
+  progVisualTimers.push(setTimeout(()=>{
+    // Belt-and-braces companion to the clear above: while the loop is still running on this same
+    // progression, the pass ending must NOT reset the map -- the next pass takes over instead.
+    if(state.loopingProgId===progId) return;
+    state.loopingCurrentIdx = null; highlightBigMapForAll(progId); clearChordChipPlaying(progId);
+  }, p.chords.length*beatsPerChord*secPerBeat*1000));
 }
 function startPlayLoop(progId, timbre){
   stopPlayLoop();
@@ -3807,6 +4167,7 @@ function clearPlayLoopState(){
   }
   state.loopingProgId = null;
   state.loopingTimbre = null;
+  state.loopingCurrentIdx = null;
   resetWaveSpeed();
 }
 function stopLoopIfPlaying(){ if(state.loopingProgId) stopPlayLoop(); }
@@ -4282,8 +4643,8 @@ const I18N = {
     "es": "¿Qué hace esto?"
   },
   "files.whole": {
-    "en": "Whole collection",
-    "es": "Toda la colección"
+    "en": "Collection",
+    "es": "Colección"
   },
   "files.export": {
     "en": "⬇ Export collection",
@@ -4320,6 +4681,98 @@ const I18N = {
   "word.overwrite": {
     "en": "Overwrite",
     "es": "Sobrescribir"
+  },
+  "gd.sync": {
+    "en": "Sync collection in different devices with your Google account",
+    "es": "Sincronizar colección entre dispositivos con tu cuenta de Google"
+  },
+  "gd.connected": {
+    "en": "Signed in with Google — your collection syncs through Drive",
+    "es": "Sesión iniciada con Google — tu colección se sincroniza por Drive"
+  },
+  "gd.signout": {
+    "en": "Sign out of Google",
+    "es": "Cerrar sesión de Google"
+  },
+  "gd.save": {
+    "en": "Save collection to Drive",
+    "es": "Guardar colección en Drive"
+  },
+  "gd.load": {
+    "en": "Sync from Drive now",
+    "es": "Sincronizar desde Drive ahora"
+  },
+  "gd.saved": {
+    "en": "Collection saved to Drive.",
+    "es": "Colección guardada en Drive."
+  },
+  "gd.loaded": {
+    "en": "Loaded from Drive — added/overwritten/skipped:",
+    "es": "Cargada desde Drive — añadidas/sobrescritas/omitidas:"
+  },
+  "gd.nofile": {
+    "en": "No collection saved in Drive yet — use Save collection first.",
+    "es": "Todavía no hay ninguna colección en Drive — usa Guardar colección primero."
+  },
+  "gd.working": {
+    "en": "Working…",
+    "es": "Trabajando…"
+  },
+  "gd.autoloaded": {
+    "en": "Synced from Drive on opening — added/overwritten/skipped:",
+    "es": "Sincronizada desde Drive al abrir — añadidas/sobrescritas/omitidas:"
+  },
+  "gd.needreauth": {
+    "en": "Google session expired — press Sign out and connect again to resume syncing.",
+    "es": "La sesión de Google ha caducado — pulsa Cerrar sesión y vuelve a conectar para seguir sincronizando."
+  },
+  "gd.hint": {
+    "en": "Loading is automatic: every time you open ARMODEX while signed in, what's in Drive is merged in. Saving stays manual — nothing in Drive is ever replaced unless you press Save. Merging follows the \"On duplicate\" choice above.",
+    "es": "La carga es automática: cada vez que abres ARMODEX con la sesión iniciada, lo que hay en Drive se fusiona. El guardado sigue siendo manual — nada en Drive se reemplaza si no pulsas Guardar. La fusión sigue la opción \"Si hay duplicado\" de arriba."
+  },
+  "gd.notconfigured": {
+    "en": "Google sync isn't set up in this build yet — an OAuth client ID has to be filled in first (see GDRIVE_CLIENT_ID in the source).",
+    "es": "La sincronización con Google aún no está configurada en esta versión — falta rellenar un client ID de OAuth (mira GDRIVE_CLIENT_ID en el código)."
+  },
+  "gd.err.signin": {
+    "en": "Couldn't sign in with Google. Check that this site's address is listed as an authorized JavaScript origin.",
+    "es": "No se pudo iniciar sesión con Google. Comprueba que la dirección de este sitio esté como origen JavaScript autorizado."
+  },
+  "gd.err.save": {
+    "en": "Couldn't save to Drive. Try signing out and back in.",
+    "es": "No se pudo guardar en Drive. Prueba a cerrar sesión y volver a entrar."
+  },
+  "gd.err.load": {
+    "en": "Couldn't load from Drive. Try signing out and back in.",
+    "es": "No se pudo cargar desde Drive. Prueba a cerrar sesión y volver a entrar."
+  },
+  "set.sec.collection": {
+    "en": "Collection",
+    "es": "Colección"
+  },
+  "set.sec.devices": {
+    "en": "Devices",
+    "es": "Dispositivos"
+  },
+  "set.sec.sound": {
+    "en": "Sound",
+    "es": "Sonido"
+  },
+  "set.sec.theory": {
+    "en": "Music theory",
+    "es": "Teoría musical"
+  },
+  "set.sec.display": {
+    "en": "Display",
+    "es": "Pantalla"
+  },
+  "set.sub.backup": {
+    "en": "Backup & transfer",
+    "es": "Copia y traspaso"
+  },
+  "set.sub.cloud": {
+    "en": "Cloud sync",
+    "es": "Sincronización en la nube"
   },
   "files.dangerzone": {
     "en": "Danger zone",
@@ -4922,8 +5375,8 @@ const I18N = {
     "es": "Escucha al pasar el ratón"
   },
   "interp.strum": {
-    "en": "🎸 Strum",
-    "es": "🎸 Rasgueo"
+    "en": "Strum",
+    "es": "Rasgueo"
   },
   "interp.strum.title2": {
     "en": "Play shapes strummed low-to-high instead of all at once",
@@ -4944,6 +5397,14 @@ const I18N = {
   "interp.topline": {
     "en": "Random topline",
     "es": "Melodía aleatoria"
+  },
+  "interp.connectprogs.title": {
+    "en": "Chains progressions together: the next progression you play starts on the pitch the previous one's last shape ended on, instead of restarting from the same fixed reference. Replaying the same progression keeps its current position. If the chained shift would drop (or raise) it more than 49 steps from where it was written, it's folded back by whole octaves so it can't drift into an extreme register.",
+    "es": "Encadena las progresiones: la siguiente progresión que toques empieza en la altura en la que terminó la última shape de la anterior, en vez de reiniciar desde la misma referencia fija. Repetir la misma progresión mantiene su posición actual. Si el desplazamiento la bajara (o subiera) más de 49 pasos respecto a donde fue escrita, se pliega por octavas enteras para que no se vaya a un registro extremo."
+  },
+  "interp.connectprogs": {
+    "en": "Connect progressions",
+    "es": "Conectar progresiones"
   },
   "interp.autoart.title": {
     "en": "Play each shape as a generative, polyrhythmic arpeggio across octaves instead of a static block",
@@ -5108,6 +5569,26 @@ const I18N = {
   "nickdupe.msg": {
     "en": "Another shape already has that nickname. Each shape needs its own unique nickname.",
     "es": "Otra shape ya tiene ese nickname. Cada shape necesita un nickname unico."
+  },
+  "builder.ctx.transpose": {
+    "en": "Transpose…",
+    "es": "Transponer…"
+  },
+  "builder.transpose.h2": {
+    "en": "Transpose",
+    "es": "Transponer"
+  },
+  "builder.transpose.msg": {
+    "en": "Steps (31ED2), positive or negative:",
+    "es": "Pasos (31ED2), positivos o negativos:"
+  },
+  "builder.transpose.hint": {
+    "en": "Applies to the whole current selection.",
+    "es": "Se aplica a toda la seleccion actual."
+  },
+  "builder.transpose.placeholder": {
+    "en": "e.g. 3 or -5",
+    "es": "ej. 3 o -5"
   },
   "ecosystem.title": {
     "en": "A physics-based sandbox for wandering your collected shapes",
@@ -5802,9 +6283,12 @@ const state = {
   expandedChordSig:null, showEqInfo:false, showLibInfo:false, showProgImportInfo:false, chordTags:{}, chordsFilterText:'', showMidiPanel:false,
   navHistory:[], navIndex:-1, navSuppress:false, audioUnlocked:false,
   confirmResetLibrary:false, muted:false, builderChordSearch:'', rootBass:true, mapSelectMode:true, builderMidiWrite:false, builderFreePlay:false, showBuilderIdentify:false, showBuilderUseRegistered:false,
-  loopingProgId:null, loopingTimbre:null, loopingTimer:null,
+  loopingProgId:null, loopingTimbre:null, loopingTimer:null, loopingCurrentIdx:null,
   expandedSimilaritySig:null, expandedProgSimilarity:null,
-  builder:{ editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[], selectedOrderQr:{}, lastClicked:null, error:'', editingChordIdx:null, editingChordBackup:null },
+  builder:{ editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[], selectedOrderQr:{}, lastClicked:null, error:'', editingChordIdx:null, editingChordBackup:null, selectedIdxs:[], selectAnchor:null },
+  builderCtxMenu:null, builderTransposeModal:null,
+  connectProgressions:true,
+  gdrive:{ signedIn:false, email:null, busy:false, msg:'', lastSyncAt:null },
   connect:{ chain:[] }, connectFilter:'',
   explorer:{ selectedOrder:[], selectedOrderQr:{}, lastClicked:null },
   midi:{ supported:(typeof navigator!=='undefined' && !!navigator.requestMIDIAccess), access:null, inputs:[], connected:false,
@@ -5886,10 +6370,14 @@ async function loadData(){
       if(typeof d.autoArticulation==='boolean') state.autoArticulation = d.autoArticulation;
       if(typeof d.polyrhythmA==='number') state.polyrhythmA = d.polyrhythmA;
       if(typeof d.polyrhythmB==='number') state.polyrhythmB = d.polyrhythmB;
+      if(typeof d.connectProgressions==='boolean') state.connectProgressions = d.connectProgressions;
     }
   }catch(e){}
+  await gdriveRestoreSession();
   state.loaded = true;
   render();
+  // Deliberately not awaited: the app is usable immediately and the pull lands when it lands.
+  gdriveAutoLoadOnBoot();
 }
 async function persistProgressions(){ try{ await storageSet('progressions', JSON.stringify(state.progressions)); }catch(e){ console.error(e); } }
 function persistInterpretationSettings(){
@@ -5901,6 +6389,7 @@ function persistInterpretationSettings(){
     playBpm: state.playBpm, generalPitch: state.generalPitch, progressionsTabTimbre: state.progressionsTabTimbre,
     strumMode: state.strumMode, rootBass: state.rootBass, randomTopline: state.randomTopline,
     autoArticulation: state.autoArticulation, polyrhythmA: state.polyrhythmA, polyrhythmB: state.polyrhythmB,
+    connectProgressions: state.connectProgressions,
   };
   storageSet('interpretationSettings', JSON.stringify(settings)).catch(()=>{});
 }
@@ -5908,6 +6397,8 @@ function resetInterpretationSettings(){
   state.playBpm = 100; state.generalPitch = 0; state.progressionsTabTimbre = 'guitar';
   state.strumMode = true; state.rootBass = true; state.randomTopline = false;
   state.autoArticulation = false; state.polyrhythmA = 3; state.polyrhythmB = 2;
+  state.connectProgressions = true;
+  resetProgressionConnection();
   persistInterpretationSettings();
   render();
 }
@@ -6223,20 +6714,62 @@ function builderAddChord(){
   // shape from the hex map always brings the freshly-updated progression into view.
   scrollBuilderIntoView();
 }
+// Shift-click on a built-chord card (below) selects a contiguous RANGE of shapes -- click one
+// as the anchor, shift-click another and everything in between gets selected too -- so the
+// duplicate/drag-move actions further down can act on the whole group at once.
+function builderCardClick(e, idx){
+  if(e.target.closest('.ctrls, input, .drag-handle')) return; // those have their own click handling
+  const b = state.builder;
+  // The first shape IS selectable (and therefore duplicatable) -- it just can't be MOVED, since
+  // its root is permanently pinned to 0. Only the shape mid-edit stays out of the selection.
+  if(idx===b.editingChordIdx) return;
+  if(e.shiftKey && b.selectAnchor!=null){
+    const lo = Math.min(b.selectAnchor, idx), hi = Math.max(b.selectAnchor, idx);
+    const sel = [];
+    for(let i=lo;i<=hi;i++){ if(i!==b.editingChordIdx) sel.push(i); }
+    b.selectedIdxs = sel;
+  } else {
+    b.selectAnchor = idx;
+    b.selectedIdxs = [idx];
+  }
+  render();
+}
+// A selection that includes the locked first shape can be duplicated but never reordered --
+// moving it would drag shape 0 out of first place, which the whole root-0 convention forbids.
+function builderSelectionMovable(){
+  const sel = state.builder.selectedIdxs;
+  return !(sel && sel.includes(0));
+}
+// Clicking empty space in the progression list (not on any card) clears the current selection.
+function builderChordsListClick(e){
+  if(e.target.closest('.built-chord')) return;
+  const b = state.builder;
+  if(b.selectedIdxs && b.selectedIdxs.length){ b.selectedIdxs = []; b.selectAnchor = null; render(); }
+}
 function builderDuplicateChord(idx){
   pushBuilderUndo();
   // The shape currently being edited hasn't been saved back into state.builder.chords yet, so
   // duplicating it here would copy the stale pre-edit version -- keep that one action blocked,
   // but every OTHER shape stays fully duplicatable while an edit is in progress elsewhere.
   if(idx===state.builder.editingChordIdx) return;
-  const c = state.builder.chords[idx]; if(!c) return;
-  const copy = { id:uid(), root:c.root, intervals:c.intervals.slice(), label:c.label||'', qrOffsets: c.qrOffsets ? c.qrOffsets.map(o=>o?{...o}:null) : null, rootQr: c.rootQr ? {...c.rootQr} : null };
-  // Track the being-edited chord by identity (not index) across the splice, since inserting a
-  // duplicate before it would otherwise silently point editingChordIdx at the wrong chord.
-  const editedItem = state.builder.editingChordIdx!=null ? state.builder.chords[state.builder.editingChordIdx] : null;
-  state.builder.chords.splice(idx+1, 0, copy);
-  if(editedItem) state.builder.editingChordIdx = state.builder.chords.indexOf(editedItem);
-  try{ const ctx = getAudioCtx(); if(ctx) scheduleChordAudio(copy.intervals.map(iv=>copy.root+iv), state.progressionsTabTimbre, ctx.currentTime, 0.8, copy.root, false, false); }catch(e){}
+  const b = state.builder;
+  // If this card is part of a multi-shape selection, duplicate the WHOLE selection together
+  // (in order) instead of just the one card whose button was clicked -- and the fresh duplicates
+  // become the new selection, so a second duplicate/move acts on the copies, not the originals.
+  const useMulti = b.selectedIdxs && b.selectedIdxs.length>1 && b.selectedIdxs.includes(idx);
+  const indices = (useMulti ? b.selectedIdxs.slice() : [idx]).filter(i=>i!==b.editingChordIdx && b.chords[i]).sort((x,y)=>x-y);
+  if(indices.length===0) return;
+  const editedItem = b.editingChordIdx!=null ? b.chords[b.editingChordIdx] : null;
+  const copies = indices.map(i=>{
+    const c = b.chords[i];
+    return { id:uid(), root:c.root, intervals:c.intervals.slice(), label:c.label||'', qrOffsets: c.qrOffsets ? c.qrOffsets.map(o=>o?{...o}:null) : null, rootQr: c.rootQr ? {...c.rootQr} : null };
+  });
+  const insertAt = indices[indices.length-1] + 1;
+  b.chords.splice(insertAt, 0, ...copies);
+  if(editedItem) b.editingChordIdx = b.chords.indexOf(editedItem);
+  b.selectedIdxs = copies.map((c,k)=>insertAt+k);
+  b.selectAnchor = b.selectedIdxs[0];
+  try{ const ctx = getAudioCtx(); if(ctx) copies.forEach((copy,k)=> scheduleChordAudio(copy.intervals.map(iv=>copy.root+iv), state.progressionsTabTimbre, ctx.currentTime+k*0.07, 0.8, copy.root, false, false)); }catch(e){}
   render();
 }
 function builderRemoveChord(idx){
@@ -6247,19 +6780,29 @@ function builderRemoveChord(idx){
   state.builder.chords.splice(idx,1);
   if(editedItem) state.builder.editingChordIdx = state.builder.chords.indexOf(editedItem);
   if(state.builder.chords.length===0){ state.builder.selectedOrder = [0]; state.builder.lastClicked = 0; } // back to first-chord rules
+  // Indices shift on removal -- clearing the selection is safer than trying to remap it.
+  state.builder.selectedIdxs = []; state.builder.selectAnchor = null;
   render();
 }
-function builderClearAllChords(){ pushBuilderUndo(); state.builder.chords = []; state.builder.selectedOrder = [0]; state.builder.selectedOrderQr = {0:{q:0,r:0}}; state.builder.lastClicked = 0; render(); }
+function builderClearAllChords(){ pushBuilderUndo(); state.builder.chords = []; state.builder.selectedOrder = [0]; state.builder.selectedOrderQr = {0:{q:0,r:0}}; state.builder.lastClicked = 0; state.builder.selectedIdxs = []; state.builder.selectAnchor = null; render(); }
 function builderMoveChord(idx, dir){
   const arr = state.builder.chords; const j = idx+dir; if(j<0 || j>=arr.length) return;
   [arr[idx], arr[j]] = [arr[j], arr[idx]]; builderProgLoopKick(); render();
 }
 let builderDragFromIdx = null;
+// When the dragged card is part of an active multi-selection, the whole contiguous block moves
+// together -- this holds that block's sorted index range for the duration of the drag.
+let builderDragFromIndices = null;
 function builderDragChordStart(e, idx){
   // Only the shape actually being edited (and the always-locked first shape) is off-limits to
   // drag -- reordering every other shape is fine while an edit is in progress elsewhere.
   if(idx===0 || idx===state.builder.editingChordIdx){ e.preventDefault(); return; }
+  const sel = state.builder.selectedIdxs;
+  const inSel = !!(sel && sel.length>1 && sel.includes(idx));
+  // A block containing the locked first shape can't be reordered at all (see builderSelectionMovable).
+  if(inSel && !builderSelectionMovable()){ e.preventDefault(); return; }
   builderDragFromIdx = idx;
+  builderDragFromIndices = inSel ? sel.slice().sort((a,b)=>a-b) : null;
   // Kill any minimap/preview already on screen the instant the drag begins -- and while
   // builderDragFromIdx is set, showBuiltChordMinimap refuses to open a new one.
   hideBuiltChordMinimap();
@@ -6271,6 +6814,7 @@ function builderDragChordStart(e, idx){
 // minimaps while dragging" block can never get stuck on after an aborted drag.
 function builderDragEnded(){
   builderDragFromIdx = null;
+  builderDragFromIndices = null;
   builderLastDropAt = Date.now();
   builderClearDragTargets();
 }
@@ -6290,8 +6834,12 @@ function builderDragOverList(e){
     if(e.clientY < r.top + r.height/2){ insertIdx = i; break; }
   }
   if(insertIdx===0) insertIdx = 1; // nothing can go before the locked first shape
-  // Dropping back into its own slot (either side of itself) is a no-op -- show no gap.
-  if(insertIdx===builderDragFromIdx || insertIdx===builderDragFromIdx+1){
+  const block = builderDragFromIndices;
+  const lo = block ? block[0] : builderDragFromIdx;
+  const hi = block ? block[block.length-1] : builderDragFromIdx;
+  // Dropping back anywhere within (or right against) the dragged block's own current span is a
+  // no-op -- show no gap.
+  if(insertIdx>=lo && insertIdx<=hi+1){
     builderDragInsertIdx = null;
     builderClearDragTargets();
     return;
@@ -6300,28 +6848,89 @@ function builderDragOverList(e){
   cards.forEach((el,i)=>{
     el.classList.toggle('drop-before', i===insertIdx);
     el.classList.toggle('drop-after', insertIdx===cards.length && i===cards.length-1);
+    el.classList.toggle('drag-block-member', !!(block && i>=lo && i<=hi));
   });
 }
 function builderClearDragTargets(){
   builderDragInsertIdx = null;
-  document.querySelectorAll('.built-chord').forEach(el=>{ el.classList.remove('drag-target'); el.classList.remove('drop-before'); el.classList.remove('drop-after'); });
+  document.querySelectorAll('.built-chord').forEach(el=>{ el.classList.remove('drag-target'); el.classList.remove('drop-before'); el.classList.remove('drop-after'); el.classList.remove('drag-block-member'); });
 }
 function builderDropOnList(e){
   e.preventDefault();
   builderLastDropAt = Date.now();
   const from = builderDragFromIdx;
   let to = builderDragInsertIdx;
+  const fromBlock = builderDragFromIndices;
   builderDragFromIdx = null;
+  builderDragFromIndices = null;
   builderClearDragTargets();
   if(from==null || to==null || from===0) return;
   pushBuilderUndo();
   const arr = state.builder.chords;
   const editedItem = state.builder.editingChordIdx!=null ? arr[state.builder.editingChordIdx] : null;
-  const [moved] = arr.splice(from, 1);
-  if(to>from) to--;
-  arr.splice(to, 0, moved);
-  if(editedItem) state.builder.editingChordIdx = arr.indexOf(editedItem);
+  if(fromBlock && fromBlock.length>1){
+    const lo = fromBlock[0], hi = fromBlock[fromBlock.length-1];
+    const block = arr.splice(lo, hi-lo+1);
+    let insertAt = to;
+    if(insertAt>hi) insertAt -= block.length; // the removed block shifts everything after it left
+    arr.splice(insertAt, 0, ...block);
+    if(editedItem) state.builder.editingChordIdx = arr.indexOf(editedItem);
+    state.builder.selectedIdxs = block.map((c,k)=>insertAt+k);
+    state.builder.selectAnchor = state.builder.selectedIdxs[0];
+  } else {
+    const [moved] = arr.splice(from, 1);
+    if(to>from) to--;
+    arr.splice(to, 0, moved);
+    if(editedItem) state.builder.editingChordIdx = arr.indexOf(editedItem);
+    state.builder.selectedIdxs = [];
+    state.builder.selectAnchor = null;
+  }
   // Re-voice the loop immediately from the new order (see the old drop handler's note).
+  builderProgLoopKick();
+  render();
+}
+// Right-click a built-chord card to Transpose it (or the whole current multi-selection, if the
+// card right-clicked is part of one) by a number of 31ED2 steps.
+function builderCardContextMenu(e, idx){
+  if(idx===0 || idx===state.builder.editingChordIdx) return; // fixed root / mid-edit -- no menu
+  e.preventDefault();
+  const b = state.builder;
+  if(!(b.selectedIdxs && b.selectedIdxs.length>1 && b.selectedIdxs.includes(idx))){
+    b.selectedIdxs = [idx];
+    b.selectAnchor = idx;
+  }
+  hideBuiltChordMinimap();
+  try{ hideHoverPreview(); }catch(err){}
+  state.builderCtxMenu = { idx, x: e.clientX, y: e.clientY };
+  render();
+}
+function closeBuilderCtxMenu(){ if(state.builderCtxMenu){ state.builderCtxMenu = null; render(); } }
+function builderCtxOpenTranspose(){
+  const idx = state.builderCtxMenu ? state.builderCtxMenu.idx : null;
+  state.builderCtxMenu = null;
+  state.builderTransposeModal = { idx, value:'' };
+  render();
+}
+function closeBuilderTransposeModal(){ state.builderTransposeModal = null; render(); }
+function setBuilderTransposeValue(v){ if(state.builderTransposeModal) state.builderTransposeModal.value = v; }
+function applyBuilderTranspose(){
+  const modal = state.builderTransposeModal;
+  state.builderTransposeModal = null;
+  if(!modal) { render(); return; }
+  const steps = parseInt(modal.value, 10);
+  if(!Number.isFinite(steps) || steps===0){ render(); return; }
+  pushBuilderUndo();
+  const b = state.builder;
+  const sel = b.selectedIdxs && b.selectedIdxs.length>0 ? b.selectedIdxs : (modal.idx!=null ? [modal.idx] : []);
+  sel.forEach(i=>{
+    if(i===0 || i===b.editingChordIdx) return; // the first shape's root is always fixed at 0
+    const c = b.chords[i]; if(!c) return;
+    c.root += steps;
+    // Re-anchor the remembered board position to a valid spot for the new root -- qrOffsets (the
+    // shape's own notes relative to the root) don't change, only where the root itself sits.
+    const newRootQr = qrShiftForDelta(c.root);
+    c.rootQr = newRootQr ? { q:newRootQr.q, r:newRootQr.r } : null;
+  });
   builderProgLoopKick();
   render();
 }
@@ -6541,7 +7150,12 @@ function jumpToMatch(progId){
 async function setNickname(sig, val){
   const trimmed = val.trim();
   if(trimmed){
-    const dupe = Object.entries(state.nicknames).some(([s,n])=> s!==sig && (n||'').trim()===trimmed); // case-sensitive: "Foo" and "foo" are different nicknames
+    // Only compare against shapes that ACTUALLY STILL EXIST (i.e. are used by at least one
+    // current progression) -- state.nicknames otherwise keeps every name ever assigned forever,
+    // including for shapes since removed from every progression, silently reserving their old
+    // name and blocking anyone from reusing it on a different shape.
+    const stillExists = new Set(computeSpecies(state.progressions).list.map(sp=>sp.signature));
+    const dupe = Object.entries(state.nicknames).some(([s,n])=> s!==sig && stillExists.has(s) && (n||'').trim()===trimmed); // case-sensitive: "Foo" and "foo" are different nicknames
     if(dupe){ state.showNicknameDupeMsg = true; render(); return; }
   }
   state.nicknames[sig]=val;
@@ -6558,6 +7172,34 @@ function renderNicknameDupeModal(){
       <p class="sub" style="max-width:none;">${t('nickdupe.msg')}</p>
       <div class="row" style="justify-content:flex-end; gap:8px; margin-top:16px;">
         <button class="btn primary" style="font-size:16px; padding:12px 26px;" onclick="closeNicknameDupeMsg()">${t('word.ok')}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderBuilderCtxMenu(){
+  const m = state.builderCtxMenu; if(!m) return '';
+  // Clamp on-screen so a right-click near the right/bottom edge doesn't open the menu partly
+  // off-viewport.
+  const x = Math.min(m.x, (typeof window!=='undefined'?window.innerWidth:2000) - 170);
+  const y = Math.min(m.y, (typeof window!=='undefined'?window.innerHeight:2000) - 60);
+  return `<div class="builder-ctx-menu" style="left:${Math.max(4,x)}px; top:${Math.max(4,y)}px;" onclick="event.stopPropagation()">
+    <button class="btn small" onclick="builderCtxOpenTranspose()">${t('builder.ctx.transpose')}</button>
+  </div>`;
+}
+function renderBuilderTransposeModal(){
+  const m = state.builderTransposeModal; if(!m) return '';
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) closeBuilderTransposeModal()">
+    <div class="modal-panel" style="max-width:360px;">
+      <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="font-family:'Chakra Petch',sans-serif; margin:0; font-size:20px;">${t('builder.transpose.h2')}</h2>
+      </div>
+      <div class="field" style="margin-top:6px;"><label class="field-label">${t('builder.transpose.msg')}</label>
+        <input type="number" id="builderTransposeInput" step="1" value="${escapeHtml(m.value)}" oninput="setBuilderTransposeValue(this.value)" onkeydown="if(event.key==='Enter') applyBuilderTranspose();" placeholder="${t('builder.transpose.placeholder')}"></div>
+      <p class="sub" style="max-width:none; margin-top:4px;">${t('builder.transpose.hint')}</p>
+      <div class="row" style="justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn ghost" onclick="closeBuilderTransposeModal()">${t('word.cancel')}</button>
+        <button class="btn primary" style="font-size:16px; padding:12px 26px;" onclick="applyBuilderTranspose()">${t('word.ok')}</button>
       </div>
     </div>
   </div>`;
@@ -6711,18 +7353,42 @@ function explorerHexClick(raw, e, q, r){
 // account for how far DOWN the page the card actually starts (varies with map size, results
 // above it, etc.) -- so it could still end up taller than the space actually left below it,
 // pushing its own bottom off screen. Measure the real gap to the bottom of the viewport instead.
+// The whole Progression panel used to be one scrolling box, which meant Save progression scrolled
+// away with the cards and could end up permanently below the fold. Now the panel itself is a
+// fixed-height flex column: only the CARD LIST scrolls, while the header row and the Save row are
+// non-shrinking siblings pinned inside it. Being siblings in normal flow, they physically cannot
+// overlap the list no matter how many shapes there are -- the list simply gets the space that's
+// left over.
 function capBuilderProgressionHeight(){
   const el = document.getElementById('builderProgressionTop');
   if(!el) return;
   const apply = ()=>{
+    if(!document.body.contains(el)) return;
     const top = el.getBoundingClientRect().top;
-    const avail = Math.max(140, window.innerHeight - top - 16);
+    const avail = Math.max(160, window.innerHeight - top - 16);
     el.style.maxHeight = avail + 'px';
-    el.style.overflowY = 'auto';
+    el.style.overflowY = 'hidden';
+    el.style.display = 'flex';
+    el.style.flexDirection = 'column';
+    el.style.minHeight = '0';
+    const list = document.getElementById('builderChordsList');
+    // Everything that isn't the list keeps its natural height; the list absorbs the remainder.
+    Array.from(el.children).forEach(ch=>{
+      if(ch===list) return;
+      ch.style.flex = '0 0 auto';
+    });
+    if(list){
+      list.style.flex = '1 1 auto';
+      list.style.minHeight = '0';
+      list.style.overflowY = 'auto';
+      list.style.overscrollBehavior = 'contain';
+    }
   };
   apply();
   if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(apply);
+  setTimeout(apply, 160);
 }
+window.addEventListener('resize', ()=>{ if(state.tab==='catalog' && state.view==='builder') capBuilderProgressionHeight(); });
 // The Hex Map results panel is pulled up by a fixed -98px margin and capped with a static
 // calc(100vh - 20px). On shorter laptop viewports that combination both cut its top off-screen
 // AND left a big empty gap underneath (the cap doesn't know where the panel actually starts).
@@ -6774,12 +7440,12 @@ function textSelectionActive(){
   try{ const sel = window.getSelection && window.getSelection(); return !!(sel && !sel.isCollapsed); }catch(e){ return false; }
 }
 function dragProgressionStart(e, progId){
-  if(textSelectionActive()){ e.preventDefault(); return; }
+  if(selectionInsideElement(e.currentTarget)){ e.preventDefault(); return; }
   e.dataTransfer.setData('application/json', JSON.stringify({ type:'progression', progId }));
   e.dataTransfer.effectAllowed = 'copy';
 }
 function dragChordStart(e, progId, idx){
-  if(textSelectionActive()){ e.preventDefault(); e.stopPropagation(); return; }
+  if(selectionInsideElement(e.currentTarget)){ e.preventDefault(); e.stopPropagation(); return; }
   e.dataTransfer.setData('application/json', JSON.stringify({ type:'chord', progId, idx }));
   e.dataTransfer.effectAllowed = 'copy';
   e.stopPropagation();
@@ -6873,6 +7539,7 @@ function toggleMidiPanel(){
 }
 function toggleMuted(){ state.muted = !state.muted; render(); }
 function toggleRootBass(){ state.rootBass = !state.rootBass; persistInterpretationSettings(); stopLoopIfPlaying(); render(); }
+function toggleConnectProgressions(){ state.connectProgressions = !state.connectProgressions; resetProgressionConnection(); persistInterpretationSettings(); stopLoopIfPlaying(); render(); }
 function toggleMapSelectMode(){ state.mapSelectMode = !state.mapSelectMode; render(); }
 
 
@@ -7319,59 +7986,96 @@ function render(){
 <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showSettingsMenu?'primary':''}" onclick="toggleSettingsMenu()" title="${t('word.settings')}"><span class="header-btn-emoji header-btn-emoji-stroke">⚙️</span></button>
         ${state.showSettingsMenu ? `
-          <div class="help-dropdown-menu" style="display:flex; flex-direction:column; gap:10px;">
-            <button class="btn small ${state.showFilesMenu?'primary':''}" onclick="toggleFilesMenu()">${t('word.files')}</button>
-            ${state.showFilesMenu ? `
-              <div style="padding-left:4px; display:flex; flex-direction:column; gap:8px;">
-                <div class="row" style="justify-content:space-between; align-items:center;">
-                  <div class="field-label" style="margin:0;">${t('files.whole')}</div>
-                  <button class="btn mini ghost" onclick="toggleLibInfo()" title="${t('word.whatdoes.2')}">?</button>
+          <div class="help-dropdown-menu settings-menu" style="display:flex; flex-direction:column; gap:6px;">
+
+            <div class="settings-section">
+              <div class="settings-section-title">${t('set.sec.collection')}</div>
+              <button class="btn small ${state.showFilesMenu?'primary':''}" onclick="toggleFilesMenu()">${t('word.files')} ▾</button>
+              ${state.showFilesMenu ? `
+                <div class="settings-sub">
+
+                  <div class="settings-subgroup">
+                    <div class="row" style="justify-content:space-between; align-items:center;">
+                      <div class="settings-sub-title">${t('set.sub.backup')}</div>
+                      <button class="btn mini ghost" onclick="toggleLibInfo()" title="${t('word.whatdoes.2')}">?</button>
+                    </div>
+                    ${state.showLibInfo ? `<p class="sub settings-note">${t('files.libinfo')}</p>` : ''}
+                    <div class="settings-field-label">${t('files.whole')}</div>
+                    <button class="btn small" onclick="exportLibrary()">${t('files.export')}</button>
+                    <button class="btn small" onclick="triggerImport()">${t('files.import')}</button>
+                    <button class="btn small" onclick="exportAllShapesMidi()">${t('files.exportshapesmidi')}</button>
+                    <button class="btn small" onclick="exportAllProgressionsMidi()">${t('files.exportprogsmidi')}</button>
+                  </div>
+
+                  <div class="settings-subgroup">
+                    <div class="row" style="justify-content:space-between; align-items:center;">
+                      <div class="settings-sub-title">${t('files.importprogs.label')}</div>
+                      <button class="btn mini ghost" onclick="toggleProgImportInfo()" title="${t('word.whatdoes.3')}">?</button>
+                    </div>
+                    ${state.showProgImportInfo ? `<p class="sub settings-note">${t('files.importprogs.hint')}</p>` : ''}
+                    <button class="btn small" onclick="triggerImportProgressions()">${t('files.importprogs.btn')}</button>
+                    <div class="settings-field-label">${t('files.onduplicate')}</div>
+                    <span class="row" style="gap:6px;">
+                      <button class="btn small ${state.importDuplicateMode!=='overwrite'?'primary':''}" onclick="setImportDuplicateMode('skip')">${t('word.skip')}</button>
+                      <button class="btn small ${state.importDuplicateMode==='overwrite'?'primary':''}" onclick="setImportDuplicateMode('overwrite')">${t('word.overwrite')}</button>
+                    </span>
+                  </div>
+
+                  <div class="settings-subgroup">
+                    <div class="settings-sub-title">${t('set.sub.cloud')}</div>
+                    ${state.gdrive.signedIn ? `
+                      <div class="gdrive-status">${t('gd.connected')}${state.gdrive.email ? `<br><b>${escapeHtml(state.gdrive.email)}</b>` : ''}</div>
+                      <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveSaveCollection()">${state.gdrive.busy ? t('gd.working') : t('gd.save')}</button>
+                      <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveLoadCollection()">${state.gdrive.busy ? t('gd.working') : t('gd.load')}</button>
+                      <button class="btn small gdrive-btn" onclick="gdriveSignOut()">${t('gd.signout')}</button>
+                      <p class="sub settings-note">${t('gd.hint')}</p>
+                    ` : `
+                      <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveSignIn()">${state.gdrive.busy ? t('gd.working') : t('gd.sync')}</button>
+                    `}
+                    ${state.gdrive.msg ? `<p class="sub settings-note">${escapeHtml(state.gdrive.msg)}</p>` : ''}
+                  </div>
+
+                  <div class="settings-subgroup settings-danger">
+                    <div class="settings-sub-title">${t('files.dangerzone')}</div>
+                    ${state.confirmResetLibrary ? `
+                      <span class="sub" style="margin:0; display:block;">${t('files.confirmdelete')}</span>
+                      <span class="row" style="gap:6px; margin-top:4px;">
+                        <button class="btn small danger" onclick="resetLibrary()">${t('files.yesdelete')}</button>
+                        <button class="btn small ghost" onclick="cancelResetLibrary()">${t('word.cancel')}</button>
+                      </span>
+                    ` : `<button class="btn small danger" onclick="askResetLibrary()" title="${t('files.eraseall')}">${t('files.reset')}</button>`}
+                  </div>
+
                 </div>
-                ${state.showLibInfo ? `<p class="sub" style="max-width:none; margin:2px 0 6px; font-size:10.5px;">${t('files.libinfo')}</p>` : ''}
-                <button class="btn small" onclick="exportLibrary()">${t('files.export')}</button>
-                <button class="btn small" onclick="triggerImport()">${t('files.import')}</button>
-                <button class="btn small" onclick="exportAllShapesMidi()">${t('files.exportshapesmidi')}</button>
-                <button class="btn small" onclick="exportAllProgressionsMidi()">${t('files.exportprogsmidi')}</button>
-                <div class="row" style="justify-content:space-between; align-items:center; margin-top:8px;">
-                  <div class="field-label" style="margin:0;">${t('files.importprogs.label')}</div>
-                  <button class="btn mini ghost" onclick="toggleProgImportInfo()" title="${t('word.whatdoes.3')}">?</button>
-                </div>
-                ${state.showProgImportInfo ? `<p class="sub" style="max-width:none; margin:2px 0 6px; font-size:10.5px;">${t('files.importprogs.hint')}</p>` : ''}
-                <span class="row" style="gap:6px;">
-                  <button class="btn small" onclick="triggerImportProgressions()">${t('files.importprogs.btn')}</button>
-                </span>
-                <div class="field-label" style="margin:8px 0 2px;">${t('files.onduplicate')}</div>
-                <span class="row" style="gap:6px;">
-                  <button class="btn small ${state.importDuplicateMode!=='overwrite'?'primary':''}" onclick="setImportDuplicateMode('skip')">${t('word.skip')}</button>
-                  <button class="btn small ${state.importDuplicateMode==='overwrite'?'primary':''}" onclick="setImportDuplicateMode('overwrite')">${t('word.overwrite')}</button>
-                </span>
-                <div class="field-label" style="margin:8px 0 2px;">${t('files.dangerzone')}</div>
-                ${state.confirmResetLibrary ? `
-                  <span class="sub" style="margin:0; display:block;">${t('files.confirmdelete')}</span>
-                  <span class="row" style="gap:6px; margin-top:4px;">
-                    <button class="btn small danger" onclick="resetLibrary()">${t('files.yesdelete')}</button>
-                    <button class="btn small ghost" onclick="cancelResetLibrary()">${t('word.cancel')}</button>
-                  </span>
-                ` : `<button class="btn small danger" onclick="askResetLibrary()" title="${t('files.eraseall')}">${t('files.reset')}</button>`}
-              </div>
-            ` : ''}
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <button class="btn small ${state.showMidiPanel?'primary':''}" onclick="toggleMidiPanel()"><span class="help-menu-emoji">🔌</span>${state.lang==='es'?'MIDI Entrada/Salida':'MIDI In/Out'} ▾</button>
-            ${renderMidiPanel()}
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <button class="btn small ${state.muted?'primary':''}" onclick="toggleMuted()" title="${t('mute.title')}">${state.muted?t('mute.muted'):t('mute.mute')}</button>
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <span class="row" style="gap:6px;">
-              <button class="eq-toggle ${state.octaveEquivalence?'on':''}" onclick="toggleOctaveEquivalence()">${t('eq.label')}: ${state.octaveEquivalence ? t('word.on') : t('word.off')}</button>
-              <button class="btn mini ghost" onclick="toggleEqInfo()" title="${t('word.whatdoes')}">?</button>
-            </span>
-            ${state.showEqInfo ? `<p class="sub" style="max-width:none; font-size:10.5px;">${state.octaveEquivalence
-              ? t('eq.info.on')
-              : t('eq.info.off')}</p>` : ''}
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <button class="btn small" onclick="toggleFullscreen()">${document.fullscreenElement ? t('fullscreen.exit') : t('fullscreen.enter')}</button>
-            <hr style="border:none; border-top:1px solid var(--border); width:100%; margin:0;">
-            <button class="eq-toggle ${state.epilepsySafeMode?'on':''}" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">${t('epilepsy.toggle')}: ${state.epilepsySafeMode ? t('word.on') : t('word.off')}</button>
+              ` : ''}
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-title">${t('set.sec.devices')}</div>
+              <button class="btn small ${state.showMidiPanel?'primary':''}" onclick="toggleMidiPanel()"><span class="help-menu-emoji">🔌</span>${state.lang==='es'?'MIDI Entrada/Salida':'MIDI In/Out'} ▾</button>
+              ${state.showMidiPanel ? `<div class="settings-sub">${renderMidiPanel()}</div>` : ''}
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-title">${t('set.sec.sound')}</div>
+              <button class="btn small ${state.muted?'primary':''}" onclick="toggleMuted()" title="${t('mute.title')}">${state.muted?t('mute.muted'):t('mute.mute')}</button>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-title">${t('set.sec.theory')}</div>
+              <span class="row" style="gap:6px;">
+                <button class="eq-toggle ${state.octaveEquivalence?'on':''}" onclick="toggleOctaveEquivalence()">${t('eq.label')}: ${state.octaveEquivalence ? t('word.on') : t('word.off')}</button>
+                <button class="btn mini ghost" onclick="toggleEqInfo()" title="${t('word.whatdoes')}">?</button>
+              </span>
+              ${state.showEqInfo ? `<p class="sub settings-note">${state.octaveEquivalence ? t('eq.info.on') : t('eq.info.off')}</p>` : ''}
+            </div>
+
+            <div class="settings-section settings-section-last">
+              <div class="settings-section-title">${t('set.sec.display')}</div>
+              <button class="btn small" onclick="toggleFullscreen()">${document.fullscreenElement ? t('fullscreen.exit') : t('fullscreen.enter')}</button>
+              <button class="eq-toggle ${state.epilepsySafeMode?'on':''}" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">${t('epilepsy.toggle')}: ${state.epilepsySafeMode ? t('word.on') : t('word.off')}</button>
+            </div>
+
           </div>
         ` : ''}
       </span>
@@ -7430,7 +8134,8 @@ function render(){
     <nav class="tabs" id="navTabsBar">
       <button class="${state.tab==='catalog'?'active':''}" data-hotkey="A" onclick="switchTab('catalog')">${t('tab.progressions')}</button>
       <button class="${state.tab==='species'?'active':''}" data-hotkey="S" onclick="switchTab('species')">${t('tab.shapes')}</button>
-      <button class="${state.tab==='map'?'active':''}" data-hotkey="D" onclick="switchTab('map')">${t('tab.hexmap')}</button>
+      <!-- Hex map now lives inside the Shapes tab, immediately left of its search box (the D
+           hotkey still jumps straight there from anywhere). -->
       <button class="ecosystem-tab-btn" onclick="goToEcosystem()" title="${t('ecosystem.title')}">${t('ecosystem.btn')}</button>
       <!-- Connect tab hidden for now — not ready yet -->
       <!-- <button class="${state.tab==='connect'?'active':''}" onclick="switchTab('connect')">Connect</button> -->
@@ -7445,6 +8150,8 @@ function render(){
     ${state.showSaveNameModal ? renderSaveNameModal() : ''}
     ${state.showEcosystemNeedShapeMsg ? renderEcosystemNeedShapeModal() : ''}
     ${state.showNicknameDupeMsg ? renderNicknameDupeModal() : ''}
+    ${state.builderCtxMenu ? renderBuilderCtxMenu() : ''}
+    ${state.builderTransposeModal ? renderBuilderTransposeModal() : ''}
   `;
   const content = document.getElementById('tabContent');
   if(state.tab==='catalog'){
@@ -7488,8 +8195,25 @@ function updateScrollLock(){
   check();
   if(typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(check);
   setTimeout(check, 150);
+  // Late reflow safety net: hex SVGs, masonry columns and web fonts can all still be settling
+  // well past 150ms on a slower machine/browser, so a couple more delayed rechecks catch content
+  // that only became "actually taller than the viewport" after everything above already ran and
+  // wrongly locked scrolling.
+  setTimeout(check, 500);
+  setTimeout(check, 1200);
 }
 window.addEventListener('resize', ()=> updateScrollLock());
+// Defensive fallback: if updateScrollLock's height measurement was ever stale (e.g. content grew
+// asynchronously right after the last check) and scrolling got locked while real content actually
+// overflows, the very next scroll attempt re-measures immediately and unlocks on the spot --
+// instead of the user being stuck unable to scroll until some unrelated re-render happens to fix it.
+function recheckScrollLockOnGesture(){
+  if(!document.documentElement.classList.contains('scroll-locked')) return;
+  suppressScrollLockUntil = 0;
+  updateScrollLock();
+}
+window.addEventListener('wheel', recheckScrollLockOnGesture, {passive:true});
+window.addEventListener('touchmove', recheckScrollLockOnGesture, {passive:true});
 
 function dismissHelpHint(){
   if(!state.showHelpHint) return;
@@ -7903,13 +8627,55 @@ function toggleJargonPopup(e, popupId){
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.jargon-popup.show').forEach(popup=>popup.classList.remove('show'));
 });
-// Selecting text inside a nickname/tags input (or any text) fires a click that bubbles up to the
-// card underneath, toggling it open/closed mid-selection. Capture-phase guard: clicks originating
-// in text fields, or clicks that conclude an active text selection, never reach card handlers.
 document.addEventListener('click', (e)=>{
-  if(e.target && e.target.closest && e.target.closest('input[type="text"], input:not([type]), textarea')){ e.stopPropagation(); return; }
-  if(typeof textSelectionActive==='function' && textSelectionActive()) e.stopPropagation();
+  if(state.builderCtxMenu && !(e.target.closest && e.target.closest('.builder-ctx-menu'))) closeBuilderCtxMenu();
+});
+document.addEventListener('contextmenu', (e)=>{
+  if(state.builderCtxMenu && !(e.target.closest && e.target.closest('.built-chord'))) closeBuilderCtxMenu();
+});
+window.addEventListener('blur', ()=>{ if(state.builderCtxMenu) closeBuilderCtxMenu(); });
+// Selecting text inside a nickname/tags input fires a click that bubbles up to the card
+// underneath, toggling it open/closed mid-selection. Capture-phase guard for exactly that case.
+//
+// This used to block the click whenever ANY selection existed anywhere on the page, which is what
+// made buttons and controls all over the app go dead while some unrelated text stayed selected --
+// including the builder's own shift-click multi-select, since shift-click itself extends a
+// selection. Now it only blocks when the live selection is genuinely INSIDE the thing being
+// clicked, so a stale selection somewhere else can never take the rest of the UI down with it.
+// Kept in lockstep with the `user-select:text` opt-in rule in the stylesheet -- these are the only
+// places text is meant to be selectable, so they're also the only places a live selection is
+// allowed to influence click handling.
+const SELECTABLE_SEL = '.selectable, input, textarea, select, .modal-panel p, .modal-panel li, .modal-panel td, .modal-panel th, .prog-notes';
+function selectionInsideElement(el){
+  try{
+    const sel = window.getSelection && window.getSelection();
+    if(!sel || sel.isCollapsed || sel.rangeCount===0) return false;
+    const node = sel.getRangeAt(0).commonAncestorContainer;
+    const asEl = node.nodeType===1 ? node : node.parentElement;
+    return !!(asEl && el.contains(asEl));
+  }catch(err){ return false; }
+}
+document.addEventListener('click', (e)=>{
+  const field = e.target && e.target.closest && e.target.closest('input[type="text"], input:not([type]), textarea');
+  if(field){ e.stopPropagation(); return; }
+  const host = e.target && e.target.closest && e.target.closest(SELECTABLE_SEL);
+  if(host && selectionInsideElement(host)) e.stopPropagation();
 }, {capture:true});
+// Belt-and-braces: any pointer press that lands outside a selectable region drops whatever text is
+// currently selected, so no selection can outlive the moment it was useful and go on interfering.
+document.addEventListener('pointerdown', (e)=>{
+  try{
+    if(e.target && e.target.closest && e.target.closest(SELECTABLE_SEL)) return;
+    const sel = window.getSelection && window.getSelection();
+    if(sel && !sel.isCollapsed) sel.removeAllRanges();
+  }catch(err){}
+}, {capture:true});
+// Last line of defence for browsers/gestures that start a selection despite user-select:none
+// (drag from an image, triple-click, etc.) outside the opted-in regions.
+document.addEventListener('selectstart', (e)=>{
+  if(e.target && e.target.closest && e.target.closest(SELECTABLE_SEL)) return;
+  e.preventDefault();
+});
 function toggleSwSection(id){
   closeAllJargonPopups();
   state.swSectionOpen = state.swSectionOpen || {};
@@ -8236,6 +9002,7 @@ function renderCatalogList(content){
               <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
             </span>
             <button class="btn mini ${state.randomTopline?'primary':''}" onclick="toggleRandomTopline()" title="${t('interp.topline.title')}">${t('interp.topline')}: ${state.randomTopline?t('word.on'):t('word.off')}</button>
+            <button class="btn mini ${state.connectProgressions?'primary':''}" onclick="toggleConnectProgressions()" title="${t('interp.connectprogs.title')}">${t('interp.connectprogs')}: ${state.connectProgressions?t('word.on'):t('word.off')}</button>
             <span class="articulation-group">
               <button class="btn mini ${state.autoArticulation?'primary':''}" onclick="toggleAutoArticulation()" title="${t('interp.autoart.title')}">${t('interp.autoart')}: ${state.autoArticulation?t('word.on'):t('word.off')}</button>
               <span class="bpm-control" style="${state.autoArticulation?'':'opacity:.45;'}" title="${t('interp.poly.title')}"><label class="field-label" style="margin:0;">${t('interp.poly.label')}</label><input type="number" min="1" max="12" value="${state.polyrhythmA}" oninput="setPolyrhythmA(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}><span style="opacity:.6;">/</span><input type="number" min="1" max="12" value="${state.polyrhythmB}" oninput="setPolyrhythmB(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}></span>
@@ -8359,6 +9126,7 @@ function renderCatalogDetail(content){
                   <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
                 </span>
                 <button class="btn mini ${state.randomTopline?'primary':''}" onclick="toggleRandomTopline()" title="${t('interp.topline.title')}">${t('interp.topline')}: ${state.randomTopline?t('word.on'):t('word.off')}</button>
+            <button class="btn mini ${state.connectProgressions?'primary':''}" onclick="toggleConnectProgressions()" title="${t('interp.connectprogs.title')}">${t('interp.connectprogs')}: ${state.connectProgressions?t('word.on'):t('word.off')}</button>
                 <span class="articulation-group">
                   <button class="btn mini ${state.autoArticulation?'primary':''}" onclick="toggleAutoArticulation()" title="${t('interp.autoart.title')}">${t('interp.autoart')}: ${state.autoArticulation?t('word.on'):t('word.off')}</button>
                   <span class="bpm-control" style="${state.autoArticulation?'':'opacity:.45;'}" title="${t('interp.poly.title')}"><label class="field-label" style="margin:0;">${t('interp.poly.label')}</label><input type="number" min="1" max="12" value="${state.polyrhythmA}" oninput="setPolyrhythmA(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}><span style="opacity:.6;">/</span><input type="number" min="1" max="12" value="${state.polyrhythmB}" oninput="setPolyrhythmB(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}></span>
@@ -8431,7 +9199,11 @@ function renderCatalogDetail(content){
       </div>
     </div>
   `;
-  highlightBigMapForAll(p.id);
+  // While this progression is actively looping ("Play progression"), the map must keep
+  // showing whichever single chord is currently sounding instead of snapping back to the
+  // default "all notes" view every time an unrelated state change triggers a re-render mid-playback.
+  if(state.loopingProgId===p.id && state.loopingCurrentIdx!=null) highlightBigMapForChord(p.id, state.loopingCurrentIdx);
+  else highlightBigMapForAll(p.id);
   p.chords.forEach((c,idx)=>{
     const holder = document.getElementById(`chipHex-${p.id}-${idx}`);
     if(!holder) return;
@@ -8798,6 +9570,7 @@ function renderBuilder(content){
                       <button class="btn mini ${state.rootBass?'primary':''}" onclick="toggleRootBass()" title="${t('interp.rootbass.title')}">${t('interp.rootbass')}</button>
                     </span>
                     <button class="btn mini ${state.randomTopline?'primary':''}" onclick="toggleRandomTopline()" title="${t('interp.topline.title')}">${t('interp.topline')}: ${state.randomTopline?t('word.on'):t('word.off')}</button>
+            <button class="btn mini ${state.connectProgressions?'primary':''}" onclick="toggleConnectProgressions()" title="${t('interp.connectprogs.title')}">${t('interp.connectprogs')}: ${state.connectProgressions?t('word.on'):t('word.off')}</button>
                     <span class="articulation-group">
                       <button class="btn mini ${state.autoArticulation?'primary':''}" onclick="toggleAutoArticulation()" title="${t('interp.autoart.title')}">${t('interp.autoart')}: ${state.autoArticulation?t('word.on'):t('word.off')}</button>
                       <span class="bpm-control" style="${state.autoArticulation?'':'opacity:.45;'}" title="${t('interp.poly.title')}"><label class="field-label" style="margin:0;">${t('interp.poly.label')}</label><input type="number" min="1" max="12" value="${state.polyrhythmA}" oninput="setPolyrhythmA(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}><span style="opacity:.6;">/</span><input type="number" min="1" max="12" value="${state.polyrhythmB}" oninput="setPolyrhythmB(this.value)" style="width:42px; padding:6px 4px; text-align:center; box-sizing:border-box;" ${state.autoArticulation?'':'disabled'}></span>
@@ -8809,7 +9582,7 @@ function renderBuilder(content){
             </span>
             <button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>
           </div>
-          <div class="chords-built" ondragover="builderDragOverList(event)" ondrop="builderDropOnList(event)">
+          <div class="chords-built" id="builderChordsList" ondragover="builderDragOverList(event)" ondrop="builderDropOnList(event)" onclick="builderChordsListClick(event)">
             ${(()=>{
                 const species = computeSpecies(state.progressions);
                 return b.chords.map((cRaw,idx)=>{
@@ -8824,7 +9597,7 @@ function renderBuilder(content){
                   const sp = species.map[signatureOf(eff)];
                   const nick = sp ? state.nicknames[sp.signature] : null;
                   return `
-                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragend="builderDragEnded()">
+                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''} ${(b.selectedIdxs||[]).includes(idx)?'multi-selected':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragend="builderDragEnded()" onclick="builderCardClick(event, ${idx})" oncontextmenu="builderCardContextMenu(event, ${idx})">
                       ${idx===0 ? `<span class="drag-handle locked" title="The first shape is always rooted at 0 and can't be moved">🔒</span>` : `<span class="drag-handle" draggable="true" ondragstart="builderDragChordStart(event, ${idx})" title="Drag to reorder">⠿</span>`}
                       <span class="mini-chip builder-card-chip"><span class="root-hex-chip mini-chip-root" style="--chip-c:hsl(${Math.round(mod31(c.root)*(360/31))} 72% 56%);">${c.root}</span>${eff.filter(i=>i!==0).map(iv=>c.root+iv).join('  ')} <span class="chord-nick">${nick?`"${escapeHtml(nick)}"`:(sp?`shape #${sp.num}`:'?')}</span></span>
                       <input type="text" placeholder="optional label" class="built-chord-label-input" style="flex:0 1 auto; width:14ch; min-width:0; max-width:100%; box-sizing:content-box; field-sizing:content;" value="${escapeHtml(c.label)}" oninput="builderChordLabel(${idx}, this.value); this.style.width=Math.max(14,this.value.length+1)+'ch';" ${state.builder.editingChordIdx===idx?'disabled':''}>
@@ -8846,7 +9619,7 @@ function renderBuilder(content){
           </div>
           `}
           ${b.chords.length>=2 ? `
-          <div class="row" style="margin-top:18px;">
+          <div class="row" id="builderSaveRow" style="margin-top:18px;">
             <button class="btn primary${builderTutorialHighlight(b,'save')}" style="font-size:17px; padding:16px 28px;" data-hotkey="R" onclick="saveProgression()">${t('word.saveprogression')}</button>
             ${b.editingId ? `<button class="btn" style="font-size:15px; padding:16px 22px;" onclick="saveProgressionAs()" title="${t('word.saveasnewprogression.title')}">${t('word.saveasnewprogression')}</button>` : ''}
           </div>
@@ -9089,12 +9862,16 @@ function mountChordCardHex(sp, holderIdPrefix, opts){
 }
 function renderSpecies(content){
   const species = computeSpecies(state.progressions);
+  // Kept reachable even with nothing catalogued yet -- the Hex Map is exactly where a brand new
+  // user goes to explore before they have any shapes to list here.
+  const hexMapBtn = `<button class="btn mini hexmap-jump-btn" data-hotkey="D" onclick="switchTab('map')">${t('tab.hexmap')}</button>`;
   if(species.list.length===0){
-    content.innerHTML = `<div class="empty"><div class="glyph">⬡</div>${t('species.empty')}</div>`;
+    content.innerHTML = `<div class="list-toolbar" id="speciesTabTop">${hexMapBtn}</div><div class="empty"><div class="glyph">⬡</div>${t('species.empty')}</div>`;
     return;
   }
   const toolbar = `
     <div class="list-toolbar" id="speciesTabTop">
+      ${hexMapBtn}
       <input type="text" id="chordSearchInput" placeholder="${t('chord.searchplaceholder')}" value="${escapeHtml(state.chordsFilterText)}" oninput="state.chordsFilterText=this.value; renderSpeciesOnly()">
       <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showSortMenu?'primary':''}" onclick="toggleSortMenu()">${t('word.sortby')}</button>
@@ -9488,15 +10265,23 @@ function builderRecognitionSnippet(assoc){
    Delegated on document so it keeps working across full re-renders — shows a small
    auto-zoomed hex map for whatever chord chip / mini-chip the mouse is over.
 ========================================================================= */
-function buildStepLadderHtml(root, tones){
+function buildStepLadderHtml(root, tones, rootKeyColored){
   const vals = [root, ...tones].sort((a,b)=>a-b);
   // The ROOT is whatever value came in as `root` -- not necessarily 0 (progression chords pass
   // absolute pitches). Its box shows its real number; 0 only when the root really is 0.
   const rootIdx = vals.indexOf(root);
+  // In progression hover tooltips the root box is tinted with THAT KEY's own hue (the same
+  // pitch-class hue used by root chips everywhere else) instead of the generic yellow, so the
+  // tooltip visually agrees with the card it popped out of.
+  const rootStyle = rootKeyColored ? ` style="background:hsl(${Math.round(mod31(root)*(360/31))} 72% 56%);"` : '';
   let html = '<div class="step-ladder">';
   vals.forEach((v,i)=>{
-    html += i===rootIdx ? `<span class="step-num step-root">${v}</span>` : `<span class="step-num">${v>0?'+'+v:v}</span>`;
-    if(i<vals.length-1 && i!==rootIdx){
+    html += i===rootIdx ? `<span class="step-num step-root"${rootStyle}>${v}</span>` : `<span class="step-num">${v>0?'+'+v:v}</span>`;
+    // The gap number now also appears right after the root (i.e. between the lowest and the
+    // second-lowest note). It used to be skipped there, which meant the very first interval was
+    // the only one you had to work out yourself -- and with a root like -24 that's real mental
+    // arithmetic. Every consecutive pair now shows its distance, uniformly.
+    if(i<vals.length-1){
       const gap = vals[i+1]-v;
       html += `<span class="step-gap-num">${gap}</span>`;
     }
@@ -9534,7 +10319,7 @@ function showHoverPreview(el, clientX, clientY){
     const hpTones = state.octaveEquivalence ? new Set(tones.map(mod31)) : new Set(tones);
     hex.appendChild(buildHexSVG({ shape:'rect-centered', cols, rows, size:16, highlightRoot:hpRoot, tones:hpTones, mode:hpMode, showLabels:false, zeroLabelOnly:true, vividMarks:true, showRootRing:false }));
   }
-  document.getElementById('hoverPreviewSteps').innerHTML = buildStepLadderHtml(root, tones);
+  document.getElementById('hoverPreviewSteps').innerHTML = buildStepLadderHtml(root, tones, isProgContext);
   const nickEl = document.getElementById('hoverPreviewNick');
   const octEl = document.getElementById('hoverPreviewOctave');
   if(sig){
