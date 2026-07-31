@@ -3469,10 +3469,14 @@ async function gdriveSignIn(){
         const r = await gdriveApplyCollection(data);
         if(r.added || r.replaced) state.gdrive.msg = `${t('gd.autoloaded')} ${r.added}/${r.replaced}/${r.skipped}`;
       }
-    }catch(err){}
+    }catch(err){
+      state.gdrive.msg = t('gd.err.load') + ' [' + (err && err.message ? err.message : err) + ']';
+      console.error('[ARMODEX Drive] pull after sign-in:', err);
+    }
   }catch(e){
     state.gdrive.signedIn = false;
-    state.gdrive.msg = t('gd.err.signin');
+    state.gdrive.msg = t('gd.err.signin') + ' [' + (e && e.message ? e.message : e) + ']';
+    console.error('[ARMODEX Drive] sign-in:', e);
   }
   state.gdrive.busy = false; render();
 }
@@ -3487,16 +3491,19 @@ function gdriveSignOut(){
 // actual token is fetched silently the first time a Save/Load is asked for.
 async function gdriveRestoreSession(){
   try{
-    const raw = await storageGet('gdriveSession');
-    if(!raw) return;
-    const d = JSON.parse(raw);
+    const r = await storageGet('gdriveSession');
+    if(!r) return;
+    // storageGet hands back a { key, value } record -- reading it as a plain string here is what
+    // silently broke session persistence: the parse threw, the catch swallowed it, and every
+    // reload came back signed out (which in turn made the startup auto-sync skip itself).
+    const d = JSON.parse(r.value);
     if(d && d.signedIn){ state.gdrive.signedIn = true; state.gdrive.email = d.email || null; }
   }catch(e){}
 }
 async function gdriveFindFileId(token){
   const url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&pageSize=10';
   const r = await fetch(url, { headers:{ Authorization:'Bearer '+token } });
-  if(!r.ok) throw new Error('list_failed');
+  if(!r.ok) throw new Error('Drive list failed (HTTP '+r.status+')');
   const j = await r.json();
   const f = (j.files||[]).find(x=>x.name===GDRIVE_FILENAME);
   return f ? f.id : null;
@@ -3530,11 +3537,12 @@ async function gdriveSaveCollection(){
       headers:{ Authorization:'Bearer '+token, 'Content-Type':`multipart/related; boundary=${boundary}` },
       body: multipart,
     });
-    if(!r.ok) throw new Error('upload_failed');
+    if(!r.ok){ const txt = await r.text().catch(()=>''); throw new Error('Drive upload failed (HTTP '+r.status+') '+txt.slice(0,180)); }
     state.gdrive.lastSyncAt = Date.now();
     state.gdrive.msg = t('gd.saved');
   }catch(e){
-    state.gdrive.msg = t('gd.err.save');
+    state.gdrive.msg = t('gd.err.save') + ' [' + (e && e.message ? e.message : e) + ']';
+    console.error('[ARMODEX Drive] save:', e);
   }
   state.gdrive.busy = false; render();
 }
@@ -3570,7 +3578,7 @@ async function gdriveDownloadCollection(token){
   const fileId = await gdriveFindFileId(token);
   if(!fileId) return null;
   const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers:{ Authorization:'Bearer '+token } });
-  if(!r.ok) throw new Error('download_failed');
+  if(!r.ok) throw new Error('Drive download failed (HTTP '+r.status+')');
   return r.json();
 }
 async function gdriveLoadCollection(){
@@ -3583,7 +3591,8 @@ async function gdriveLoadCollection(){
     const r = await gdriveApplyCollection(data);
     state.gdrive.msg = `${t('gd.loaded')} ${r.added}/${r.replaced}/${r.skipped}`;
   }catch(e){
-    state.gdrive.msg = t('gd.err.load');
+    state.gdrive.msg = t('gd.err.load') + ' [' + (e && e.message ? e.message : e) + ']';
+    console.error('[ARMODEX Drive] load:', e);
   }
   state.gdrive.busy = false; render();
 }
@@ -3610,7 +3619,8 @@ async function gdriveAutoLoadOnBoot(){
     if(r.added || r.replaced) state.gdrive.msg = `${t('gd.autoloaded')} ${r.added}/${r.replaced}/${r.skipped}`;
     render();
   }catch(e){
-    state.gdrive.msg = t('gd.needreauth');
+    state.gdrive.msg = t('gd.needreauth') + ' [' + (e && e.message ? e.message : e) + ']';
+    console.error('[ARMODEX Drive] auto-sync on boot:', e);
     render();
   }
 }
