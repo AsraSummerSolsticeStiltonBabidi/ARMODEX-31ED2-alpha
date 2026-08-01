@@ -279,10 +279,14 @@
   html.mobile-mode nav.tabs button{ font-size:15px; padding:11px 16px; }
   /* Comfortable touch targets everywhere. */
   html.mobile-mode .btn{ min-height:42px; }
-  /* Long labels shrink to fit their button instead of spilling out of it. */
-  html.mobile-mode .btn{ font-size:12.5px; padding:9px 12px; white-space:normal; line-height:1.25; }
-  html.mobile-mode .btn.mini{ font-size:11px; padding:7px 9px; min-height:36px; }
-  html.mobile-mode .btn.small{ font-size:12px; padding:8px 10px; }
+  /* Long labels shrink to fit their button instead of spilling out of it.
+     !important is required, not laziness: several of these buttons carry an INLINE
+     style="font-size:16.5px; white-space:nowrap", and an inline declaration beats any plain
+     stylesheet rule no matter how specific. That is why "Add shape" and "Play shape" kept
+     overflowing while everything else obeyed. */
+  html.mobile-mode .btn{ font-size:12.5px !important; padding:9px 12px !important; white-space:normal !important; line-height:1.25 !important; word-break:break-word; }
+  html.mobile-mode .btn.mini{ font-size:11px !important; padding:7px 9px !important; min-height:36px; }
+  html.mobile-mode .btn.small{ font-size:12px !important; padding:8px 10px !important; }
   html.mobile-mode .prog-play-btn{ font-size:15px !important; padding:11px 14px !important; }
   html.mobile-mode .play-icon-btn-big{ font-size:15px !important; }
   html.mobile-mode .builder-section-label, html.mobile-mode label.field-label.builder-section-label{ font-size:14px; white-space:normal; }
@@ -923,8 +927,13 @@
   html.mobile-mode .tut-bubble{ font-size:12.5px !important; }
   html.mobile-mode .tut-demo-caption, html.mobile-mode .tut-title-write{ font-size:12px !important; }
   html.mobile-mode .selection-strip{ gap:4px; }
+  /* Absolutely positioned decoration ("New progression" / "Hex map"): it sits on top of real
+     controls on a narrow screen and there is no room for it. Hidden outright on mobile. */
+  html.mobile-mode .view-sticker-title{ display:none !important; }
   /* Held and ready to reorder. */
   .built-chord.touch-dragging{ opacity:.62; outline:2px solid #7fd4ff; outline-offset:1px; }
+  /* Stop the OS "copy/share" callout from hijacking the press-and-hold. */
+  html.mobile-mode .built-chord{ -webkit-touch-callout:none; }
   /* The 85px navigation bubbles are fixed to the bottom-right and were sitting on top of Save
      progression. Smaller on a phone, tucked into the corner, and the page gets bottom padding so
      the last control can always be scrolled clear of them. */
@@ -7824,6 +7833,10 @@ function builderTouchReorderEnd(){
 // Right-click a built-chord card to Transpose it (or the whole current multi-selection, if the
 // card right-clicked is part of one) by a number of 31ED2 steps.
 function builderCardContextMenu(e, idx){
+  // A press-and-hold on a touch screen ALSO fires contextmenu, which meant the hold gesture opened
+  // the Transpose menu instead of picking the card up. On mobile the hold belongs to the reorder
+  // drag, so the menu is suppressed there (Transpose stays reachable via the card's own controls).
+  if(isMobileMode()){ if(e.cancelable) e.preventDefault(); return; }
   if(idx===0 || idx===state.builder.editingChordIdx) return; // fixed root / mid-edit -- no menu
   e.preventDefault();
   const b = state.builder;
@@ -7837,6 +7850,17 @@ function builderCardContextMenu(e, idx){
   render();
 }
 function closeBuilderCtxMenu(){ if(state.builderCtxMenu){ state.builderCtxMenu = null; render(); } }
+// Mobile entry point for Transpose (there is no right-click there -- see builderCardContextMenu).
+function builderOpenTransposeFor(idx){
+  const b = state.builder;
+  if(idx===0 || idx===b.editingChordIdx) return;
+  if(!(b.selectedIdxs && b.selectedIdxs.length>1 && b.selectedIdxs.includes(idx))){
+    b.selectedIdxs = [idx]; b.selectAnchor = idx;
+  }
+  state.builderCtxMenu = null;
+  state.builderTransposeModal = { idx, value:'' };
+  render();
+}
 function builderCtxOpenTranspose(){
   const idx = state.builderCtxMenu ? state.builderCtxMenu.idx : null;
   state.builderCtxMenu = null;
@@ -10614,6 +10638,7 @@ function renderBuilder(content){
                           <button title="discard changes" onclick="builderCancelEditChord()">✕</button>
                         ` : `
                           <button title="duplicate this shape" onclick="event.stopPropagation(); builderDuplicateChord(${idx})">⧉</button>
+                          ${isMobileMode() && idx!==0 ? `<button title="${t('builder.ctx.transpose')}" onclick="event.stopPropagation(); builderOpenTransposeFor(${idx})">⇅</button>` : ''}
                           <button title="edit this shape on the hex map" onclick="builderStartEditChord(${idx})" ${state.builder.editingChordIdx!=null?'disabled':''}>✎</button>
                           <button title="remove" onclick="builderRemoveChord(${idx})">✕</button>
                         `}
