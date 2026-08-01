@@ -279,6 +279,17 @@
   html.mobile-mode nav.tabs button{ font-size:15px; padding:11px 16px; }
   /* Comfortable touch targets everywhere. */
   html.mobile-mode .btn{ min-height:42px; }
+  /* Long labels shrink to fit their button instead of spilling out of it. */
+  html.mobile-mode .btn{ font-size:12.5px; padding:9px 12px; white-space:normal; line-height:1.25; }
+  html.mobile-mode .btn.mini{ font-size:11px; padding:7px 9px; min-height:36px; }
+  html.mobile-mode .btn.small{ font-size:12px; padding:8px 10px; }
+  html.mobile-mode .prog-play-btn{ font-size:15px !important; padding:11px 14px !important; }
+  html.mobile-mode .play-icon-btn-big{ font-size:15px !important; }
+  html.mobile-mode .builder-section-label, html.mobile-mode label.field-label.builder-section-label{ font-size:14px; white-space:normal; }
+  html.mobile-mode .field-label{ white-space:normal; }
+  /* Interpretation and the other anchored dropdowns must never start off-screen. */
+  html.mobile-mode .help-dropdown-wrap{ position:static; }
+  html.mobile-mode .help-dropdown-wrap > .help-dropdown-menu{ position:fixed; left:8px !important; right:8px !important; width:auto !important; max-width:calc(100vw - 16px) !important; top:auto; bottom:12px; }
   html.mobile-mode .set-row{ min-height:46px; }
   .wrap{max-width:1120px;margin:0 auto; width:100%; box-sizing:border-box;}
   /* Removed the cap entirely for this view -- Includes/Part-of only get real multi-column
@@ -889,21 +900,40 @@
   html.mobile-mode .hex-frame{ padding:6px; }
   html.mobile-mode .builder-map-viewport svg.hexsvg{ max-height:56vh; }
   html.mobile-mode #builderSearchPanel,
-  html.mobile-mode #builderSearchResultsList{ max-width:100% !important; width:100% !important; margin-top:6px !important; }
+  html.mobile-mode #builderSearchResultsList{ max-width:100% !important; width:100% !important; margin-top:6px !important; margin-left:0 !important; }
+  html.mobile-mode #builderSearchField{ flex-direction:column !important; gap:6px !important; width:100% !important; }
+  html.mobile-mode #builderSearchField > div{ flex:1 1 auto !important; width:100% !important; }
+  html.mobile-mode #useRegisteredTitle{ cursor:pointer; width:100%; background:var(--panel-alt); border:1.5px solid var(--border-strong); border-radius:8px; padding:9px 11px; margin:0 !important; font-size:14px !important; }
+  html.mobile-mode.mobile-usereg-closed #builderSearchResultsList,
+  html.mobile-mode.mobile-usereg-closed #builderSearchPanel .occ-search,
+  html.mobile-mode.mobile-usereg-closed #builderSearchPanel input[type="text"]{ display:none !important; }
   html.mobile-mode .builder-nickname-inline{ margin-left:0 !important; width:100%; }
   html.mobile-mode .built-chord{ flex-wrap:wrap; gap:6px; }
   html.mobile-mode .built-chord .built-chord-label-input{ width:100% !important; flex:1 1 100% !important; }
-  html.mobile-mode .builder-tutorial-float{ position:static !important; width:100% !important; margin-bottom:8px; }
-  /* The floating tutorial mascot overlaps the map badly on a narrow screen. */
+  /* The tutorial keeps FLOATING over the map (making it static pushed the whole layout down);
+     it's just scaled to phone proportions -- the 22.5px banner text was enormous on a phone. */
+  html.mobile-mode .builder-tutorial-float{ width:calc(100% - 12px) !important; max-width:calc(100% - 12px) !important; pointer-events:none; z-index:60; }
+  html.mobile-mode .builder-tutorial-float > *{ pointer-events:auto; }
   html.mobile-mode .tut-bubble-wrap{ max-width:100%; }
+  html.mobile-mode .builder-tutorial-banner{
+    font-size:12.5px !important; line-height:1.35; padding:10px 12px 10px 22px !important;
+    margin-bottom:8px !important; border-radius:10px;
+  }
+  html.mobile-mode .tut-hex{ width:38px !important; height:38px !important; margin-top:2px !important; font-size:15px; }
+  html.mobile-mode .tut-bubble{ font-size:12.5px !important; }
+  html.mobile-mode .tut-demo-caption, html.mobile-mode .tut-title-write{ font-size:12px !important; }
   html.mobile-mode .selection-strip{ gap:4px; }
+  /* Held and ready to reorder. */
+  .built-chord.touch-dragging{ opacity:.62; outline:2px solid #7fd4ff; outline-offset:1px; }
   /* The 85px navigation bubbles are fixed to the bottom-right and were sitting on top of Save
      progression. Smaller on a phone, tucked into the corner, and the page gets bottom padding so
      the last control can always be scrolled clear of them. */
   html.mobile-mode .nav-history-fab{ right:10px; bottom:10px; gap:6px; }
   html.mobile-mode .nav-history-fab-row{ gap:8px; }
   html.mobile-mode .nav-history-fab button{ width:52px; height:52px; font-size:20px; }
-  html.mobile-mode #app{ padding-bottom:78px; }
+  /* Enough runway to scroll the last control (Save progression) clear above the fixed nav
+     bubbles instead of ending flush against them. */
+  html.mobile-mode #app{ padding-bottom:150px; }
   html.mobile-mode [data-hotkey="R"].btn.primary{ font-size:15px; padding:12px 18px; }
   /* Toolbars in the builder wrap instead of running off the edge, and no control keeps a width
      that can't shrink. */
@@ -7083,6 +7113,7 @@ const state = {
   builder:{ editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[], selectedOrderQr:{}, lastClicked:null, error:'', editingChordIdx:null, editingChordBackup:null, selectedIdxs:[], selectAnchor:null },
   builderCtxMenu:null, builderTransposeModal:null,
   setSub:{ backup:false, cloud:false, importprogs:false, danger:false },
+  mobileUseRegOpen:false,
   connectProgressions:true,
   gdrive:{ signedIn:false, email:null, busy:false, msg:'', lastSyncAt:null },
   connect:{ chain:[] }, connectFilter:'',
@@ -7467,6 +7498,13 @@ function pulseBuilderMapGlow(raw){ pulseMapGlow('builderHexHolder', raw); }
 function toggleBuilderFreePlay(){ state.builderFreePlay = !state.builderFreePlay; render(); }
 function toggleBuilderGearMenu(){ state.showBuilderGearMenu = !state.showBuilderGearMenu; render(); }
 function toggleBuilderIdentify(){ state.showBuilderIdentify = !state.showBuilderIdentify; renderBuilderSearchOnly(); }
+// Mobile only: the registered-shapes panel is a big block of vertical space on a phone, so its
+// title becomes a collapsed dropdown you open when you actually want it.
+function toggleBuilderUseRegisteredMobile(){ state.mobileUseRegOpen = !state.mobileUseRegOpen; syncMobileUseRegClass(); render(); }
+function syncMobileUseRegClass(){
+  if(typeof document==='undefined') return;
+  document.documentElement.classList.toggle('mobile-usereg-closed', isMobileMode() && !state.mobileUseRegOpen);
+}
 function toggleBuilderUseRegistered(){ state.showBuilderUseRegistered = !state.showBuilderUseRegistered; renderBuilderSearchOnly(); }
 function builderSetRoot(raw){
   pushBuilderUndo();
@@ -7516,6 +7554,7 @@ function builderAddChord(){
 // as the anchor, shift-click another and everything in between gets selected too -- so the
 // duplicate/drag-move actions further down can act on the whole group at once.
 function builderCardClick(e, idx){
+  if(builderTouchSuppressClick) return; // this click is the tail of a press-and-hold reorder
   if(e.target.closest('.ctrls, input, .drag-handle')) return; // those have their own click handling
   const b = state.builder;
   // The first shape IS selectable (and therefore duplicatable) -- it just can't be MOVED, since
@@ -7694,6 +7733,61 @@ function builderDropOnList(e){
 // insertion maths and the very same drop function as the mouse one, so both behave identically
 // and there is only one definition of "where does it land".
 let builderTouchDrag = null;
+// A tiny drag handle is a mouse idiom; on a phone the natural gesture is press-and-hold anywhere
+// on the card, which is what was being tried. This adds exactly that, on the whole card, mobile
+// only -- and then hands over to the same reorder machinery as everything else.
+let builderLongPressTimer = null;
+let builderTouchSuppressClick = false;
+function builderTouchCardStart(e, idx){
+  if(!isMobileMode()) return;
+  if(!e.touches || e.touches.length!==1) return;
+  if(e.target.closest && e.target.closest('.ctrls, input, .drag-handle')) return;
+  if(idx===0 || idx===state.builder.editingChordIdx) return;
+  const sel = state.builder.selectedIdxs;
+  const inSel = !!(sel && sel.length>1 && sel.includes(idx));
+  if(inSel && !builderSelectionMovable()) return;
+  const t = e.touches[0];
+  const startY = t.clientY, startX = t.clientX;
+  const card = e.currentTarget;
+  clearTimeout(builderLongPressTimer);
+  builderLongPressTimer = setTimeout(()=>{
+    builderDragFromIdx = idx;
+    builderDragFromIndices = inSel ? sel.slice().sort((a,b)=>a-b) : null;
+    builderTouchDrag = { idx, startY, moved:true, viaLongPress:true };
+    builderTouchSuppressClick = true;
+    hideBuiltChordMinimap();
+    try{ hideHoverPreview(); }catch(err){}
+    if(card && card.classList) card.classList.add('touch-dragging');
+    try{ if(navigator.vibrate) navigator.vibrate(18); }catch(err){}
+  }, 380);
+  builderTouchDrag = { idx, startY, startX, moved:false, pending:true };
+}
+function builderTouchCardMove(e){
+  if(!builderTouchDrag || !e.touches || e.touches.length!==1) return;
+  const t = e.touches[0];
+  if(builderTouchDrag.pending && !builderTouchDrag.viaLongPress){
+    // Moved before the hold completed: that's a scroll, not a drag. Let the page have it.
+    if(Math.hypot(t.clientX-builderTouchDrag.startX, t.clientY-builderTouchDrag.startY) > 8){
+      clearTimeout(builderLongPressTimer);
+      builderTouchDrag = null;
+    }
+    return;
+  }
+  if(!builderTouchDrag.viaLongPress) return;
+  if(e.cancelable) e.preventDefault();
+  const list = document.getElementById('builderChordsList');
+  if(!list) return;
+  builderDragOverList({ preventDefault(){}, currentTarget:list, clientY:t.clientY });
+}
+function builderTouchCardEnd(){
+  clearTimeout(builderLongPressTimer);
+  document.querySelectorAll('.built-chord.touch-dragging').forEach(el=>el.classList.remove('touch-dragging'));
+  if(!builderTouchDrag){ return; }
+  const wasDrag = !!builderTouchDrag.viaLongPress;
+  builderTouchDrag = null;
+  if(wasDrag){ builderDropOnList({ preventDefault(){} }); setTimeout(()=>{ builderTouchSuppressClick = false; }, 60); }
+  else builderTouchSuppressClick = false;
+}
 function builderTouchReorderStart(e, idx){
   if(!isMobileMode()) return;
   if(!e.touches || e.touches.length!==1) return;
@@ -8204,11 +8298,21 @@ function capBuilderProgressionHeight(){
   // its own inner scroller. Let the panel be its natural height and let the whole page scroll --
   // one scrollbar, everything reachable.
   if(isMobileMode()){
+    // The panel itself keeps its natural height (so Save is never clipped and the page scrolls
+    // normally), but the CARD LIST gets a ceiling and its own scroll -- otherwise ten shapes push
+    // Save far off the bottom. Safe here because scroll locking is disabled on mobile, so the
+    // page can always still be scrolled past this.
     el.style.maxHeight = 'none'; el.style.overflowY = 'visible';
     el.style.display = ''; el.style.flexDirection = ''; el.style.minHeight = '';
-    const list = document.getElementById('builderChordsList');
-    if(list){ list.style.flex=''; list.style.minHeight=''; list.style.overflowY='visible'; list.style.maxHeight='none'; }
     Array.from(el.children).forEach(ch=>{ ch.style.flex=''; });
+    const list = document.getElementById('builderChordsList');
+    if(list){
+      list.style.flex = '';
+      list.style.minHeight = '';
+      list.style.maxHeight = Math.round(window.innerHeight * 0.38) + 'px';
+      list.style.overflowY = 'auto';
+      list.style.overscrollBehavior = 'contain';
+    }
     return;
   }
   const apply = ()=>{
@@ -9042,6 +9146,7 @@ function render(){
   updateMasonryColumnCounts();
   positionHelpHint();
   fitWideDropdowns();
+  syncMobileUseRegClass();
   dismissStaleFloatingPreviews();
   updateScrollLock();
 }
@@ -10422,8 +10527,8 @@ function renderBuilder(content){
             ${hasRegisteredShapes ? `
             <div class="field" id="builderSearchField" style="margin-top:0; min-height:0; min-width:0; flex:0 1 auto; width:fit-content; display:flex; flex-direction:row; flex-wrap:nowrap; gap:12px; align-items:flex-start;">
               <div style="min-width:0; flex:0 1 220px;">
-                <label class="field-label builder-section-label" id="useRegisteredTitle" style="display:flex; align-items:center; gap:6px;">${t('builder.useregistered')}</label>
-                <p class="sub" style="max-width:none; margin-top:2px; font-size:10.5px;">${t('builder.dblclick.hint')}</p>
+                <label class="field-label builder-section-label" id="useRegisteredTitle" style="display:flex; align-items:center; gap:6px;"${isMobileMode()?` onclick="toggleBuilderUseRegisteredMobile()"`:''}>${t('builder.useregistered')}${isMobileMode()?` <span style="margin-left:auto;">${state.mobileUseRegOpen?'▾':'▸'}</span>`:''}</label>
+                ${isMobileMode() && !state.mobileUseRegOpen ? '' : `<p class="sub" style="max-width:none; margin-top:2px; font-size:10.5px;">${t('builder.dblclick.hint')}</p>`}
                 <input type="text" id="builderChordSearchInput" style="margin-top:6px; width:100%; box-sizing:border-box;" placeholder="${t('builder.searchplaceholder')}" value="${escapeHtml(state.builderChordSearch)}" oninput="state.builderChordSearch=this.value; renderBuilderSearchOnly()">
               </div>
               <!-- Results sit to the RIGHT of the search box, as a second column inside the same
@@ -10499,7 +10604,7 @@ function renderBuilder(content){
                   const sp = species.map[signatureOf(eff)];
                   const nick = sp ? state.nicknames[sp.signature] : null;
                   return `
-                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''} ${(b.selectedIdxs||[]).includes(idx)?'multi-selected':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragend="builderDragEnded()" onclick="builderCardClick(event, ${idx})" oncontextmenu="builderCardContextMenu(event, ${idx})">
+                    <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''} ${(b.selectedIdxs||[]).includes(idx)?'multi-selected':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragend="builderDragEnded()" onclick="builderCardClick(event, ${idx})" oncontextmenu="builderCardContextMenu(event, ${idx})" ontouchstart="builderTouchCardStart(event, ${idx})" ontouchmove="builderTouchCardMove(event)" ontouchend="builderTouchCardEnd()" ontouchcancel="builderTouchCardEnd()">
                       ${idx===0 ? `<span class="drag-handle locked" title="The first shape is always rooted at 0 and can't be moved">🔒</span>` : `<span class="drag-handle" draggable="true" ondragstart="builderDragChordStart(event, ${idx})" ontouchstart="builderTouchReorderStart(event, ${idx})" ontouchmove="builderTouchReorderMove(event)" ontouchend="builderTouchReorderEnd()" ontouchcancel="builderTouchReorderEnd()" title="Drag to reorder">⠿</span>`}
                       <span class="mini-chip builder-card-chip"><span class="root-hex-chip mini-chip-root" style="--chip-c:hsl(${Math.round(mod31(c.root)*(360/31))} 72% 56%);">${c.root}</span>${eff.filter(i=>i!==0).map(iv=>c.root+iv).join('  ')} <span class="chord-nick">${nick?`"${escapeHtml(nick)}"`:(sp?`shape #${sp.num}`:'?')}</span></span>
                       <input type="text" placeholder="optional label" class="built-chord-label-input" style="flex:0 1 auto; width:14ch; min-width:0; max-width:100%; box-sizing:content-box; field-sizing:content;" value="${escapeHtml(c.label)}" oninput="builderChordLabel(${idx}, this.value); this.style.width=Math.max(14,this.value.length+1)+'ch';" ${state.builder.editingChordIdx===idx?'disabled':''}>
