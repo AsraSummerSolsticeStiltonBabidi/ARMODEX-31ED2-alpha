@@ -2,7 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- Installable web app: adds a home-screen icon that opens ARMODEX without any browser UI, and
+     keeps working with no connection. Needs manifest.json, sw.js and the icons sitting next to
+     this file. -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0d0f11">
+<!-- iOS ignores the manifest's display mode; these are its equivalent. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ARMODEX">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <title>31ed2 Armodex</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,6 +222,51 @@
   }
   @media (prefers-reduced-motion: reduce){ .cursor-reticle{animation:none;} }
   @media (prefers-reduced-motion: reduce){ .harmonic-waves-holder, .harmonic-waves-holder *{animation:none !important;} }
+  /* --- Mobile mode: no permanently-animating full-screen layers, no infinite hue cycles, no
+     heavy shadows. These are the things that cost a phone GPU every single frame forever. --- */
+  html.mobile-mode .bg-cycle{ animation:none; background:hsl(240 30% 6%); }
+  html.mobile-mode .note-hex-bg,
+  html.mobile-mode .harmonic-waves-holder,
+  html.mobile-mode .cursor-reticle{ display:none !important; }
+  html.mobile-mode h1,
+  html.mobile-mode .hero-title-mini,
+  html.mobile-mode .splash-title,
+  html.mobile-mode .pupil-hex,
+  html.mobile-mode .ecosystem-launch-btn,
+  html.mobile-mode .ecosystem-text-pulse,
+  html.mobile-mode .kaleido-spin{ animation:none !important; }
+  html.mobile-mode *{ box-shadow:none !important; text-shadow:none !important; }
+  html.mobile-mode .btn.primary, html.mobile-mode .set-l1, html.mobile-mode .set-leaf{ box-shadow:none !important; }
+  /* The custom colour-cycling cursor is meaningless without a mouse and costs a style
+     recalculation of the whole document every 650ms. */
+  html.mobile-mode, html.mobile-mode body,
+  html.mobile-mode button, html.mobile-mode a[href], html.mobile-mode .btn{ cursor:auto !important; }
+  /* The generic mobile rule below lets the hex SVG fall back to its intrinsic size inside a
+     scroller. With width="100%" on the SVG itself that intrinsic size degenerates, which is
+     exactly why the builder map rendered as a single column of hexagons. In mobile mode the map
+     simply fits the screen instead -- the board is smaller now, so it doesn't need to scroll. */
+  html.mobile-mode .touch-scroll-map{ overflow:visible; max-height:none; }
+  html.mobile-mode .touch-scroll-map svg.hexsvg.hexsvg-hscroll{ width:100%; height:auto; max-width:100%; max-height:70vh; margin:6px auto 0; }
+  html.mobile-mode svg.hexsvg{ max-height:60vh; }
+  /* Dropdowns are wider than a phone screen: let them use it all and scroll vertically. */
+  html.mobile-mode .help-dropdown-menu,
+  html.mobile-mode .settings-menu,
+  html.mobile-mode .help-menu-rows{ width:auto; max-width:calc(100vw - 20px); left:0; right:auto; max-height:70vh; }
+  html.mobile-mode .set-label{ white-space:normal; }
+  html.mobile-mode .builder-ctx-menu{ max-width:calc(100vw - 20px); }
+  html.mobile-mode .modal-panel{ padding:18px 16px; max-height:88vh; }
+  /* In fullscreen/standalone there is no browser chrome, so the app must keep itself clear of
+     the notch and the home indicator by itself. */
+  html.mobile-mode body{
+    padding:calc(14px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right))
+            calc(40px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  }
+  html.mobile-mode .wrap{ padding:0; }
+  html.mobile-mode .hero-title-mini{ font-size:34px; height:36px; }
+  html.mobile-mode nav.tabs button{ font-size:15px; padding:11px 16px; }
+  /* Comfortable touch targets everywhere. */
+  html.mobile-mode .btn{ min-height:42px; }
+  html.mobile-mode .set-row{ min-height:46px; }
   .wrap{max-width:1120px;margin:0 auto; width:100%; box-sizing:border-box;}
   /* Removed the cap entirely for this view -- Includes/Part-of only get real multi-column
      room once this uses the full viewport width, not just a larger-but-still-fixed number. */
@@ -1462,6 +1519,31 @@
 // (the common case is the browser's own localStorage -- see the storage layer further down), swap
 // the splash screen's text right away so a returning Spanish-speaking user doesn't see a flash of
 // English before the app finishes booting.
+/* ---------------------------------------------------------------------------------------------
+   MOBILE MODE
+   One codebase, not a second app: a phone gets the same ARMODEX with a class on <html> that
+   switches off the purely decorative, permanently-running work (three full-viewport animated
+   layers, the colour-cycling cursor, infinite hue animations, big shadows) and lets the layout
+   rules adapt. Decided once, before first paint, so the expensive machinery is never even
+   started -- turning it off after the fact would still have paid for the first frames.
+   --------------------------------------------------------------------------------------------- */
+(function(){
+  try{
+    var coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+    var narrow = Math.min(window.innerWidth||9999, window.screen? (window.screen.width||9999):9999) <= 820;
+    var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints||0) > 0;
+    window.__ARMODEX_MOBILE = !!((coarse && touch) || narrow);
+    if(window.__ARMODEX_MOBILE) document.documentElement.classList.add('mobile-mode');
+  }catch(e){ window.__ARMODEX_MOBILE = false; }
+})();
+function isMobileMode(){ return !!window.__ARMODEX_MOBILE; }
+// Registered after 'load' so fetching/parsing it never competes with the first paint. Failing
+// (file:// , no HTTPS, unsupported browser) is silent and harmless -- the app just runs online-only.
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
 (function(){
   var TXT = {
     es: {
@@ -1859,6 +1941,7 @@ const REF_FREQ = 220; // frequency assigned to raw step 0
 function freqForRaw(raw){ return REF_FREQ * Math.pow(2, raw/31) * Math.pow(2, (state.generalPitch||0)/1200); }
 let waveSpeedActive = 0;
 function setWaveSpeed(rate){
+  if(isMobileMode()) return; // the wave layer isn't mounted on mobile
   // Sets the EASED target only -- waveTick() above smoothly approaches it every frame, so this
   // never causes the jump a direct animation-duration swap did.
   waveSpeedTarget = rate;
@@ -1922,6 +2005,7 @@ function noteHexTransitionMs(durSec){
 let lastPulseTime = 0;
 const SAFE_MODE_MIN_PULSE_GAP_MS = 360;
 function pulseNoteColor(rawNotes, durSec){
+  if(isMobileMode()) return; // the background hex layer doesn't exist on mobile -- nothing to pulse
   if(state.epilepsySafeMode){
     const now = (typeof performance!=='undefined' ? performance.now() : Date.now());
     if(now - lastPulseTime < SAFE_MODE_MIN_PULSE_GAP_MS) return;
@@ -4720,6 +4804,9 @@ function builderBoardSize(){
   // was never actually the fix for it -- the real fix (in builderPlaceChordFromSearch) is
   // reconstructing each note's exact (q,r) position from qrOffsets, independent of board size.
   // Changing this size was unnecessary churn that just broke the map's normal, already-good feel.
+  // A phone gets a genuinely smaller board rather than the desktop one squeezed into a scroller:
+  // 24x12 hexes across ~360px makes every key unreadably small, which is why it was unusable.
+  if(isMobileMode()) return { cols: state.hexExpandLevel===1?19:11, rows: state.hexExpandLevel===1?15:9 };
   return { cols: state.hexExpandLevel===1?42:24, rows: state.hexExpandLevel===1?21:12 };
 }
 function chordSignatureSequence(p){
@@ -10804,7 +10891,9 @@ function renderMap(content){
   `;
   const mapHolder = document.getElementById('mapHexHolder');
   mapHolder.innerHTML = '';
-  mapHolder.appendChild(buildHexSVG({ shape:'rect-centered', cols: state.hexExpandLevel===1?42:22, rows: state.hexExpandLevel===1?22:BOARD_ROWS, size: state.hexExpandLevel===1?36:(isMobileViewport()?36:30), autoFit:false, highlightRoot:hl.root, tones:hl.tones, mode:hl.mode, focusRoot:exactFocus?exactFocus.focusRoot:null, focusTones:exactFocus?exactFocus.focusTones:null, fallbackRaws:exactFocus?exactFocus.fallbackRaws:null, echoRaws:exactFocus?new Set(ex.selectedOrder):null, interactive:true, onHexClick:explorerHexClick, octaveHighlightPc: ex.lastClicked!=null ? mod31(ex.lastClicked) : null, allowHScroll:true, showRootRing:false }));
+  const mapCols = isMobileMode() ? (state.hexExpandLevel===1?19:11) : (state.hexExpandLevel===1?42:22);
+  const mapRows = isMobileMode() ? (state.hexExpandLevel===1?15:9) : (state.hexExpandLevel===1?22:BOARD_ROWS);
+  mapHolder.appendChild(buildHexSVG({ shape:'rect-centered', cols: mapCols, rows: mapRows, size: state.hexExpandLevel===1?36:(isMobileViewport()?36:30), autoFit:false, highlightRoot:hl.root, tones:hl.tones, mode:hl.mode, focusRoot:exactFocus?exactFocus.focusRoot:null, focusTones:exactFocus?exactFocus.focusTones:null, fallbackRaws:exactFocus?exactFocus.fallbackRaws:null, echoRaws:exactFocus?new Set(ex.selectedOrder):null, interactive:true, onHexClick:explorerHexClick, octaveHighlightPc: ex.lastClicked!=null ? mod31(ex.lastClicked) : null, allowHScroll:true, showRootRing:false }));
   repositionMapZoomHint();
   const captionHolder = document.getElementById('octaveCaptionText');
   if(captionHolder) captionHolder.textContent = '';
@@ -11502,6 +11591,7 @@ function revalidateHotkeyTooltip(x, y){
 })();
 let __lastFlashTime = 0;
 function flashBackground(strength, fadeSec){
+  if(isMobileMode()) return; // decorative full-screen flash: skipped on phones
   const now = performance.now();
   if(now - __lastFlashTime < 700) return; // hard floor: never flash more than ~once every 0.7s, regardless of click rate
   __lastFlashTime = now;
@@ -11584,7 +11674,7 @@ function waveTick(now){
   wavePathState.forEach(ws=>{ ws.path.style.transform = `translateX(${(ws.phase*-ws.period).toFixed(2)}px)`; });
   requestAnimationFrame(waveTick);
 }
-requestAnimationFrame(waveTick);
+if(!isMobileMode()) requestAnimationFrame(waveTick);
 // Restores a color-cycling look to the custom cursor without reintroducing the position lag that
 // the native `cursor:url(...)` pivot was specifically done to eliminate. Instead of tracking the
 // mouse in JS (the thing that caused the original lag), this just rewrites which pre-rendered
@@ -11620,16 +11710,21 @@ function startCursorColorCycle(){
   applyCursorHue();
   setInterval(()=>{ cursorHueIdx = (cursorHueIdx+1) % CURSOR_HUES.length; applyCursorHue(); }, 650);
 }
-if(typeof document!=='undefined' && document.readyState!=='loading') startCursorColorCycle();
-else if(typeof document!=='undefined') document.addEventListener('DOMContentLoaded', startCursorColorCycle);
-(function mountHarmonicWaves(){
-  const holder = document.getElementById('harmonicWavesHolder');
-  if(holder) holder.appendChild(buildHarmonicWavesSVG());
-})();
-(function mountNoteHexBg(){
-  const holder = document.getElementById('noteHexBg');
-  if(holder) holder.appendChild(buildNoteHexBackground());
-})();
+// All three of these are decoration that runs forever. On a phone they're skipped outright --
+// not hidden with CSS, never built and never scheduled -- so the SVGs are never generated, the
+// wave rAF loop never starts, and the 650ms cursor restyle never fires.
+if(!isMobileMode()){
+  if(typeof document!=='undefined' && document.readyState!=='loading') startCursorColorCycle();
+  else if(typeof document!=='undefined') document.addEventListener('DOMContentLoaded', startCursorColorCycle);
+  (function mountHarmonicWaves(){
+    const holder = document.getElementById('harmonicWavesHolder');
+    if(holder) holder.appendChild(buildHarmonicWavesSVG());
+  })();
+  (function mountNoteHexBg(){
+    const holder = document.getElementById('noteHexBg');
+    if(holder) holder.appendChild(buildNoteHexBackground());
+  })();
+}
 (function initCursorReticle(){
   // Disabled: replaced entirely by the native `cursor: url(...)` CSS cursor set on html,body
   // above, which moves with zero JS involvement and is therefore guaranteed to feel identical to
