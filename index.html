@@ -897,6 +897,22 @@
   /* The floating tutorial mascot overlaps the map badly on a narrow screen. */
   html.mobile-mode .tut-bubble-wrap{ max-width:100%; }
   html.mobile-mode .selection-strip{ gap:4px; }
+  /* The 85px navigation bubbles are fixed to the bottom-right and were sitting on top of Save
+     progression. Smaller on a phone, tucked into the corner, and the page gets bottom padding so
+     the last control can always be scrolled clear of them. */
+  html.mobile-mode .nav-history-fab{ right:10px; bottom:10px; gap:6px; }
+  html.mobile-mode .nav-history-fab-row{ gap:8px; }
+  html.mobile-mode .nav-history-fab button{ width:52px; height:52px; font-size:20px; }
+  html.mobile-mode #app{ padding-bottom:78px; }
+  html.mobile-mode [data-hotkey="R"].btn.primary{ font-size:15px; padding:12px 18px; }
+  /* Toolbars in the builder wrap instead of running off the edge, and no control keeps a width
+     that can't shrink. */
+  html.mobile-mode .builder-grid .row,
+  html.mobile-mode .tap-keys-row,
+  html.mobile-mode .list-toolbar{ flex-wrap:wrap; }
+  html.mobile-mode .builder-grid .btn,
+  html.mobile-mode .builder-grid .help-dropdown-wrap{ max-width:100%; flex-shrink:1; }
+  html.mobile-mode .builder-grid .row > *{ min-width:0; }
   #builderProgressionTop, #mapViewTop, #speciesTabTop, #progDetailTitle, #builderViewTop, #builderTutorialBanner, #navTabsBar, #speciesFocusTop{scroll-margin-top:14px;}
   label.field-label.builder-section-label, .hex-frame .plate-label.builder-section-label, .builder-section-label{font-family:'Chakra Petch',sans-serif; font-size:17px; font-weight:800; color:#ffffff; letter-spacing:.01em; white-space:nowrap; text-transform:none;}
   .selection-strip{display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;}
@@ -1797,6 +1813,17 @@ function buildHexSVG(opts){
           const cellList = cellRegistry.map(entry=>({ raw:entry.raw, q:entry.q, r:entry.r, rect: entry.poly.getBoundingClientRect() }));
           shapeDragState = { raw:c.raw, anchorQ:c.q, anchorR:c.r, startX:e.clientX, startY:e.clientY, dragging:false, cellList, qrToPoly, currentTarget:null };
         });
+        // Touch equivalent, registered ONLY on mobile so the mouse path above is untouched.
+        // A finger produces no mousedown, which is why dragging a shape did nothing on a phone.
+        if(isMobileMode()){
+          poly.addEventListener('touchstart', (e)=>{
+            if(!e.touches || e.touches.length!==1) return; // let two-finger gestures pan/zoom
+            initShapeDragTouchHandlers();
+            const t = e.touches[0];
+            const cellList = cellRegistry.map(entry=>({ raw:entry.raw, q:entry.q, r:entry.r, rect: entry.poly.getBoundingClientRect() }));
+            shapeDragState = { raw:c.raw, anchorQ:c.q, anchorR:c.r, startX:t.clientX, startY:t.clientY, dragging:false, cellList, qrToPoly, currentTarget:null };
+          }, {passive:true});
+        }
       }
     }
     g.appendChild(poly);
@@ -2949,6 +2976,10 @@ function showBuiltChordMinimap(idx, e){
   // Never during a reorder drag, nor in the instant right after the drop (the re-render lands the
   // pointer on a card, firing a spurious mouseenter that popped the tooltip).
   if(builderDragFromIdx!=null || (Date.now()-builderLastDropAt) < 450) return;
+  // Nor while the right-click menu is open on a card: the menu and the minimap tooltip occupy the
+  // same spot under the pointer and were overlapping each other. Hiding it once when the menu
+  // opens isn't enough -- that render lands the pointer on the card again and re-fires mouseenter.
+  if(state.builderCtxMenu) return;
   let c = state.builder.chords[idx]; if(!c) return;
   // While this shape is being edited, the tooltip mirrors the LIVE selection instead of the
   // stale saved chord.
@@ -2970,6 +3001,7 @@ function showBuiltChordMinimap(idx, e){
   positionBuiltChordMinimap(e);
 }
 function positionBuiltChordMinimap(e){
+  if(state.builderCtxMenu) return;
   const el = document.getElementById('builtChordMinimapTooltip');
   if(!el || !e) return;
   const pad = 16;
@@ -7589,7 +7621,9 @@ function builderDragEnded(){
 // visibly opens at exactly that slot in real time -- an honest preview of the resulting order.
 let builderDragInsertIdx = null;
 function builderDragOverList(e){
-  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  e.preventDefault();
+  if(e.dataTransfer) e.dataTransfer.dropEffect = 'move'; // absent on the synthetic touch event
+
   if(builderDragFromIdx==null) return;
   const list = e.currentTarget;
   const cards = Array.from(list.querySelectorAll('.built-chord'));
@@ -7654,6 +7688,44 @@ function builderDropOnList(e){
   // Re-voice the loop immediately from the new order (see the old drop handler's note).
   builderProgLoopKick();
   render();
+}
+// HTML5 drag-and-drop (draggable="true" + dragstart) simply does not fire for touch, which is why
+// reordering shapes did nothing on a phone. This is a touch-only path that reuses the very same
+// insertion maths and the very same drop function as the mouse one, so both behave identically
+// and there is only one definition of "where does it land".
+let builderTouchDrag = null;
+function builderTouchReorderStart(e, idx){
+  if(!isMobileMode()) return;
+  if(!e.touches || e.touches.length!==1) return;
+  if(idx===0 || idx===state.builder.editingChordIdx) return; // locked first shape / shape being edited
+  const sel = state.builder.selectedIdxs;
+  const inSel = !!(sel && sel.length>1 && sel.includes(idx));
+  if(inSel && !builderSelectionMovable()) return;
+  builderDragFromIdx = idx;
+  builderDragFromIndices = inSel ? sel.slice().sort((a,b)=>a-b) : null;
+  builderTouchDrag = { idx, startY: e.touches[0].clientY, moved:false };
+  hideBuiltChordMinimap();
+  try{ hideHoverPreview(); }catch(err){}
+}
+function builderTouchReorderMove(e){
+  if(!builderTouchDrag || !e.touches || e.touches.length!==1) return;
+  const t = e.touches[0];
+  if(!builderTouchDrag.moved && Math.abs(t.clientY - builderTouchDrag.startY) < 8) return;
+  builderTouchDrag.moved = true;
+  if(e.cancelable) e.preventDefault(); // take over from page scrolling only once it's a real drag
+  const list = document.getElementById('builderChordsList');
+  if(!list) return;
+  // Same slot computation as builderDragOverList, fed by the touch point instead of the pointer.
+  builderDragOverList({
+    preventDefault(){}, dataTransfer:{}, currentTarget:list, clientY:t.clientY
+  });
+}
+function builderTouchReorderEnd(){
+  if(!builderTouchDrag) return;
+  const moved = builderTouchDrag.moved;
+  builderTouchDrag = null;
+  if(moved) builderDropOnList({ preventDefault(){} });
+  else builderDragEnded();
 }
 // Right-click a built-chord card to Transpose it (or the whole current multi-selection, if the
 // card right-clicked is part of one) by a number of 31ED2 steps.
@@ -10428,7 +10500,7 @@ function renderBuilder(content){
                   const nick = sp ? state.nicknames[sp.signature] : null;
                   return `
                     <div class="built-chord ${state.builder.editingChordIdx===idx?'editing':''} ${builderPlayingIdx===idx?'now-playing':''} ${(b.selectedIdxs||[]).includes(idx)?'multi-selected':''}" style="background:linear-gradient(to bottom, hsl(${Math.round(mod31(c.root)*(360/31))} 38% 17%), hsl(${Math.round(mod31(c.root)*(360/31))} 32% 13%));" onmouseenter="hoverPlayBuiltChord(${idx}); showBuiltChordMinimap(${idx}, event);" onmousemove="positionBuiltChordMinimap(event)" onmouseleave="builderChordCardMouseLeave();" ondragend="builderDragEnded()" onclick="builderCardClick(event, ${idx})" oncontextmenu="builderCardContextMenu(event, ${idx})">
-                      ${idx===0 ? `<span class="drag-handle locked" title="The first shape is always rooted at 0 and can't be moved">🔒</span>` : `<span class="drag-handle" draggable="true" ondragstart="builderDragChordStart(event, ${idx})" title="Drag to reorder">⠿</span>`}
+                      ${idx===0 ? `<span class="drag-handle locked" title="The first shape is always rooted at 0 and can't be moved">🔒</span>` : `<span class="drag-handle" draggable="true" ondragstart="builderDragChordStart(event, ${idx})" ontouchstart="builderTouchReorderStart(event, ${idx})" ontouchmove="builderTouchReorderMove(event)" ontouchend="builderTouchReorderEnd()" ontouchcancel="builderTouchReorderEnd()" title="Drag to reorder">⠿</span>`}
                       <span class="mini-chip builder-card-chip"><span class="root-hex-chip mini-chip-root" style="--chip-c:hsl(${Math.round(mod31(c.root)*(360/31))} 72% 56%);">${c.root}</span>${eff.filter(i=>i!==0).map(iv=>c.root+iv).join('  ')} <span class="chord-nick">${nick?`"${escapeHtml(nick)}"`:(sp?`shape #${sp.num}`:'?')}</span></span>
                       <input type="text" placeholder="optional label" class="built-chord-label-input" style="flex:0 1 auto; width:14ch; min-width:0; max-width:100%; box-sizing:content-box; field-sizing:content;" value="${escapeHtml(c.label)}" oninput="builderChordLabel(${idx}, this.value); this.style.width=Math.max(14,this.value.length+1)+'ch';" ${state.builder.editingChordIdx===idx?'disabled':''}>
                       <div class="ctrls">
@@ -11346,6 +11418,40 @@ function initShapeDragMouseHandlers(){
     }
     shapeDragState = null;
   });
+}
+// Touch counterpart of initShapeDragMouseHandlers. Kept as a separate, separately-installed pair
+// of listeners rather than switching the existing ones to pointer events: the mouse path is
+// long-tuned and this must not be able to change it.
+function initShapeDragTouchHandlers(){
+  if(window.__shapeDragTouchInit) return;
+  window.__shapeDragTouchInit = true;
+  document.addEventListener('touchmove', (e)=>{
+    if(!shapeDragState || !e.touches || e.touches.length!==1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - shapeDragState.startX, dy = t.clientY - shapeDragState.startY;
+    if(!shapeDragState.dragging && Math.hypot(dx,dy) > 8) shapeDragState.dragging = true;
+    if(shapeDragState.dragging){
+      // Only once it's a real drag do we take the gesture away from the page's own scrolling.
+      if(e.cancelable) e.preventDefault();
+      const cell = findNearestShapeDragCell(shapeDragState.cellList, t.clientX, t.clientY);
+      if(cell){
+        previewShapeDragAt(shapeDragState.qrToPoly, cell.q - shapeDragState.anchorQ, cell.r - shapeDragState.anchorR);
+        shapeDragState.currentTarget = cell;
+      }
+    }
+  }, {passive:false});
+  const finish = ()=>{
+    if(!shapeDragState) return;
+    if(shapeDragState.dragging && shapeDragState.currentTarget){
+      clearShapeDragPreview();
+      shapeDropByQrDisplacement(shapeDragState.currentTarget, shapeDragState);
+      shapeDragSuppressClick = true;
+      setTimeout(()=>{ shapeDragSuppressClick = false; }, 0);
+    }
+    shapeDragState = null;
+  };
+  document.addEventListener('touchend', finish);
+  document.addEventListener('touchcancel', ()=>{ clearShapeDragPreview(); shapeDragState = null; });
 }
 let hoverPreviewForceDown = false;
 function hideHoverPreview(){ document.getElementById('hoverPreview').classList.remove('visible'); }
