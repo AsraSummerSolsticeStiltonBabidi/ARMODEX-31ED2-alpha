@@ -1800,7 +1800,7 @@ function buildHexSVG(opts){
   // unmarked hex landing later in that traversal could visually cover part of an already-drawn
   // marked hex's thicker stroke/root ring. Collecting into layers and appending unmarked cells
   // first, marked cells last, guarantees marked cells always render on top.
-  const plainLayer = [], toneLayer = [], rootLayer = [];
+  const plainLayer = [], toneLayer = [], accentLayer = [], rootLayer = [];
   positioned.forEach(c=>{
     const g=document.createElementNS(svgns,'g');
     const poly=document.createElementNS(svgns,'polygon');
@@ -1838,10 +1838,11 @@ function buildHexSVG(opts){
     // value alone also hit every other cell on the board carrying that same number -- unmarked
     // repetitions of a root, sitting far from where the chord was really written, ended up ringed
     // in gold with no colour fill, reading as notes that were never played.
+    let hasAccentRing = false;
     if(cellAccents && (isRoot || isTone)){
       const akey = (mode==='pc') ? c.pc : c.raw;
-      if(cellAccents.thick && cellAccents.thick.has(akey)){ stroke = 'var(--accent)'; sw = size*0.32; }
-      else if(cellAccents.thin && cellAccents.thin.has(akey)){ stroke = 'var(--accent)'; sw = size*0.19; }
+      if(cellAccents.thick && cellAccents.thick.has(akey)){ stroke = 'var(--accent)'; sw = size*0.32; hasAccentRing = true; }
+      else if(cellAccents.thin && cellAccents.thin.has(akey)){ stroke = 'var(--accent)'; sw = size*0.19; hasAccentRing = true; }
     }
     poly.setAttribute('fill', fill);
     poly.setAttribute('stroke', stroke);
@@ -1894,12 +1895,17 @@ function buildHexSVG(opts){
       g.appendChild(t);
     }
     if(showCents && (isRoot || isTone)) markedCells.push({ raw:c.raw, poly, isRoot, x:c.x, y:c.y, size });
-    (isRoot ? rootLayer : isTone ? toneLayer : plainLayer).push(g);
+    // A stroke straddles its polygon's edge, so half of it lies OUTSIDE the hexagon and any cell
+    // drawn afterwards paints over that half. Ringed cells therefore need their own layer above
+    // the ordinary tones -- exactly the reason the root already has one. Barely visible while the
+    // ring was hairline; at the current thickness it read as a cut-off outline.
+    (isRoot ? rootLayer : hasAccentRing ? accentLayer : isTone ? toneLayer : plainLayer).push(g);
   });
   plainLayer.forEach(g=>svg.appendChild(g));
   // Root cells append last (drawn on top) so the root's outline ring never gets covered by a
   // neighboring marked-tone cell that happened to be generated later in iteration order.
   toneLayer.forEach(g=>svg.appendChild(g));
+  accentLayer.forEach(g=>svg.appendChild(g));
   rootLayer.forEach(g=>svg.appendChild(g));
   if(showCents && markedCells.length>1){
     const sorted = markedCells.slice().sort((a,b)=>a.raw-b.raw);
