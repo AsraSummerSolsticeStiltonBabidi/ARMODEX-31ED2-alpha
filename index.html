@@ -1838,11 +1838,16 @@ function buildHexSVG(opts){
     // value alone also hit every other cell on the board carrying that same number -- unmarked
     // repetitions of a root, sitting far from where the chord was really written, ended up ringed
     // in gold with no colour fill, reading as notes that were never played.
-    let hasAccentRing = false;
+    // Which gold ring, if any, this cell earns. The ring itself is drawn as a separate INSET
+    // hexagon further below rather than by thickening this polygon's own stroke: a stroke straddles
+    // its edge, so half of a thick one lies outside the cell where neighbouring cells (and, at the
+    // board's rim, the viewBox itself) clip it -- which is why the outline kept looking chopped.
+    // An inset ring lives entirely inside the cell and cannot be cut by anything.
+    let accentRing = 0;
     if(cellAccents && (isRoot || isTone)){
       const akey = (mode==='pc') ? c.pc : c.raw;
-      if(cellAccents.thick && cellAccents.thick.has(akey)){ stroke = 'var(--accent)'; sw = size*0.32; hasAccentRing = true; }
-      else if(cellAccents.thin && cellAccents.thin.has(akey)){ stroke = 'var(--accent)'; sw = size*0.19; hasAccentRing = true; }
+      if(cellAccents.thick && cellAccents.thick.has(akey)) accentRing = 2;
+      else if(cellAccents.thin && cellAccents.thin.has(akey)) accentRing = 1;
     }
     poly.setAttribute('fill', fill);
     poly.setAttribute('stroke', stroke);
@@ -1874,6 +1879,18 @@ function buildHexSVG(opts){
       }
     }
     g.appendChild(poly);
+    if(accentRing){
+      const rw = accentRing===2 ? size*0.20 : size*0.12;   // ring thickness
+      const ring = document.createElementNS(svgns,'polygon');
+      // Radius chosen so the ring's OUTER edge lands just inside the cell's own outline.
+      ring.setAttribute('points', hexPoints(c.x, c.y, size*0.92 - rw/2 - 1));
+      ring.setAttribute('fill','none');
+      ring.setAttribute('stroke','var(--accent)');
+      ring.setAttribute('stroke-width', rw.toFixed(2));
+      ring.setAttribute('stroke-linejoin','round');
+      ring.style.pointerEvents = 'none';
+      g.appendChild(ring);
+    }
     if(isRoot && showRootRing){
       const ring=document.createElementNS(svgns,'circle');
       ring.setAttribute('cx', c.x.toFixed(1)); ring.setAttribute('cy', c.y.toFixed(1));
@@ -1899,7 +1916,7 @@ function buildHexSVG(opts){
     // drawn afterwards paints over that half. Ringed cells therefore need their own layer above
     // the ordinary tones -- exactly the reason the root already has one. Barely visible while the
     // ring was hairline; at the current thickness it read as a cut-off outline.
-    (isRoot ? rootLayer : hasAccentRing ? accentLayer : isTone ? toneLayer : plainLayer).push(g);
+    (isRoot ? rootLayer : accentRing ? accentLayer : isTone ? toneLayer : plainLayer).push(g);
   });
   plainLayer.forEach(g=>svg.appendChild(g));
   // Root cells append last (drawn on top) so the root's outline ring never gets covered by a
