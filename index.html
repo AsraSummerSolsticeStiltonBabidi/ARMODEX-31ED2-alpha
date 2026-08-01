@@ -459,6 +459,9 @@
     box-shadow:0 12px 28px rgba(0,0,0,.5); width:fit-content; max-width:min(96vw, 640px); max-height:75vh; overflow-y:auto; align-items:flex-start;
   }
   .help-dropdown-menu .btn{ text-align:left; white-space:nowrap; }
+  /* ...except in the settings menu, where several buttons carry a full sentence. Forcing nowrap
+     there is what made "Sync collection…" and "Import progressions" run off the edge. */
+  .settings-menu .btn{ white-space:normal; }
   .help-dropdown-menu p.sub{ color:#d8dee6; }
   /* Option boxes hug their own text instead of stretching to the menu's full width. */
   .help-dropdown-menu > .btn, .help-dropdown-menu > .eq-toggle{ align-self:flex-start; width:auto; }
@@ -470,26 +473,96 @@
   .eq-note{color:var(--muted); font-size:12.5px; line-height:1.5;}
   /* Sized to match #chordSearchInput exactly (same font-size and vertical padding), so the two
      sit as equals side by side instead of the button looking like an afterthought. */
-  /* Settings menu hierarchy: top-level SECTIONS carry an all-caps accent heading and a divider,
-     sub-groups inside an expanded section are indented behind a vertical rule, so at a glance you
-     can tell what belongs to what instead of reading one flat list of buttons. */
-  .settings-menu{ max-width:min(94vw, 400px); }
-  .settings-section{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; width:100%; padding-bottom:10px; border-bottom:1px solid var(--border); }
-  .settings-section-last{ border-bottom:none; padding-bottom:0; }
-  .settings-section-title{ font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent2); opacity:.95; margin-top:2px; }
-  .settings-sub{ display:flex; flex-direction:column; gap:12px; width:100%; padding-left:10px; margin-left:2px; border-left:2px solid var(--border); }
-  .settings-subgroup{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; width:100%; }
-  .settings-sub-title{ font-family:'Inter',sans-serif; font-size:11.5px; font-weight:700; color:#e6ebf2; letter-spacing:.02em; }
-  .settings-field-label{ font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
-  .settings-note{ max-width:none; margin:2px 0 0; font-size:10.5px; color:#c3ccd8; }
-  .settings-danger .settings-sub-title{ color:var(--danger); }
+  /* ---------------------------------------------------------------------------------------
+     SETTINGS MENU HIERARCHY
+     Depth is expressed by the ROWS THEMSELVES, never by a small caption floating above a
+     bigger control. Every heading here is a real, clickable row; what tells you its level is
+     its size, its weight, how far it is indented, and the accent rule running down its left.
+       Level 1  14px / 800  flush left        teal rule when open
+       Level 2  12.5px / 700  indented once   thin rule when open
+       Level 3  11.5px / 600  indented twice  plain action buttons
+     Settings with no children aren't headings at all: they read as label-plus-state rows, a
+     visibly different species from the ones that open something.
+     --------------------------------------------------------------------------------------- */
+  .settings-menu{ max-width:min(94vw, 430px); gap:0; padding:10px; }
+  /* The Help dropdown now uses the very same rows as Settings, so it gets the same box too. */
+  /* These labels are whole questions. Rather than wrapping or truncating them, the menu sizes
+     itself to the longest one (max-content) and every row stretches to match, so each question
+     sits on exactly one line however long it is in the current language. */
+  .help-menu-rows{ width:max-content; max-width:96vw; gap:0; padding:10px; }
+  .help-menu-rows .set-l1{ width:100%; align-items:center; }
+  .help-menu-rows .set-label{ white-space:nowrap; overflow:visible; text-overflow:clip; }
+  .set-row{ display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box; text-align:left;
+    cursor:pointer; border-radius:9px; font-family:'Inter',sans-serif; line-height:1.25;
+    transition:background .12s ease, border-color .12s ease, color .12s ease; }
+  .set-ico{ flex:0 0 auto; text-align:center; filter:drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+  .set-chev{ margin-left:auto; opacity:.65; font-size:10px; flex:0 0 auto; }
+
+  /* Same finish as the Help menu's buttons -- the dark panel-alt fill with a solid border --
+     so the two dropdowns read as one family instead of two different design languages. */
+  .set-l1{ font-size:14px; font-weight:800; letter-spacing:.01em; color:var(--text);
+    background:var(--panel-alt); border:1.5px solid var(--border-strong); padding:11px 12px; margin-top:5px; }
+  .set-l1:first-child{ margin-top:0; }
+  .set-l1:hover{ background:var(--panel-raised); border-color:var(--accent2); color:#fff; }
+  .set-l1.open{ background:var(--panel-raised); border-color:var(--accent2); color:#fff; }
+  .set-l1 .set-ico{ font-size:15px; width:20px; }
+
+  .set-body{ margin:5px 0 3px 10px; padding-left:12px; border-left:2px solid rgba(94,196,186,.45);
+    display:flex; flex-direction:column; gap:3px; }
+
+  .set-l2{ font-size:12.5px; font-weight:700; color:#c8d2df; background:transparent;
+    border:1px solid transparent; padding:7px 9px; }
+  .set-l2:hover{ background:rgba(255,255,255,.07); color:#fff; }
+  .set-l2.open{ color:#fff; background:rgba(255,255,255,.07); border-color:var(--border); }
+  .set-l2 .set-ico{ font-size:12.5px; width:17px; }
+
+  .set-body2{ margin:3px 0 7px 8px; padding-left:10px; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; gap:5px; align-items:stretch; }
+  .set-body2 .btn{ width:100%; text-align:left; font-size:11.5px; font-weight:600; padding:8px 10px; }
+  .set-body2 .set-inline{ display:flex; gap:6px; }
+  .set-body2 .set-inline .btn{ width:auto; flex:1 1 0; text-align:center; }
+
+  /* Leaf settings: a label and its current state, not a heading. */
+  .set-leaf{ font-size:14px; font-weight:800; color:var(--text); background:var(--panel-alt);
+    border:1.5px solid var(--border-strong); padding:10px 12px; margin-top:5px; }
+  .set-leaf:hover{ background:var(--panel-raised); color:#fff; border-color:var(--accent2); }
+  .set-leaf .set-ico{ font-size:15px; width:20px; }
+  /* Labels never wrap to a second or third line: they hold one line and the row grows/shrinks
+     around them, with the state pill and info button pinned to the right. */
+  .set-label{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .set-pill{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+    letter-spacing:.1em; padding:5px 12px; border-radius:999px; border:1.5px solid var(--border-strong);
+    color:var(--muted); background:transparent; flex:0 0 auto; }
+  .set-pill.on{ background:var(--accent2); border-color:var(--accent2); color:#0a201d; }
+
+  .set-info-btn{ flex:0 0 auto; font-size:13px; font-weight:800; line-height:1;
+    width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+    border-radius:999px; border:1.5px solid var(--border-strong);
+    background:transparent; color:var(--muted); cursor:pointer; }
+  .set-info-btn:hover{ color:#fff; border-color:var(--accent2); }
+  .set-l2 .set-info-btn, .set-body2 .set-info-btn{ width:22px; height:22px; font-size:11px; }
+  .set-note{ font-size:10.5px; color:#c3ccd8; line-height:1.5; margin:1px 0 3px; max-width:none; }
+  .set-caption{ font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted); margin:4px 0 0; }
+
+  .g-mark{ display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px;
+    border-radius:50%; background:#fff; color:#4285F4; font-family:'Inter',sans-serif; font-weight:900;
+    font-size:12px; line-height:1; margin-right:8px; border:1px solid #dadce0; flex:0 0 auto; }
+  /* Action buttons inside the menu wrap onto a second line rather than being clipped -- these are
+     full sentences, not short labels, so ellipsis would hide the useful half. */
+  .set-body2 .btn{ white-space:normal; line-height:1.35; display:flex; align-items:center; }
+  .set-danger.open{ background:rgba(224,51,77,.15); border-color:var(--danger); color:#ffd9de; }
+  .set-danger:hover{ color:#ffd9de; }
+
   /* The Google sync controls are the only ones here that reach outside the app entirely, so they
      get a white treatment that sets them clearly apart from every other button in the menu. */
   .btn.gdrive-btn{ background:#f4efe2; color:#14181f; border-color:#f4efe2; font-weight:700; }
   .btn.gdrive-btn:hover{ background:#ffffff; border-color:#ffffff; color:#14181f; }
   .btn.gdrive-btn:disabled{ opacity:.55; cursor:default; }
   .gdrive-status{ font-size:11px; line-height:1.5; color:#bde8c9; background:rgba(94,196,186,.1); border:1px solid rgba(94,196,186,.35); border-radius:8px; padding:7px 9px; width:100%; box-sizing:border-box; }
-  .hexmap-jump-btn{ font-size:16px; padding:12px 22px; white-space:nowrap; flex:0 0 auto; align-self:stretch; display:inline-flex; align-items:center; }
+  /* Deliberately identical to #newProgressionBtn -- same size, same yellow, same text colour --
+     so the app's two primary "go do a thing" buttons read as equals. */
+  .btn.hexmap-jump-btn{ font-size:16px; padding:12px 22px; white-space:nowrap; flex:0 0 auto; }
 
   .builder-ctx-menu{ position:fixed; z-index:900; display:flex; flex-direction:column; gap:4px; background:var(--panel-raised); border:1px solid var(--border-strong); border-radius:10px; padding:6px; box-shadow:0 12px 28px rgba(0,0,0,.5); }
   .builder-ctx-menu .btn{ text-align:left; white-space:nowrap; }
@@ -1385,16 +1458,41 @@
 // the splash screen's text right away so a returning Spanish-speaking user doesn't see a flash of
 // English before the app finishes booting.
 (function(){
+  var TXT = {
+    es: {
+      sub: 'Reúne tus armonías, identifica formas y progresiones, encuéntralas en cualquier parte de tu colección, disfruta las conexiones.',
+      cont: 'Haz clic para continuar',
+      pkmn: '¡Hazte con todos!'
+    },
+    ca: {
+      sub: 'Reuneix les teves harmonies, identifica formes i progressions, troba-les a qualsevol lloc de la teva col·lecció, gaudeix de les connexions.',
+      cont: 'Fes clic per continuar',
+      pkmn: 'Atrapa\'ls tots!'
+    }
+  };
   try{
     var raw = localStorage.getItem('harmodex:lang');
-    var savedLang = raw ? JSON.parse(raw) : null;
-    if(savedLang === 'es'){
+    var lang = raw ? JSON.parse(raw) : null;
+    // Nothing saved yet (first ever visit) means the app itself hasn't picked a language either,
+    // so mirror exactly the rule loadData() will apply a moment later -- otherwise a Catalan or
+    // Spanish speaker gets a splash in English and then an app in their own language.
+    if(!lang){
+      var ls = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+      if(ls.some(function(l){ return /^ca\b/i.test(l||''); })) lang = 'ca';
+      else if(ls.some(function(l){ return /^(es|gl|eu)\b/i.test(l||''); })) lang = 'es';
+    }
+    var t = TXT[lang];
+    if(t){
       var sub = document.querySelector('.splash-sub');
       var cont = document.querySelector('.splash-continue');
-      if(sub) sub.textContent = 'Reúne tus armonías, identifica formas y progresiones, encuéntralas en cualquier parte de tu colección, disfruta las conexiones.';
-      if(cont) cont.textContent = 'Haz clic para continuar';
       var pkmn = document.querySelector('.pkmn-text');
-      if(pkmn) pkmn.textContent = '¡Hazte con todos!';
+      var load = document.querySelector('#app .empty');
+      if(sub) sub.textContent = t.sub;
+      if(cont) cont.textContent = t.cont;
+      if(pkmn) pkmn.textContent = t.pkmn;
+      if(load && load.lastChild && load.lastChild.nodeType === 3){
+        load.lastChild.textContent = (lang==='ca') ? 'Carregant la teva col·lecció…' : 'Cargando tu colección…';
+      }
     }
   }catch(e){}
 })();
@@ -3325,6 +3423,14 @@ function exportSingleProgression(progId){
   downloadBytes(JSON.stringify(payload,null,2), `31ed2-armodex-progression-${slug(p.name)}.json`, 'application/json');
 }
 function toggleFilesMenu(){ state.showFilesMenu = !state.showFilesMenu; render(); }
+// Which sub-sections of the Collection menu are expanded. "Backup & transfer" starts open so the
+// everyday export/import actions stay two clicks away rather than three.
+function setSubOpen(id){ return !!(state.setSub && state.setSub[id]); }
+function toggleSetSub(id){
+  state.setSub = state.setSub || {};
+  state.setSub[id] = !state.setSub[id];
+  render();
+}
 function toggleHearMenu(){ state.showHearMenu = !state.showHearMenu; render(); if(state.showHearMenu) clampBuilderHearMenu(); }
 // Keeps the builder's Interpretation dropdown fully on-screen: it always opens downward from its
 // button now, but depending on how far right/low the button sits, a fixed left:0 anchor could
@@ -3352,6 +3458,10 @@ function clampBuilderHearMenu(){
 function closeSettingsSubWindows(){
   state.showEqInfo=false; state.showFilesMenu=false; state.showLibInfo=false;
   state.showProgImportInfo=false; state.confirmResetLibrary=false; state.showMidiPanel=false;
+  // Sub-sections collapse back to their defaults too, so the menu always reopens in the same
+  // predictable shape rather than however it happened to be left last time.
+  state.setSub = { backup:false, cloud:false, importprogs:false, danger:false };
+  state.showLangMenu=false;
 }
 function toggleFullscreen(){
   if(document.fullscreenElement){
@@ -4626,843 +4736,1068 @@ function contextCompare(setA, setB){
 const I18N = {
   "app.tagline": {
     "en": "Collect your harmonies, identify shapes and progressions, find them  anywhere in your collection, enjoy connections.",
-    "es": "Reúne tus armonías, identifica formas y progresiones, encuéntralas en cualquier parte de tu colección, disfruta las conexiones."
+    "es": "Reúne tus armonías, identifica formas y progresiones, encuéntralas en cualquier parte de tu colección, disfruta las conexiones.",
+    "ca": "Reuneix les teves harmonies, identifica formes i progressions, troba-les a qualsevol lloc de la teva col·lecció, gaudeix de les connexions."
   },
   "word.on": {
     "en": "ON",
-    "es": "SÍ"
+    "es": "SÍ",
+    "ca": "SÍ"
   },
   "word.off": {
     "en": "OFF",
-    "es": "NO"
+    "es": "NO",
+    "ca": "NO"
   },
   "eq.label": {
     "en": "Octave equivalence",
-    "es": "Equivalencia de octava"
+    "es": "Equivalencia de octava",
+    "ca": "Equivalència d'octava"
   },
   "word.whatdoes": {
     "en": "What does this do?",
-    "es": "¿Qué hace esto?"
+    "es": "¿Qué hace esto?",
+    "ca": "Què fa això?"
   },
   "word.whatdoes.2": {
     "en": "What does this do?",
-    "es": "¿Qué hace esto?"
+    "es": "¿Qué hace esto?",
+    "ca": "Què fa això?"
   },
   "word.whatdoes.3": {
     "en": "What does this do?",
-    "es": "¿Qué hace esto?"
+    "es": "¿Qué hace esto?",
+    "ca": "Què fa això?"
   },
   "files.whole": {
     "en": "Collection",
-    "es": "Colección"
+    "es": "Colección",
+    "ca": "Col·lecció"
   },
   "files.export": {
     "en": "⬇ Export collection",
-    "es": "⬇ Exportar colección"
+    "es": "⬇ Exportar colección",
+    "ca": "⬇ Exportar col·lecció"
   },
   "files.import": {
     "en": "⬆ Import collection",
-    "es": "⬆ Importar colección"
+    "es": "⬆ Importar colección",
+    "ca": "⬆ Importar col·lecció"
   },
   "files.exportshapesmidi": {
     "en": "Export all shapes as MIDI (.zip)",
-    "es": "Exportar todas las formas a MIDI (.zip)"
+    "es": "Exportar todas las formas a MIDI (.zip)",
+    "ca": "Exportar totes les formes a MIDI (.zip)"
   },
   "files.exportprogsmidi": {
     "en": "Export all progressions as MIDI (.zip)",
-    "es": "Exportar todas las progresiones a MIDI (.zip)"
+    "es": "Exportar todas las progresiones a MIDI (.zip)",
+    "ca": "Exportar totes les progressions a MIDI (.zip)"
   },
   "files.importprogs.label": {
     "en": "Import progressions",
-    "es": "Importar progresiones"
+    "es": "Importar progresiones",
+    "ca": "Importar progressions"
   },
   "files.importprogs.btn": {
     "en": "⬆ Import progressions",
-    "es": "⬆ Importar progresiones"
+    "es": "⬆ Importar progresiones",
+    "ca": "⬆ Importar progressions"
   },
   "files.onduplicate": {
     "en": "On duplicate (all imports)",
-    "es": "Si hay duplicado (todas las importaciones)"
+    "es": "Si hay duplicado (todas las importaciones)",
+    "ca": "Si hi ha duplicat (totes les importacions)"
   },
   "word.skip": {
     "en": "Skip",
-    "es": "Omitir"
+    "es": "Omitir",
+    "ca": "Ometre"
   },
   "word.overwrite": {
     "en": "Overwrite",
-    "es": "Sobrescribir"
+    "es": "Sobrescribir",
+    "ca": "Sobreescriure"
   },
   "gd.sync": {
     "en": "Sync collection in different devices with your Google account",
-    "es": "Sincronizar colección entre dispositivos con tu cuenta de Google"
+    "es": "Sincronizar colección entre dispositivos con tu cuenta de Google",
+    "ca": "Sincronitzar col·lecció entre dispositius"
   },
   "gd.connected": {
     "en": "Signed in with Google — your collection syncs through Drive",
-    "es": "Sesión iniciada con Google — tu colección se sincroniza por Drive"
+    "es": "Sesión iniciada con Google — tu colección se sincroniza por Drive",
+    "ca": "Sessió iniciada amb Google — la teva col·lecció es sincronitza per Drive"
   },
   "gd.signout": {
     "en": "Sign out of Google",
-    "es": "Cerrar sesión de Google"
+    "es": "Cerrar sesión de Google",
+    "ca": "Tancar sessió de Google"
   },
   "gd.save": {
     "en": "Save collection to Drive",
-    "es": "Guardar colección en Drive"
+    "es": "Guardar colección en Drive",
+    "ca": "Desar col·lecció al Drive"
   },
   "gd.load": {
     "en": "Sync from Drive now",
-    "es": "Sincronizar desde Drive ahora"
+    "es": "Sincronizar desde Drive ahora",
+    "ca": "Sincronitzar des del Drive ara"
   },
   "gd.saved": {
     "en": "Collection saved to Drive.",
-    "es": "Colección guardada en Drive."
+    "es": "Colección guardada en Drive.",
+    "ca": "Col·lecció desada al Drive."
   },
   "gd.loaded": {
     "en": "Loaded from Drive — added/overwritten/skipped:",
-    "es": "Cargada desde Drive — añadidas/sobrescritas/omitidas:"
+    "es": "Cargada desde Drive — añadidas/sobrescritas/omitidas:",
+    "ca": "Carregada des del Drive — afegides/sobreescrites/omeses:"
   },
   "gd.nofile": {
     "en": "No collection saved in Drive yet — use Save collection first.",
-    "es": "Todavía no hay ninguna colección en Drive — usa Guardar colección primero."
+    "es": "Todavía no hay ninguna colección en Drive — usa Guardar colección primero.",
+    "ca": "Encara no hi ha cap col·lecció al Drive — fes servir Desar col·lecció primer."
   },
   "gd.working": {
     "en": "Working…",
-    "es": "Trabajando…"
+    "es": "Trabajando…",
+    "ca": "Treballant…"
   },
   "gd.autoloaded": {
     "en": "Synced from Drive on opening — added/overwritten/skipped:",
-    "es": "Sincronizada desde Drive al abrir — añadidas/sobrescritas/omitidas:"
+    "es": "Sincronizada desde Drive al abrir — añadidas/sobrescritas/omitidas:",
+    "ca": "Sincronitzada des del Drive en obrir — afegides/sobreescrites/omeses:"
   },
   "gd.needreauth": {
     "en": "Google session expired — press Sign out and connect again to resume syncing.",
-    "es": "La sesión de Google ha caducado — pulsa Cerrar sesión y vuelve a conectar para seguir sincronizando."
+    "es": "La sesión de Google ha caducado — pulsa Cerrar sesión y vuelve a conectar para seguir sincronizando.",
+    "ca": "La sessió de Google ha caducat — prem Tancar sessió i torna a connectar per continuar sincronitzant."
   },
   "gd.hint": {
     "en": "Loading is automatic: every time you open ARMODEX while signed in, what's in Drive is merged in. Saving stays manual — nothing in Drive is ever replaced unless you press Save. Merging follows the \"On duplicate\" choice above.",
-    "es": "La carga es automática: cada vez que abres ARMODEX con la sesión iniciada, lo que hay en Drive se fusiona. El guardado sigue siendo manual — nada en Drive se reemplaza si no pulsas Guardar. La fusión sigue la opción \"Si hay duplicado\" de arriba."
+    "es": "La carga es automática: cada vez que abres ARMODEX con la sesión iniciada, lo que hay en Drive se fusiona. El guardado sigue siendo manual — nada en Drive se reemplaza si no pulsas Guardar. La fusión sigue la opción \"Si hay duplicado\" de arriba.",
+    "ca": "La càrrega és automàtica: cada cop que obres ARMODEX amb la sessió iniciada, el que hi ha al Drive es fusiona. El desat continua sent manual — res del Drive es reemplaça si no prems Desar. La fusió segueix l'opció \"Si hi ha duplicat\" de dalt."
   },
   "gd.notconfigured": {
     "en": "Google sync isn't set up in this build yet — an OAuth client ID has to be filled in first (see GDRIVE_CLIENT_ID in the source).",
-    "es": "La sincronización con Google aún no está configurada en esta versión — falta rellenar un client ID de OAuth (mira GDRIVE_CLIENT_ID en el código)."
+    "es": "La sincronización con Google aún no está configurada en esta versión — falta rellenar un client ID de OAuth (mira GDRIVE_CLIENT_ID en el código).",
+    "ca": "La sincronització amb Google encara no està configurada en aquesta versió — falta omplir un client ID d'OAuth (mira GDRIVE_CLIENT_ID al codi)."
   },
   "gd.err.signin": {
     "en": "Couldn't sign in with Google. Check that this site's address is listed as an authorized JavaScript origin.",
-    "es": "No se pudo iniciar sesión con Google. Comprueba que la dirección de este sitio esté como origen JavaScript autorizado."
+    "es": "No se pudo iniciar sesión con Google. Comprueba que la dirección de este sitio esté como origen JavaScript autorizado.",
+    "ca": "No s'ha pogut iniciar sessió amb Google. Comprova que l'adreça d'aquest lloc estigui com a origen JavaScript autoritzat."
   },
   "gd.err.save": {
     "en": "Couldn't save to Drive. Try signing out and back in.",
-    "es": "No se pudo guardar en Drive. Prueba a cerrar sesión y volver a entrar."
+    "es": "No se pudo guardar en Drive. Prueba a cerrar sesión y volver a entrar.",
+    "ca": "No s'ha pogut desar al Drive. Prova de tancar la sessió i tornar a entrar."
   },
   "gd.err.load": {
     "en": "Couldn't load from Drive. Try signing out and back in.",
-    "es": "No se pudo cargar desde Drive. Prueba a cerrar sesión y volver a entrar."
+    "es": "No se pudo cargar desde Drive. Prueba a cerrar sesión y volver a entrar.",
+    "ca": "No s'ha pogut carregar des del Drive. Prova de tancar la sessió i tornar a entrar."
   },
   "set.sec.collection": {
     "en": "Collection",
-    "es": "Colección"
+    "es": "Colección",
+    "ca": "Col·lecció"
   },
   "set.sec.devices": {
     "en": "Devices",
-    "es": "Dispositivos"
+    "es": "Dispositivos",
+    "ca": "Dispositius"
   },
   "set.sec.sound": {
     "en": "Sound",
-    "es": "Sonido"
+    "es": "Sonido",
+    "ca": "So"
   },
   "set.sec.theory": {
     "en": "Music theory",
-    "es": "Teoría musical"
+    "es": "Teoría musical",
+    "ca": "Teoria musical"
   },
   "set.sec.display": {
     "en": "Display",
-    "es": "Pantalla"
+    "es": "Pantalla",
+    "ca": "Pantalla"
+  },
+  "set.midiio": {
+    "en": "MIDI In/Out",
+    "es": "MIDI Entrada/Salida",
+    "ca": "MIDI Entrada/Sortida"
+  },
+  "set.mute": {
+    "en": "Mute",
+    "es": "Silenciar",
+    "ca": "Silenciar"
+  },
+  "set.fullscreen": {
+    "en": "Fullscreen",
+    "es": "Pantalla completa",
+    "ca": "Pantalla completa"
   },
   "set.sub.backup": {
     "en": "Backup & transfer",
-    "es": "Copia y traspaso"
+    "es": "Copia y traspaso",
+    "ca": "Còpia i traspàs"
   },
   "set.sub.cloud": {
     "en": "Cloud sync",
-    "es": "Sincronización en la nube"
+    "es": "Sincronización en la nube",
+    "ca": "Sincronització al núvol"
   },
   "files.dangerzone": {
     "en": "Danger zone",
-    "es": "Zona de peligro"
+    "es": "Zona de peligro",
+    "ca": "Zona de perill"
   },
   "files.confirmdelete": {
     "en": "Delete your whole collection? This can't be undone.",
-    "es": "¿Borrar toda tu colección? Esto no se puede deshacer."
+    "es": "¿Borrar toda tu colección? Esto no se puede deshacer.",
+    "ca": "Esborrar tota la teva col·lecció? Això no es pot desfer."
   },
   "files.yesdelete": {
     "en": "Yes, delete everything",
-    "es": "Sí, borrar todo"
+    "es": "Sí, borrar todo",
+    "ca": "Sí, esborrar-ho tot"
   },
   "savemodal.h2": {
     "en": "Name your progression",
-    "es": "Nombra tu progresión"
+    "es": "Nombra tu progresión",
+    "ca": "Posa nom a la teva progressió"
   },
   "builder.midiwrite": {
     "en": "🔌 Write shape with MIDI controller",
-    "es": "🔌 Escribe la forma con tu controlador MIDI"
+    "es": "🔌 Escribe la forma con tu controlador MIDI",
+    "ca": "🔌 Escriu la forma amb el teu controlador MIDI"
   },
   "builder.midiwrite.title": {
     "en": "When on, playing your MIDI controller toggles notes in/out of this chord, just like tapping the hex map. When off, MIDI just plays sound.",
-    "es": "Si está activado, tocar tu controlador MIDI activa/desactiva notas de esta forma, igual que tocar el mapa hexagonal. Si está desactivado, el MIDI solo reproduce sonido."
+    "es": "Si está activado, tocar tu controlador MIDI activa/desactiva notas de esta forma, igual que tocar el mapa hexagonal. Si está desactivado, el MIDI solo reproduce sonido.",
+    "ca": "Si està activat, tocar el teu controlador MIDI activa/desactiva notes d'aquesta forma, igual que tocar el mapa hexagonal. Si està desactivat, el MIDI només reprodueix so."
   },
   "tun.row.neutral3": {
     "en": "Neutral third",
-    "es": "Tercera neutra"
+    "es": "Tercera neutra",
+    "ca": "Tercera neutra"
   },
   "word.ok": {
     "en": "OK",
-    "es": "Vale"
+    "es": "Vale",
+    "ca": "D'acord"
   },
   "word.cancel": {
     "en": "Cancel",
-    "es": "Cancelar"
+    "es": "Cancelar",
+    "ca": "Cancel·lar"
   },
   "word.yes": {
     "en": "Yes",
-    "es": "Sí"
+    "es": "Sí",
+    "ca": "Sí"
   },
   "word.no": {
     "en": "No",
-    "es": "No"
+    "es": "No",
+    "ca": "No"
   },
   "files.reset": {
     "en": "🗑 Reset collection",
-    "es": "🗑 Reiniciar colección"
+    "es": "🗑 Reiniciar colección",
+    "ca": "🗑 Reiniciar col·lecció"
   },
   "files.eraseall": {
     "en": "Erase every progression, nickname, and tag",
-    "es": "Borra todas las progresiones, apodos y etiquetas"
+    "es": "Borra todas las progresiones, apodos y etiquetas",
+    "ca": "Esborra totes les progressions, sobrenoms i etiquetes"
   },
   "midi.panel.btn": {
     "en": "🔌 MIDI In/Out ▾",
-    "es": "🔌 MIDI In/Out ▾"
+    "es": "🔌 MIDI In/Out ▾",
+    "ca": "🔌 MIDI In/Out ▾"
   },
   "mute.title": {
     "en": "Mute all sound",
-    "es": "Silenciar todo el sonido"
+    "es": "Silenciar todo el sonido",
+    "ca": "Silenciar tot el so"
   },
   "mute.muted": {
     "en": "🔇 Muted",
-    "es": "🔇 Silenciado"
+    "es": "🔇 Silenciado",
+    "ca": "🔇 Silenciat"
   },
   "mute.mute": {
     "en": "🔊 Mute",
-    "es": "🔊 Silenciar"
+    "es": "🔊 Silenciar",
+    "ca": "🔊 Silenciar"
   },
   "sound.enable": {
     "en": "🔊 Enable sound",
-    "es": "🔊 Activar sonido"
+    "es": "🔊 Activar sonido",
+    "ca": "🔊 Activar so"
   },
   "sound.enable.title": {
     "en": "Browsers block sound until you click something — this guarantees it",
-    "es": "Los navegadores bloquean el sonido hasta que haces clic en algo — esto lo garantiza"
+    "es": "Los navegadores bloquean el sonido hasta que haces clic en algo — esto lo garantiza",
+    "ca": "Els navegadors bloquegen el so fins que fas clic en alguna cosa — això ho garanteix"
   },
   "tab.progressions": {
     "en": "Progressions",
-    "es": "Progresiones"
+    "es": "Progresiones",
+    "ca": "Progressions"
   },
   "tab.shapes": {
     "en": "Shapes",
-    "es": "Formas"
+    "es": "Formas",
+    "ca": "Formes"
   },
   "tab.hexmap": {
     "en": "Hex map",
-    "es": "Mapa hexagonal"
+    "es": "Mapa hexagonal",
+    "ca": "Mapa hexagonal"
   },
   "help.menu.software": {
     "en": "How can I use this software?",
-    "es": "¿Cómo puedo usar este software?"
+    "es": "¿Cómo puedo usar este software?",
+    "ca": "Com puc fer servir aquest programari?"
   },
   "help.menu.tuning": {
     "en": "How can I use this tuning system?",
-    "es": "¿Cómo puedo usar este sistema de afinación?"
+    "es": "¿Cómo puedo usar este sistema de afinación?",
+    "ca": "Com puc fer servir aquest sistema d'afinació?"
   },
   "help.menu.hexagons": {
     "en": "How can I use this hexagons?",
-    "es": "¿Cómo puedo usar estos hexágonos?"
+    "es": "¿Cómo puedo usar estos hexágonos?",
+    "ca": "Com puc fer servir aquests hexàgons?"
   },
   "help.menu.faster": {
     "en": "How can I use this software faster?",
-    "es": "¿Cómo puedo usar este software más rápido?"
+    "es": "¿Cómo puedo usar este software más rápido?",
+    "ca": "Com puc fer servir aquest programari més ràpid?"
   },
   "help.close": {
     "en": "✕ Close",
-    "es": "✕ Cerrar"
+    "es": "✕ Cerrar",
+    "ca": "✕ Tancar"
   },
   "shortcuts.h2": {
     "en": "How can I use this software faster?",
-    "es": "¿Cómo puedo usar este software más rápido?"
+    "es": "¿Cómo puedo usar este software más rápido?",
+    "ca": "Com puc fer servir aquest programari més ràpid?"
   },
   "shortcuts.intro": {
     "en": "Keyboard shortcuts — ignored while you're typing in a text field.",
-    "es": "Atajos de teclado — se ignoran mientras estás escribiendo en un campo de texto."
+    "es": "Atajos de teclado — se ignoran mientras estás escribiendo en un campo de texto.",
+    "ca": "Dreceres de teclat — s'ignoren mentre estàs escrivint en un camp de text."
   },
   "shortcuts.li1": {
     "en": "<b>A</b> → Progressions, <b>S</b> → Shapes, <b>D</b> → Hex map.",
-    "es": "<b>A</b> → Progresiones, <b>S</b> → Formas, <b>D</b> → Mapa hexagonal."
+    "es": "<b>A</b> → Progresiones, <b>S</b> → Formas, <b>D</b> → Mapa hexagonal.",
+    "ca": "<b>A</b> → Progressions, <b>S</b> → Formes, <b>D</b> → Mapa hexagonal."
   },
   "shortcuts.li2": {
     "en": "<b>R</b> → New progression (in the progressions list) or Save progression (in the builder).",
-    "es": "<b>R</b> → Nueva progresión (en la lista de progresiones) o Guardar progresión (en el editor)."
+    "es": "<b>R</b> → Nueva progresión (en la lista de progresiones) o Guardar progresión (en el editor).",
+    "ca": "<b>R</b> → Nova progressió (a la llista de progressions) o Desar progressió (a l'editor)."
   },
   "shortcuts.li3": {
     "en": "<b>W</b> → Play (whichever applies to where you are: a progression, the Hex map, or — in the builder — the shape you're tapping out).",
-    "es": "<b>W</b> → Reproducir (lo que corresponda según dónde estés: una progresión, el mapa hexagonal o — en el editor — la forma que estás tecleando)."
+    "es": "<b>W</b> → Reproducir (lo que corresponda según dónde estés: una progresión, el mapa hexagonal o — en el editor — la forma que estás tecleando).",
+    "ca": "<b>W</b> → Reproduir (el que correspongui segons on siguis: una progressió, el mapa hexagonal o — a l'editor — la forma que estàs teclejant)."
   },
   "shortcuts.li4": {
     "en": "<b>Q</b> → Play progression (in the builder).",
-    "es": "<b>Q</b> → Reproducir progresión (en el editor)."
+    "es": "<b>Q</b> → Reproducir progresión (en el editor).",
+    "ca": "<b>Q</b> → Reproduir progressió (a l'editor)."
   },
   "shortcuts.li5": {
     "en": "<b>E</b> → Add shape to progression, <b>C</b> → Clear progression (empties every shape in the draft), <b>F</b> → download as MIDI (all in the builder; <b>F</b> also works for a progression you're viewing).",
-    "es": "<b>E</b> → Añadir forma a la progresión, <b>C</b> → Vaciar progresión (borra todas las formas del borrador), <b>F</b> → descargar como MIDI (todo en el editor; <b>F</b> también funciona en una progresión que estés viendo)."
+    "es": "<b>E</b> → Añadir forma a la progresión, <b>C</b> → Vaciar progresión (borra todas las formas del borrador), <b>F</b> → descargar como MIDI (todo en el editor; <b>F</b> también funciona en una progresión que estés viendo).",
+    "ca": "<b>E</b> → Afegir forma a la progressió, <b>C</b> → Buidar progressió (esborra totes les formes de l'esborrany), <b>F</b> → descarregar com a MIDI (tot a l'editor; <b>F</b> també funciona en una progressió que estiguis veient)."
   },
   "shortcuts.li6": {
     "en": "<b>Z</b> / <b>X</b> → same as ← / →, stepping back and forward through your recently-viewed screens.",
-    "es": "<b>Z</b> / <b>X</b> → igual que ← / →, retroceden y avanzan por las pantallas que has visto recientemente."
+    "es": "<b>Z</b> / <b>X</b> → igual que ← / →, retroceden y avanzan por las pantallas que has visto recientemente.",
+    "ca": "<b>Z</b> / <b>X</b> → igual que ← / →, retrocedeixen i avancen per les pantalles que has vist recentment."
   },
   "shortcuts.li7": {
     "en": "<b>Space</b> → jumps back to the top of whatever screen you're on (the builder's tutorial banner, a progression's detail view, the shapes tab, or the hex map), wherever you've scrolled to.",
-    "es": "<b>Espacio</b> → te lleva de vuelta arriba del todo de la pantalla en la que estés (el banner del tutorial del constructor, la vista de una progresión, la pestaña de formas, o el mapa hexagonal), sin importar cuánto hayas bajado."
+    "es": "<b>Espacio</b> → te lleva de vuelta arriba del todo de la pantalla en la que estés (el banner del tutorial del constructor, la vista de una progresión, la pestaña de formas, o el mapa hexagonal), sin importar cuánto hayas bajado.",
+    "ca": "<b>Espai</b> → et porta de tornada a dalt de tot de la pantalla on siguis (el bàner del tutorial del constructor, la vista d'una progressió, la pestanya de formes, o el mapa hexagonal), sense importar quant hagis baixat."
   },
   "shortcuts.li8": {
     "en": "<b>Ctrl+Z</b> / <b>Ctrl+Y</b> (in the builder) → undo / redo your last note taps, added or removed shapes, drag-reorders, and edits.",
-    "es": "<b>Ctrl+Z</b> / <b>Ctrl+Y</b> (en el editor) → deshacer / rehacer tus últimos toques de notas, formas añadidas o eliminadas, reordenamientos, y ediciones."
+    "es": "<b>Ctrl+Z</b> / <b>Ctrl+Y</b> (en el editor) → deshacer / rehacer tus últimos toques de notas, formas añadidas o eliminadas, reordenamientos, y ediciones.",
+    "ca": "<b>Ctrl+Z</b> / <b>Ctrl+Y</b> (a l'editor) → desfer / refer els teus últims tocs de notes, formes afegides o eliminades, reordenacions, i edicions."
   },
   "sw.h2": {
     "en": "How can I use this software?",
-    "es": "¿Cómo puedo usar este software?"
+    "es": "¿Cómo puedo usar este software?",
+    "ca": "Com puc fer servir aquest programari?"
   },
   "sw.intro": {
     "en": "This intuitive software catalogs chords and progressions in <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31-tone equal temperament (31ED2)</span>, using the compressed <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupBW')\">Bosanquet-Wilson hexagonal layout<span class=\"jargon-q\">?</span></span> and step numbers (0-31). Collect shapes and it tracks the <b>harmonic structure</b> behind each one so you can find it again anywhere in your collection, under any key.",
-    "es": "Este software intuitivo cataloga acordes y progresiones en <span class=\"info-link\" onclick=\"switchToTuningInfo()\">temperamento igual de 31 tonos (31ED2)</span>, usando la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupBW')\">disposición hexagonal comprimida de Bosanquet-Wilson<span class=\"jargon-q\">?</span></span> y números de step (0-31). Colecciona formas y registra la <b>estructura armónica</b> detrás de cada una para que puedas volver a encontrarla en cualquier parte de tu colección, sobre cualquier nota."
+    "es": "Este software intuitivo cataloga acordes y progresiones en <span class=\"info-link\" onclick=\"switchToTuningInfo()\">temperamento igual de 31 tonos (31ED2)</span>, usando la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupBW')\">disposición hexagonal comprimida de Bosanquet-Wilson<span class=\"jargon-q\">?</span></span> y números de step (0-31). Colecciona formas y registra la <b>estructura armónica</b> detrás de cada una para que puedas volver a encontrarla en cualquier parte de tu colección, sobre cualquier nota.",
+    "ca": "Aquest programari intuïtiu cataloga acords i progressions en <span class=\"info-link\" onclick=\"switchToTuningInfo()\">temperament igual de 31 tons (31ED2)</span>, fent servir la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupBW')\">disposició hexagonal comprimida de Bosanquet-Wilson<span class=\"jargon-q\">?</span></span> i números de step (0-31). Col·lecciona formes i registra l'<b>estructura harmònica</b> que hi ha darrere de cadascuna perquè puguis tornar a trobar-la a qualsevol lloc de la teva col·lecció, sobre qualsevol nota."
   },
   "sw.goodfor.h3": {
     "en": "🔮 What this might be good for?",
-    "es": "🔮 ¿Para qué podría servir?"
+    "es": "🔮 ¿Para qué podría servir?",
+    "ca": "🔮 Per a què podria servir?"
   },
   "sw.goodfor.li1": {
     "en": "To start compositions or improvisations. It can be an interesting tool for someone without experience in this tuning system who wants to experiment: tapping around, hearing what comes up, and building an intuition for it.",
-    "es": "Para empezar composiciones o improvisaciones. Puede ser una herramienta interesante para alguien sin experiencia en este sistema de afinación que quiera experimentar: tocando por aquí y por allá, escuchando lo que sale, y construyendo una intuición para ello."
+    "es": "Para empezar composiciones o improvisaciones. Puede ser una herramienta interesante para alguien sin experiencia en este sistema de afinación que quiera experimentar: tocando por aquí y por allá, escuchando lo que sale, y construyendo una intuición para ello.",
+    "ca": "Per començar composicions o improvisacions. Pot ser una eina interessant per a algú sense experiència en aquest sistema d'afinació que vulgui experimentar: tocant per aquí i per allà, escoltant el que surt, i construint una intuïció per a això."
   },
   "sw.goodfor.li2": {
     "en": "Someone who already uses this tuning system can use it as a smart journal: jot down what catches your ear, understand what it connects to, turn it into MIDI and import it into a DAW, or keep their shapes handy to play on a hex-controller.",
-    "es": "Quien ya utiliza este sistema de afinación lo puede usar como diario inteligente: apuntar lo que llama la atención, entender con qué se conecta, pasarlo a MIDI e importarlo en un DAW o tener a mano sus formas para tocarlas en su controlador de teclas hexagonales."
+    "es": "Quien ya utiliza este sistema de afinación lo puede usar como diario inteligente: apuntar lo que llama la atención, entender con qué se conecta, pasarlo a MIDI e importarlo en un DAW o tener a mano sus formas para tocarlas en su controlador de teclas hexagonales.",
+    "ca": "Qui ja utilitza aquest sistema d'afinació el pot fer servir com a diari intel·ligent: apuntar el que crida l'atenció, entendre amb què es connecta, passar-ho a MIDI i importar-ho en un DAW o tenir a mà les seves formes per tocar-les al seu controlador de tecles hexagonals."
   },
   "sw.goodfor.li3": {
     "en": "To counter the fact that we can't consciously access all the musical ideas we've had throughout our life.",
-    "es": "Para contrarrestar el hecho de que no podemos acceder conscientemente a todas las ideas musicales que hemos tenido a lo largo de la vida."
+    "es": "Para contrarrestar el hecho de que no podemos acceder conscientemente a todas las ideas musicales que hemos tenido a lo largo de la vida.",
+    "ca": "Per contrarestar el fet que no podem accedir conscientment a totes les idees musicals que hem tingut al llarg de la vida."
   },
   "sw.progs.h3": {
     "en": "🧳 Progressions",
-    "es": "🧳 Progresiones"
+    "es": "🧳 Progresiones",
+    "ca": "🧳 Progressions"
   },
   "sw.progs.li1": {
     "en": "Progressions are sequences of shapes.",
-    "es": "Las progresiones son secuencias de formas."
+    "es": "Las progresiones son secuencias de formas.",
+    "ca": "Les progressions són seqüències de formes."
   },
   "sw.progs.li2": {
     "en": "A shape is a set of one or more musical notes.",
-    "es": "Una forma es el conjunto de una o más notas musicales."
+    "es": "Una forma es el conjunto de una o más notas musicales.",
+    "ca": "Una forma és el conjunt d'una o més notes musicals."
   },
   "sw.progs.li3": {
     "en": "Shapes are written by tapping their keys on the hex map.",
-    "es": "Las formas se escriben marcando sus teclas del mapa hexagonal."
+    "es": "Las formas se escriben marcando sus teclas del mapa hexagonal.",
+    "ca": "Les formes s'escriuen marcant les seves tecles del mapa hexagonal."
   },
   "sw.progs.li4": {
     "en": "Progressions are built by adding shapes one after another in time.",
-    "es": "Las progresiones se construyen añadiendo formas una detrás de otra en el tiempo."
+    "es": "Las progresiones se construyen añadiendo formas una detrás de otra en el tiempo.",
+    "ca": "Les progressions es construeixen afegint formes una darrere l'altra en el temps."
   },
   "sw.progs.li5": {
     "en": "You can hear how they sound as you go, to shape it to your taste.",
-    "es": "Puedes escuchar cómo suenan mientras lo haces para hacerlo a tu gusto."
+    "es": "Puedes escuchar cómo suenan mientras lo haces para hacerlo a tu gusto.",
+    "ca": "Pots escoltar com sonen mentre ho fas per fer-ho al teu gust."
   },
   "sw.progs.midifile": {
     "en": "You can also import any MIDI file (meant for 31ED2) by dragging it onto the app, it's translated straight into a new progression.",
-    "es": "También puedes importar cualquier archivo MIDI (pensado para 31ED2) arrastrándolo sobre la app, se traduce directamente en una progresión nueva."
+    "es": "También puedes importar cualquier archivo MIDI (pensado para 31ED2) arrastrándolo sobre la app, se traduce directamente en una progresión nueva.",
+    "ca": "També pots importar qualsevol arxiu MIDI (pensat per a 31ED2) arrossegant-lo sobre l'app, es tradueix directament en una progressió nova."
   },
   "sw.progs.li10": {
     "en": "⬇ MIDI export works for a single chord or the whole progression, to use in other music software. To hear the alternate tuning correctly, the software opening the file needs to interpret it as 31ED2 rather than standard 12ED2 — Ableton 12 has native microtonal tuning support, and failing that, free synth plugins like <a href=\"https://surge-synthesizer.github.io/downloads/\" target=\"_blank\" rel=\"noopener\">Surge XT</a> can add microtonal playback to virtually any DAW.",
-    "es": "⬇ MIDI exporta tanto un solo acorde como la progresión entera para ser usada en otro software musical. Para que la afinación alternativa suene correctamente, el software que abra el archivo debe interpretarlo como 31ED2 y no como el 12ED2 estándar — Ableton 12 ofrece soporte nativo para microtonalidad, y en su defecto, plugins de síntesis gratuitos como <a href=\"https://surge-synthesizer.github.io/downloads/\" target=\"_blank\" rel=\"noopener\">Surge XT</a> permiten reproducir microtonalidad en prácticamente cualquier DAW."
+    "es": "⬇ MIDI exporta tanto un solo acorde como la progresión entera para ser usada en otro software musical. Para que la afinación alternativa suene correctamente, el software que abra el archivo debe interpretarlo como 31ED2 y no como el 12ED2 estándar — Ableton 12 ofrece soporte nativo para microtonalidad, y en su defecto, plugins de síntesis gratuitos como <a href=\"https://surge-synthesizer.github.io/downloads/\" target=\"_blank\" rel=\"noopener\">Surge XT</a> permiten reproducir microtonalidad en prácticamente cualquier DAW.",
+    "ca": "⬇ MIDI exporta tant un sol acord com la progressió sencera per ser utilitzada en un altre programari musical. Perquè l'afinació alternativa soni correctament, el programari que obri l'arxiu ha d'interpretar-lo com a 31ED2 i no com el 12ED2 estàndard — Ableton 12 ofereix suport natiu per a microtonalitat, i si no, plugins de síntesi gratuïts com <a href=\"https://surge-synthesizer.github.io/downloads/\" target=\"_blank\" rel=\"noopener\">Surge XT</a> permeten reproduir microtonalitat en pràcticament qualsevol DAW."
   },
   "sw.shapes.h3": {
     "en": "⬡ Shapes",
-    "es": "⬡ Formas"
+    "es": "⬡ Formas",
+    "ca": "⬡ Formes"
   },
   "sw.shapes.li1": {
     "en": "Separately from progressions, every distinct shape you've used is captured automatically just once, regardless of which note you built it from.",
-    "es": "Por separado de las progresiones, cada forma distinta que has usado queda capturada automáticamente una sola vez, independientemente de la nota desde la que la hayas construido."
+    "es": "Por separado de las progresiones, cada forma distinta que has usado queda capturada automáticamente una sola vez, independientemente de la nota desde la que la hayas construido.",
+    "ca": "Per separat de les progressions, cada forma diferent que has fet servir queda capturada automàticament una sola vegada, independentment de la nota des de la qual l'hagis construïda."
   },
   "sw.shapes.li2": {
     "en": "You can nickname them and tag them.",
-    "es": "Puedes apodarlas y etiquetarlas."
+    "es": "Puedes apodarlas y etiquetarlas.",
+    "ca": "Pots posar-los sobrenom i etiquetar-les."
   },
   "sw.shapes.li2b": {
     "en": "You can see them on the hex map.",
-    "es": "Puedes verlas en el mapa hexagonal."
+    "es": "Puedes verlas en el mapa hexagonal.",
+    "ca": "Pots veure-les al mapa hexagonal."
   },
   "sw.shapes.li3": {
     "en": "Clicking on one shows its intervals in steps and cents, and its relationship to other shapes and progressions.",
-    "es": "Haciendo clic en ellas puedes ver sus intervalos en steps y cents, y su relación con otras formas y progresiones."
+    "es": "Haciendo clic en ellas puedes ver sus intervalos en steps y cents, y su relación con otras formas y progresiones.",
+    "ca": "Fent clic en elles pots veure els seus intervals en steps i cents, i la seva relació amb altres formes i progressions."
   },
   "sw.shapes.li4": {
     "en": "In the progression builder you can load them to reuse without rebuilding from scratch.",
-    "es": "En el editor de progresiones puedes cargarlas para usarlas sin tener que reconstruirlas desde cero."
+    "es": "En el editor de progresiones puedes cargarlas para usarlas sin tener que reconstruirlas desde cero.",
+    "ca": "A l'editor de progressions pots carregar-les per fer-les servir sense haver de reconstruir-les des de zero."
   },
   "sw.ecosystem.h3": {
     "en": "🌍 Your Ecosystem",
-    "es": "🌍 Tu Ecosistema"
+    "es": "🌍 Tu Ecosistema",
+    "ca": "🌍 El teu Ecosistema"
   },
   "sw.ecosystem.p1": {
     "en": "Shapes from your collection, living, interacting, nourishing themselves, reproducing and dying, affected by environmental conditions determined by your compositional choices. A generative soundscape emerges, hopefully expanding your musical path.",
-    "es": "Formas de tu colección, viviendo, interactuando, nutriéndose, reproduciéndose y muriendo, afectadas por condiciones ambientales determinadas por tus decisiones compositivas. Emerge un paisaje sonoro generativo, que ojalá expanda tu camino musical."
+    "es": "Formas de tu colección, viviendo, interactuando, nutriéndose, reproduciéndose y muriendo, afectadas por condiciones ambientales determinadas por tus decisiones compositivas. Emerge un paisaje sonoro generativo, que ojalá expanda tu camino musical.",
+    "ca": "Formes de la teva col·lecció, vivint, interactuant, nodrint-se, reproduint-se i morint, afectades per condicions ambientals determinades per les teves decisions compositives. Emergeix un paisatge sonor generatiu, que tant de bo expandeixi el teu camí musical."
   },
   "sw.hexmap.h3": {
     "en": "🗺️ Hex map",
-    "es": "🗺️ Mapa hexagonal"
+    "es": "🗺️ Mapa hexagonal",
+    "ca": "🗺️ Mapa hexagonal"
   },
   "sw.hexmap.p1": {
     "en": "In this window you can write any shape, even if you haven't captured it, to get information on how it relates to shapes and progressions in your collection.",
-    "es": "En esta ventana puedes escribir cualquier forma, aunque no la tengas capturada, para obtener información sobre cómo se relaciona con formas y progresiones de tu colección."
+    "es": "En esta ventana puedes escribir cualquier forma, aunque no la tengas capturada, para obtener información sobre cómo se relaciona con formas y progresiones de tu colección.",
+    "ca": "En aquesta finestra pots escriure qualsevol forma, encara que no la tinguis capturada, per obtenir informació sobre com es relaciona amb formes i progressions de la teva col·lecció."
   },
   "sw.eq.h3": {
     "en": "🟰 Octave equivalence",
-    "es": "🟰 Equivalencia de octava"
+    "es": "🟰 Equivalencia de octava",
+    "ca": "🟰 Equivalència d'octava"
   },
   "sw.eq.li1": {
     "en": "Header toggle. <b>ON</b>: chords are grouped/matched by pitch class, and every hex map highlights <i>every octaved repeat</i> of a note across the board. <b>OFF</b>: exact spacing matters — the same shape voiced an octave apart counts as a different chord, and hex maps highlight only the exact notes involved.",
-    "es": "Interruptor en la cabecera. <b>ON</b>: los acordes se agrupan/emparejan por pitch class, y cada mapa hexagonal resalta <i>cada repetición octavada</i> de una nota por todo el tablero. <b>OFF</b>: importa la distancia exacta — la misma forma tocada una octava más arriba o abajo cuenta como un acorde distinto, y los mapas hexagonales resaltan solo las notas exactas implicadas."
+    "es": "Interruptor en la cabecera. <b>ON</b>: los acordes se agrupan/emparejan por pitch class, y cada mapa hexagonal resalta <i>cada repetición octavada</i> de una nota por todo el tablero. <b>OFF</b>: importa la distancia exacta — la misma forma tocada una octava más arriba o abajo cuenta como un acorde distinto, y los mapas hexagonales resaltan solo las notas exactas implicadas.",
+    "ca": "Interruptor a la capçalera. <b>ON</b>: els acords s'agrupen/emparellen per pitch class, i cada mapa hexagonal ressalta <i>cada repetició octavada</i> d'una nota per tot el tauler. <b>OFF</b>: importa la distància exacta — la mateixa forma tocada una octava més amunt o avall compta com un acord diferent, i els mapes hexagonals ressalten només les notes exactes implicades."
   },
   "sw.midi.h3": {
     "en": "🔌 MIDI input",
-    "es": "🔌 Entrada MIDI"
+    "es": "🔌 Entrada MIDI",
+    "ca": "🔌 Entrada MIDI"
   },
   "sw.midi.p1": {
     "en": "You can use the software to play freely with your MIDI controller in this tuning system.",
-    "es": "Puedes usar el software para tocar libremente con tu controlador MIDI en este sistema de afinación."
+    "es": "Puedes usar el software para tocar libremente con tu controlador MIDI en este sistema de afinación.",
+    "ca": "Pots fer servir el programari per tocar lliurement amb el teu controlador MIDI en aquest sistema d'afinació."
   },
   "sw.midi.li1": {
     "en": "<b>Connect MIDI</b> → <b>Calibrate root</b> (play any note so it becomes the central step 0). On the Hex map, your controller works just like tapping the board, live. In the progression builder, first turn on <b>🔌 Write shape with MIDI controller</b>. Works with any MIDI keyboard, not just an isomorphic one — one semitone will equal one 31ED2 step.",
-    "es": "<b>Conectar MIDI</b> → <b>Calibrar root</b> (toca cualquier nota para que esta sea el step 0 central). En el mapa hexagonal, tu controlador funciona igual que tocar el tablero, en vivo. En el editor de progresiones, activa antes <b>🔌 Escribe la forma con tu controlador MIDI</b>. Funciona con cualquier teclado MIDI, no solo con uno isomórfico, un semitono equivaldrá a un step de 31ED2."
+    "es": "<b>Conectar MIDI</b> → <b>Calibrar root</b> (toca cualquier nota para que esta sea el step 0 central). En el mapa hexagonal, tu controlador funciona igual que tocar el tablero, en vivo. En el editor de progresiones, activa antes <b>🔌 Escribe la forma con tu controlador MIDI</b>. Funciona con cualquier teclado MIDI, no solo con uno isomórfico, un semitono equivaldrá a un step de 31ED2.",
+    "ca": "<b>Connectar MIDI</b> → <b>Calibrar root</b> (toca qualsevol nota perquè aquesta sigui el step 0 central). Al mapa hexagonal, el teu controlador funciona igual que tocar el tauler, en directe. A l'editor de progressions, activa abans <b>🔌 Escriu la forma amb el teu controlador MIDI</b>. Funciona amb qualsevol teclat MIDI, no només amb un d'isomòrfic, un semitò equivaldrà a un step de 31ED2."
   },
   "sw.interp.h3": {
     "en": "✨ Interpretation",
-    "es": "✨ Interpretación"
+    "es": "✨ Interpretación",
+    "ca": "✨ Interpretació"
   },
   "sw.interp.p1": {
     "en": "Interpretation controls how a shape or progression is actually played back — the same notes can sound very different depending on these settings.",
-    "es": "Interpretación controla cómo suena en realidad una forma o progresión al reproducirse — las mismas notas pueden sonar muy distinto según estos ajustes."
+    "es": "Interpretación controla cómo suena en realidad una forma o progresión al reproducirse — las mismas notas pueden sonar muy distinto según estos ajustes.",
+    "ca": "Interpretació controla com sona en realitat una forma o progressió en reproduir-se — les mateixes notes poden sonar molt diferent segons aquests ajustos."
   },
   "sw.interp.li1": {
     "en": "<b>Play BPM</b>: playback speed. <b>General pitch</b>: shifts everything higher or lower. <b>Timbre</b>: sine or guitar-ish tone.",
-    "es": "<b>BPM de reproducción</b>: velocidad. <b>Tono general</b>: sube o baja el tono de todo. <b>Timbre</b>: seno o tipo guitarra."
+    "es": "<b>BPM de reproducción</b>: velocidad. <b>Tono general</b>: sube o baja el tono de todo. <b>Timbre</b>: seno o tipo guitarra.",
+    "ca": "<b>BPM de reproducció</b>: velocitat. <b>To general</b>: puja o baixa el to de tot. <b>Timbre</b>: sinus o tipus guitarra."
   },
   "sw.interp.li2": {
     "en": "<b>🎸 Strum</b>: plays notes low-to-high with a stagger instead of all at once. <b>Root bass</b>: also sounds the root two octaves lower.",
-    "es": "<b>🎸 Rasgueo</b>: reproduce las notas de grave a agudo con desfase en vez de todas a la vez. <b>Bajo root</b>: también suena la root dos octavas más abajo."
+    "es": "<b>🎸 Rasgueo</b>: reproduce las notas de grave a agudo con desfase en vez de todas a la vez. <b>Bajo root</b>: también suena la root dos octavas más abajo.",
+    "ca": "<b>🎸 Rasgueig</b>: reprodueix les notes de greu a agut amb desfasament en comptes de totes alhora. <b>Baix root</b>: també sona la root dues octaves més avall."
   },
   "sw.interp.li3": {
     "en": "<b>Random topline</b>: layers a random generative melody above each shape. <b>Auto-articulation</b>: plays each shape as a generative arpeggio across octaves instead of a static block.",
-    "es": "<b>Melodía aleatoria</b>: superpone una melodía generativa por encima de cada forma. <b>Auto-articulación</b>: reproduce cada forma como un arpegio generativo a través de octavas, en vez de un bloque estático."
+    "es": "<b>Melodía aleatoria</b>: superpone una melodía generativa por encima de cada forma. <b>Auto-articulación</b>: reproduce cada forma como un arpegio generativo a través de octavas, en vez de un bloque estático.",
+    "ca": "<b>Melodia aleatòria</b>: superposa una melodia generativa per damunt de cada forma. <b>Auto-articulació</b>: reprodueix cada forma com un arpegi generatiu a través d'octaves, en comptes d'un bloc estàtic."
   },
   "sw.interp.li4": {
     "en": "<b>Polyrhythm maker</b>: sets the two speeds Auto-articulation's two voices step through the whole shape at — not just its random topline. A polyrhythm is simply two repeating pulses of different lengths played at once (e.g. 3 beats against 2); equal numbers feel plain, different numbers create that layered, cross-current feel.",
-    "es": "<b>Generador de polirritmia</b>: fija las dos velocidades a las que las dos voces de Auto-articulación recorren toda la forma — no solo su melodía aleatoria. Un polirritmo es, simplemente, dos pulsos que se repiten con distinta duración sonando a la vez (por ejemplo, 3 tiempos contra 2); números iguales se sienten planos, números distintos crean esa sensación de capas cruzadas."
+    "es": "<b>Generador de polirritmia</b>: fija las dos velocidades a las que las dos voces de Auto-articulación recorren toda la forma — no solo su melodía aleatoria. Un polirritmo es, simplemente, dos pulsos que se repiten con distinta duración sonando a la vez (por ejemplo, 3 tiempos contra 2); números iguales se sienten planos, números distintos crean esa sensación de capas cruzadas.",
+    "ca": "<b>Generador de polirítmia</b>: fixa les dues velocitats a les quals les dues veus d'Auto-articulació recorren tota la forma — no només la seva melodia aleatòria. Un polirítmic és, simplement, dos polsos que es repeteixen amb durada diferent sonant alhora (per exemple, 3 temps contra 2); números iguals se senten plans, números diferents creen aquesta sensació de capes creuades."
   },
   "sw.io.h3": {
     "en": "📄 Import / export",
-    "es": "📄 Importar / exportar"
+    "es": "📄 Importar / exportar",
+    "ca": "📄 Importar / exportar"
   },
   "sw.io.li1": {
     "en": "The <b>📁 Files</b> menu (top of page) lets you export/import your whole <b>collection</b>, or just <b>import progressions</b> from a file someone shared (their chords' nicknames come along automatically — there's no separate chord import). To export a single progression (with the nicknames of the chords it uses bundled in), open it and use its own \"⬇ Export as collection file\" button. Chord tags aren't included in any export. When an imported item shares a name (progressions) or already has a nickname (chords), the <b>On duplicate</b> switch decides whether it's skipped or overwritten.",
-    "es": "El menú <b>📁 Files</b> (arriba de la página) te deja exportar/importar toda tu <b>colección</b>, o solo <b>importar progresiones</b> de un archivo que alguien haya compartido (los apodos de sus acordes vienen incluidos automáticamente — no hay una importación de acordes aparte). Para exportar una sola progresión (con los apodos de los acordes que usa incluidos), ábrela y usa su propio botón \"⬇ Export as collection file\". Las etiquetas de acorde no se incluyen en ninguna exportación. Cuando un elemento importado comparte nombre (progresiones) o ya tiene apodo (acordes), el interruptor <b>Si hay duplicado</b> decide si se omite o se sobrescribe."
+    "es": "El menú <b>📁 Files</b> (arriba de la página) te deja exportar/importar toda tu <b>colección</b>, o solo <b>importar progresiones</b> de un archivo que alguien haya compartido (los apodos de sus acordes vienen incluidos automáticamente — no hay una importación de acordes aparte). Para exportar una sola progresión (con los apodos de los acordes que usa incluidos), ábrela y usa su propio botón \"⬇ Export as collection file\". Las etiquetas de acorde no se incluyen en ninguna exportación. Cuando un elemento importado comparte nombre (progresiones) o ya tiene apodo (acordes), el interruptor <b>Si hay duplicado</b> decide si se omite o se sobrescribe.",
+    "ca": "El menú <b>📁 Files</b> (a dalt de la pàgina) et deixa exportar/importar tota la teva <b>col·lecció</b>, o només <b>importar progressions</b> d'un arxiu que algú hagi compartit (els sobrenoms dels seus acords vénen inclosos automàticament — no hi ha una importació d'acords a part). Per exportar una sola progressió (amb els sobrenoms dels acords que fa servir inclosos), obre-la i fes servir el seu propi botó \"⬇ Export as collection file\". Les etiquetes d'acord no s'inclouen en cap exportació. Quan un element importat comparteix nom (progressions) o ja té sobrenom (acords), l'interruptor <b>Si hi ha duplicat</b> decideix si s'omet o se sobreescriu."
   },
   "sw.io.li2": {
     "en": "<b>🗑 Reset collection</b> erases every progression, nickname, and tag — there's a confirmation step first.",
-    "es": "<b>🗑 Reset collection</b> borra todas las progresiones, apodos y etiquetas — hay un paso de confirmación antes."
+    "es": "<b>🗑 Reset collection</b> borra todas las progresiones, apodos y etiquetas — hay un paso de confirmación antes.",
+    "ca": "<b>🗑 Reset collection</b> esborra totes les progressions, sobrenoms i etiquetes — hi ha un pas de confirmació abans."
   },
   "sw.io.li3": {
     "en": "<b>⬇ MIDI</b> — a chord, a whole progression, or a Connect chain, as a Standard MIDI File, with each <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> step mapped directly to its own MIDI note number (no pitch bend), so it opens as plain 31 notes-per-octave data in any DAW.",
-    "es": "<b>⬇ MIDI</b> — un acorde, una progresión entera, o una cadena Connect, como un archivo MIDI estándar, con cada step de <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> mapeado directamente a su propio número de nota MIDI (sin pitch bend), así que se abre como datos de 31 notas por octava en cualquier DAW."
+    "es": "<b>⬇ MIDI</b> — un acorde, una progresión entera, o una cadena Connect, como un archivo MIDI estándar, con cada step de <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> mapeado directamente a su propio número de nota MIDI (sin pitch bend), así que se abre como datos de 31 notas por octava en cualquier DAW.",
+    "ca": "<b>⬇ MIDI</b> — un acord, una progressió sencera, o una cadena Connect, com un arxiu MIDI estàndard, amb cada step de <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> mapejat directament al seu propi número de nota MIDI (sense pitch bend), així que s'obre com a dades de 31 notes per octava en qualsevol DAW."
   },
   "sw.badfor.h3": {
     "en": "🤔 What this might be bad for?",
-    "es": "🤔 Para qué podría no ser tan bueno"
+    "es": "🤔 Para qué podría no ser tan bueno",
+    "ca": "🤔 Per a què podria no ser tan bo"
   },
   "sw.badfor.p1": {
     "en": "The software lines shapes up one after another without accounting for the rhythmic subtleties and articulation that affect how a combination is actually perceived. Cataloguing and interpreting how those things shape the subjective experience a progression creates is left entirely in the user's hands.",
-    "es": "El software encadena formas una tras otra sin tener en cuenta las sutilezas rítmicas y de articulación que afectan a cómo se percibe realmente una combinación. Catalogar e interpretar cómo esos factores dan forma a la experiencia subjetiva que crea una progresión queda enteramente en manos del usuario."
+    "es": "El software encadena formas una tras otra sin tener en cuenta las sutilezas rítmicas y de articulación que afectan a cómo se percibe realmente una combinación. Catalogar e interpretar cómo esos factores dan forma a la experiencia subjetiva que crea una progresión queda enteramente en manos del usuario.",
+    "ca": "El programari encadena formes una darrere l'altra sense tenir en compte les subtileses rítmiques i d'articulació que afecten com es percep realment una combinació. Catalogar i interpretar com aquests factors donen forma a l'experiència subjectiva que crea una progressió queda enterament en mans de l'usuari."
   },
   "sw.badfor.p2": {
     "en": "This software can make you develop your own way of naming things, which is useful, beautiful, and fun — but common languages are needed to communicate and play with other people, especially in this often individualistic historical moment.",
-    "es": "Este software puede hacer que desarrolles tu propia forma de nombrar las cosas, algo útil, bonito y divertido — pero hacen falta lenguajes comunes para comunicarse y tocar con otras personas, sobre todo en este momento histórico a menudo tan individualista."
+    "es": "Este software puede hacer que desarrolles tu propia forma de nombrar las cosas, algo útil, bonito y divertido — pero hacen falta lenguajes comunes para comunicarse y tocar con otras personas, sobre todo en este momento histórico a menudo tan individualista.",
+    "ca": "Aquest programari pot fer que desenvolupis la teva pròpia manera d'anomenar les coses, una cosa útil, bonica i divertida — però calen llenguatges comuns per comunicar-se i tocar amb altres persones, sobretot en aquest moment històric sovint tan individualista."
   },
   "jargon.bw.title": {
     "en": "Bosanquet-Wilson hexagonal layout",
-    "es": "Disposición hexagonal de Bosanquet-Wilson"
+    "es": "Disposición hexagonal de Bosanquet-Wilson",
+    "ca": "Disposició hexagonal de Bosanquet-Wilson"
   },
   "jargon.bw.popuptitle": {
     "en": "Bosanquet-Wilson hexagonal layout",
-    "es": "Disposición hexagonal de Bosanquet-Wilson"
+    "es": "Disposición hexagonal de Bosanquet-Wilson",
+    "ca": "Disposició hexagonal de Bosanquet-Wilson"
   },
   "jargon.bw.body": {
     "en": "This app is built specifically for the compressed Bosanquet-Wilson hexagonal layout (generators N = -3, NE = +5, NW = -8).",
-    "es": "Esta app está construida específicamente para la disposición hexagonal comprimida de Bosanquet-Wilson (generadores N = -3, NE = +5, NW = -8)."
+    "es": "Esta app está construida específicamente para la disposición hexagonal comprimida de Bosanquet-Wilson (generadores N = -3, NE = +5, NW = -8).",
+    "ca": "Aquesta app està construïda específicament per a la disposició hexagonal comprimida de Bosanquet-Wilson (generadors N = -3, NE = +5, NW = -8)."
   },
   "jargon.bw.howtouse": {
     "en": "How can I use these hexagons?",
-    "es": "¿Cómo puedo usar estos hexágonos?"
+    "es": "¿Cómo puedo usar estos hexágonos?",
+    "ca": "Com puc fer servir aquests hexàgons?"
   },
   "tun.h2": {
     "en": "How can I use this tuning system?",
-    "es": "¿Cómo puedo usar este sistema de afinación?"
+    "es": "¿Cómo puedo usar este sistema de afinación?",
+    "ca": "Com puc fer servir aquest sistema d'afinació?"
   },
   "tun.p1": {
     "en": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> is a <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> tuning system that divides the <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octave<span class=\"jargon-q\">?</span></span> into 31 equidistant notes called steps. You can use it by playing whichever pitches sound the way you want.",
-    "es": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> es un sistema de afinación <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divide la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notas equidistantes llamadas steps. Puedes usarlo tocando las notas que te suenen como quieras."
+    "es": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> es un sistema de afinación <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divide la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notas equidistantes llamadas steps. Puedes usarlo tocando las notas que te suenen como quieras.",
+    "ca": "<span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(31)\" onmouseleave=\"stopEdoScalePreview()\">31ED2</span> és un sistema d'afinació <a href=\"https://en.xen.wiki/w/Microtonal_music\" target=\"_blank\" rel=\"noopener\">microtonal</a> que divideix l'<span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event, 'jargonPopupOctave')\">octava<span class=\"jargon-q\">?</span></span> en 31 notes equidistants anomenades steps. Pots fer-lo servir tocant les notes que et sonin com vulguis."
   },
   "tun.p2": {
     "en": "Generally, it is a more accurate approximation to <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">just intonation<span class=\"jargon-q\">?</span></span> than <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, the Western standard tuning system adopted just a few centuries ago. Just intonation intervals are sometimes approximated by tuning systems like these (ED2), in an attempt to reduce the amount of notes needed to compose.",
-    "es": "En general, es una aproximación más precisa a la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> que <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, el sistema de afinación estándar occidental adoptado hace apenas unos siglos. Los intervalos de afinación justa a veces se aproximan mediante sistemas de afinación como estos (ED2) en un intento de reducir la cantidad de notas necesarias para componer."
+    "es": "En general, es una aproximación más precisa a la <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> que <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, el sistema de afinación estándar occidental adoptado hace apenas unos siglos. Los intervalos de afinación justa a veces se aproximan mediante sistemas de afinación como estos (ED2) en un intento de reducir la cantidad de notas necesarias para componer.",
+    "ca": "En general, és una aproximació més precisa a l'<span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinació justa<span class=\"jargon-q\">?</span></span> que <span class=\"prime-btn\" onmouseenter=\"startEdoScalePreview(12)\" onmouseleave=\"stopEdoScalePreview()\">12ED2</span>, el sistema d'afinació estàndard occidental adoptat fa tot just uns segles. Els intervals d'afinació justa a vegades s'aproximen mitjançant sistemes d'afinació com aquests (ED2) en un intent de reduir la quantitat de notes necessàries per compondre."
   },
   "tun.p3": {
     "en": "31ED2 also allows us to play low-complexity <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">just intonation<span class=\"jargon-q\">?</span></span> intervals that aren't accessible in 12ED2. 12ED2 approximates just-intonation intervals that include the primes 2, 3, and 5 relatively well, but the same can't be said for primes 7, 11, 13, and so on. 31ED2 approximates, relatively well, many more intervals — including ones built from primes such as",
-    "es": "31ED2 también nos permite tocar intervalos de <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> de baja complejidad que no son accesibles en 12ED2. 12ED2 aproxima relativamente bien los intervalos de afinación justa que incluyen los primos 2, 3 y 5, pero no puede decirse lo mismo de los primos 7, 11, 13, etcétera. 31ED2 aproxima relativamente bien muchos más intervalos — incluyendo algunos construidos a partir de primos como"
+    "es": "31ED2 también nos permite tocar intervalos de <span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinación justa<span class=\"jargon-q\">?</span></span> de baja complejidad que no son accesibles en 12ED2. 12ED2 aproxima relativamente bien los intervalos de afinación justa que incluyen los primos 2, 3 y 5, pero no puede decirse lo mismo de los primos 7, 11, 13, etcétera. 31ED2 aproxima relativamente bien muchos más intervalos — incluyendo algunos construidos a partir de primos como",
+    "ca": "31ED2 també ens permet tocar intervals d'<span class=\"jargon-wrap\" onclick=\"toggleJargonPopup(event)\">afinació justa<span class=\"jargon-q\">?</span></span> de baixa complexitat que no són accessibles en 12ED2. 12ED2 aproxima relativament bé els intervals d'afinació justa que inclouen els primers 2, 3 i 5, però no pot dir-se el mateix dels primers 7, 11, 13, etcètera. 31ED2 aproxima relativament bé molts més intervals — incloent-hi alguns construïts a partir de primers com"
   },
   "tun.p3b": {
     "en": "and beyond. This gives you access to simple intervals that are forbidden by 12ED2, such as <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(25)\" onmouseleave=\"stopRatioIntervalPreview()\">7/4</span> (called the harmonic seventh), <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(7)\" onmouseleave=\"stopRatioIntervalPreview()\">7/6</span> (the subminor third), and <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(9)\" onmouseleave=\"stopRatioIntervalPreview()\">11/9</span> (the neutral third)... and so on.",
-    "es": "y más allá. Esto te da acceso a intervalos simples que están prohibidos en 12ED2, como <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(25)\" onmouseleave=\"stopRatioIntervalPreview()\">7/4</span> (llamado séptima armónica), <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(7)\" onmouseleave=\"stopRatioIntervalPreview()\">7/6</span> (la tercera submenor), y <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(9)\" onmouseleave=\"stopRatioIntervalPreview()\">11/9</span> (la tercera neutra)... y así sucesivamente."
+    "es": "y más allá. Esto te da acceso a intervalos simples que están prohibidos en 12ED2, como <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(25)\" onmouseleave=\"stopRatioIntervalPreview()\">7/4</span> (llamado séptima armónica), <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(7)\" onmouseleave=\"stopRatioIntervalPreview()\">7/6</span> (la tercera submenor), y <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(9)\" onmouseleave=\"stopRatioIntervalPreview()\">11/9</span> (la tercera neutra)... y así sucesivamente.",
+    "ca": "i més enllà. Això et dóna accés a intervals simples que estan prohibits en 12ED2, com <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(25)\" onmouseleave=\"stopRatioIntervalPreview()\">7/4</span> (anomenat setena harmònica), <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(7)\" onmouseleave=\"stopRatioIntervalPreview()\">7/6</span> (la tercera submenor), i <span class=\"prime-btn\" onmouseenter=\"startRatioIntervalPreview(9)\" onmouseleave=\"stopRatioIntervalPreview()\">11/9</span> (la tercera neutra)... i així successivament."
   },
   "tun.p4": {
     "en": "We can still <span class=\"prime-btn\" onmouseenter=\"startTranslateWellPreview()\" onmouseleave=\"stopTranslateWellPreview()\">translate anything from 12ED2 quite well</span>. But since 31ED2 is generally a closer approximation to just intonation, each interval is more unique — for example, stacking 3 major thirds <span class=\"prime-btn\" onmouseenter=\"startStackedThirdsPreview()\" onmouseleave=\"stopStackedThirdsPreview()\">doesn't get you to an octave</span>, but instead to a different note, microtonally lower. This can be treated as a limitation, or as an implicit expressive device in harmonic progressions: if you move by major thirds in a progression, for example, you end up in a chord at a new pitch microtonally close to where you started.",
-    "es": "Aun así <span class=\"prime-btn\" onmouseenter=\"startTranslateWellPreview()\" onmouseleave=\"stopTranslateWellPreview()\">podemos traducir bastante bien cualquier cosa desde 12ED2</span>. Pero como 31ED2 suele ser una aproximación más cercana a la afinación justa, cada intervalo es más único — por ejemplo, apilar 3 terceras mayores <span class=\"prime-btn\" onmouseenter=\"startStackedThirdsPreview()\" onmouseleave=\"stopStackedThirdsPreview()\">no te lleva a una octava</span>, si no a una nota distinta, microtonalmente mas grave. Esto puede tratarse como una limitación, o como un recurso expresivo implícito en las progresiones armónicas: si te mueves por terceras mayores en una progresión, por ejemplo, terminas en un acorde a una altura nueva microtonalmente cercana a donde empezaste."
+    "es": "Aun así <span class=\"prime-btn\" onmouseenter=\"startTranslateWellPreview()\" onmouseleave=\"stopTranslateWellPreview()\">podemos traducir bastante bien cualquier cosa desde 12ED2</span>. Pero como 31ED2 suele ser una aproximación más cercana a la afinación justa, cada intervalo es más único — por ejemplo, apilar 3 terceras mayores <span class=\"prime-btn\" onmouseenter=\"startStackedThirdsPreview()\" onmouseleave=\"stopStackedThirdsPreview()\">no te lleva a una octava</span>, si no a una nota distinta, microtonalmente mas grave. Esto puede tratarse como una limitación, o como un recurso expresivo implícito en las progresiones armónicas: si te mueves por terceras mayores en una progresión, por ejemplo, terminas en un acorde a una altura nueva microtonalmente cercana a donde empezaste.",
+    "ca": "Tot i així <span class=\"prime-btn\" onmouseenter=\"startTranslateWellPreview()\" onmouseleave=\"stopTranslateWellPreview()\">podem traduir bastant bé qualsevol cosa des de 12ED2</span>. Però com que 31ED2 sol ser una aproximació més propera a l'afinació justa, cada interval és més únic — per exemple, apilar 3 terceres majors <span class=\"prime-btn\" onmouseenter=\"startStackedThirdsPreview()\" onmouseleave=\"stopStackedThirdsPreview()\">no et porta a una octava</span>, sinó a una nota diferent, microtonalment més greu. Això pot tractar-se com una limitació, o com un recurs expressiu implícit en les progressions harmòniques: si et mous per terceres majors en una progressió, per exemple, acabes en un acord a una altura nova microtonalment propera a on vas començar."
   },
   "tun.table.h3": {
     "en": "Some common interval sizes in 31ED2",
-    "es": "Algunos tamaños de intervalo comunes en 31ED2"
+    "es": "Algunos tamaños de intervalo comunes en 31ED2",
+    "ca": "Alguns tamanys d'interval comuns en 31ED2"
   },
   "tun.table.source": {
     "en": "Source: <a href=\"https://en.wikipedia.org/wiki/31_equal_temperament\" target=\"_blank\" rel=\"noopener\">Wikipedia — 31 equal temperament</a>, \"Interval size\" section.",
-    "es": "Fuente: <a href=\"https://en.wikipedia.org/wiki/31_equal_temperament\" target=\"_blank\" rel=\"noopener\">Wikipedia — 31 equal temperament</a>, sección \"Interval size\"."
+    "es": "Fuente: <a href=\"https://en.wikipedia.org/wiki/31_equal_temperament\" target=\"_blank\" rel=\"noopener\">Wikipedia — 31 equal temperament</a>, sección \"Interval size\".",
+    "ca": "Font: <a href=\"https://en.wikipedia.org/wiki/31_equal_temperament\" target=\"_blank\" rel=\"noopener\">Wikipedia — 31 equal temperament</a>, secció \"Interval size\"."
   },
   "tun.table.head": {
     "en": "Interval name|Steps|Size (¢)|Just ratio|Just (¢)|Error (¢)",
-    "es": "Nombre del intervalo|Pasos|Tamaño (¢)|Razón justa|Justo (¢)|Error (¢)"
+    "es": "Nombre del intervalo|Pasos|Tamaño (¢)|Razón justa|Justo (¢)|Error (¢)",
+    "ca": "Nom de l'interval|Passos|Mida (¢)|Raó justa|Just (¢)|Error (¢)"
   },
   "tun.row.octave": {
     "en": "Octave",
-    "es": "Octava"
+    "es": "Octava",
+    "ca": "Octava"
   },
   "tun.row.min7": {
     "en": "Minor seventh",
-    "es": "Séptima menor"
+    "es": "Séptima menor",
+    "ca": "Setena menor"
   },
   "tun.row.harm7": {
     "en": "Harmonic/subminor seventh",
-    "es": "Séptima armónica/submenor"
+    "es": "Séptima armónica/submenor",
+    "ca": "Setena harmònica/submenor"
   },
   "tun.row.maj6": {
     "en": "Major sixth",
-    "es": "Sexta mayor"
+    "es": "Sexta mayor",
+    "ca": "Sisena major"
   },
   "tun.row.min6": {
     "en": "Minor sixth",
-    "es": "Sexta menor"
+    "es": "Sexta menor",
+    "ca": "Sisena menor"
   },
   "tun.row.p5": {
     "en": "Perfect fifth",
-    "es": "Quinta justa"
+    "es": "Quinta justa",
+    "ca": "Quinta justa"
   },
   "tun.row.lesssep": {
     "en": "Lesser septimal tritone",
-    "es": "Tritono séptimal menor"
+    "es": "Tritono séptimal menor",
+    "ca": "Tríton septimal menor"
   },
   "tun.row.undec": {
     "en": "Undecimal tritone, half augmented fourth, 11th harmonic",
-    "es": "Tritono undecimal, cuarta semiaumentada, 11.º armónico"
+    "es": "Tritono undecimal, cuarta semiaumentada, 11.º armónico",
+    "ca": "Tríton undecimal, quarta semiaugmentada, 11è harmònic"
   },
   "tun.row.p4": {
     "en": "Perfect fourth",
-    "es": "Cuarta justa"
+    "es": "Cuarta justa",
+    "ca": "Quarta justa"
   },
   "tun.row.sepmaj3": {
     "en": "Supermajor third",
-    "es": "Tercera supermayor"
+    "es": "Tercera supermayor",
+    "ca": "Tercera supermajor"
   },
   "tun.row.maj3": {
     "en": "Major third",
-    "es": "Tercera mayor"
+    "es": "Tercera mayor",
+    "ca": "Tercera major"
   },
   "tun.row.min3": {
     "en": "Minor third",
-    "es": "Tercera menor"
+    "es": "Tercera menor",
+    "ca": "Tercera menor"
   },
   "tun.row.sepmin3": {
     "en": "Subminor third",
-    "es": "Tercera submenor"
+    "es": "Tercera submenor",
+    "ca": "Tercera submenor"
   },
   "tun.row.sepwt": {
     "en": "Septimal whole tone",
-    "es": "Tono entero séptimal"
+    "es": "Tono entero séptimal",
+    "ca": "To sencer septimal"
   },
   "tun.row.wt": {
     "en": "Whole tone (major)",
-    "es": "Tono entero (mayor)"
+    "es": "Tono entero (mayor)",
+    "ca": "To sencer (major)"
   },
   "tun.row.diaton": {
     "en": "Diatonic semitone",
-    "es": "Semitono diatónico"
+    "es": "Semitono diatónico",
+    "ca": "Semitò diatònic"
   },
   "tun.row.chrom": {
     "en": "Chromatic semitone",
-    "es": "Semitono cromático"
+    "es": "Semitono cromático",
+    "ca": "Semitò cromàtic"
   },
   "tun.row.diesis": {
     "en": "Diesis",
-    "es": "Diesis"
+    "es": "Diesis",
+    "ca": "Diesi"
   },
   "jargon.ji.title": {
     "en": "Just intonation",
-    "es": "Afinación justa"
+    "es": "Afinación justa",
+    "ca": "Afinació justa"
   },
   "jargon.ji.p1": {
     "en": "Just intonation (JI) is an approach to <a href=\"https://en.xen.wiki/w/Musical_tuning\" target=\"_blank\" rel=\"noopener\">musical tuning</a> where all <a href=\"https://en.xen.wiki/w/Interval\" target=\"_blank\" rel=\"noopener\">intervals</a> between two notes have <a href=\"https://en.xen.wiki/w/Frequency_ratio\" target=\"_blank\" rel=\"noopener\">frequency ratios</a> which are <a href=\"https://en.wikipedia.org/wiki/Rational_number\" target=\"_blank\" rel=\"noopener\">rational numbers</a>. For example, a perfect fifth in just intonation can have frequency ratio <a href=\"https://en.xen.wiki/w/3/2\" target=\"_blank\" rel=\"noopener\">3/2</a>, a major third <a href=\"https://en.xen.wiki/w/5/4\" target=\"_blank\" rel=\"noopener\">5/4</a>, a minor third <a href=\"https://en.xen.wiki/w/6/5\" target=\"_blank\" rel=\"noopener\">6/5</a>, and so on — so for example in a fifth, when the low pitch has oscillated 2 times, the high pitch has oscillated exactly 3 times.",
-    "es": "La afinación justa (JI) es un enfoque de la <a href=\"https://en.xen.wiki/w/Musical_tuning\" target=\"_blank\" rel=\"noopener\">afinación musical</a> en el que todos los <a href=\"https://en.xen.wiki/w/Interval\" target=\"_blank\" rel=\"noopener\">intervalos</a> entre dos notas tienen <a href=\"https://en.xen.wiki/w/Frequency_ratio\" target=\"_blank\" rel=\"noopener\">razones de frecuencia</a> que son <a href=\"https://en.wikipedia.org/wiki/Rational_number\" target=\"_blank\" rel=\"noopener\">números racionales</a>. Por ejemplo, una quinta justa en afinación justa puede tener razón de frecuencia <a href=\"https://en.xen.wiki/w/3/2\" target=\"_blank\" rel=\"noopener\">3/2</a>, una tercera mayor <a href=\"https://en.xen.wiki/w/5/4\" target=\"_blank\" rel=\"noopener\">5/4</a>, una tercera menor <a href=\"https://en.xen.wiki/w/6/5\" target=\"_blank\" rel=\"noopener\">6/5</a>, y así sucesivamente — así que por ejemplo en una quinta, cuando el sonido grave ha oscilado 2 veces, el sonido agudo ha oscilado exactamente 3 veces."
+    "es": "La afinación justa (JI) es un enfoque de la <a href=\"https://en.xen.wiki/w/Musical_tuning\" target=\"_blank\" rel=\"noopener\">afinación musical</a> en el que todos los <a href=\"https://en.xen.wiki/w/Interval\" target=\"_blank\" rel=\"noopener\">intervalos</a> entre dos notas tienen <a href=\"https://en.xen.wiki/w/Frequency_ratio\" target=\"_blank\" rel=\"noopener\">razones de frecuencia</a> que son <a href=\"https://en.wikipedia.org/wiki/Rational_number\" target=\"_blank\" rel=\"noopener\">números racionales</a>. Por ejemplo, una quinta justa en afinación justa puede tener razón de frecuencia <a href=\"https://en.xen.wiki/w/3/2\" target=\"_blank\" rel=\"noopener\">3/2</a>, una tercera mayor <a href=\"https://en.xen.wiki/w/5/4\" target=\"_blank\" rel=\"noopener\">5/4</a>, una tercera menor <a href=\"https://en.xen.wiki/w/6/5\" target=\"_blank\" rel=\"noopener\">6/5</a>, y así sucesivamente — así que por ejemplo en una quinta, cuando el sonido grave ha oscilado 2 veces, el sonido agudo ha oscilado exactamente 3 veces.",
+    "ca": "L'afinació justa (JI) és un enfocament de l'<a href=\"https://en.xen.wiki/w/Musical_tuning\" target=\"_blank\" rel=\"noopener\">afinació musical</a> en què tots els <a href=\"https://en.xen.wiki/w/Interval\" target=\"_blank\" rel=\"noopener\">intervals</a> entre dues notes tenen <a href=\"https://en.xen.wiki/w/Frequency_ratio\" target=\"_blank\" rel=\"noopener\">raons de freqüència</a> que són <a href=\"https://en.wikipedia.org/wiki/Rational_number\" target=\"_blank\" rel=\"noopener\">números racionals</a>. Per exemple, una quinta justa en afinació justa pot tenir raó de freqüència <a href=\"https://en.xen.wiki/w/3/2\" target=\"_blank\" rel=\"noopener\">3/2</a>, una tercera major <a href=\"https://en.xen.wiki/w/5/4\" target=\"_blank\" rel=\"noopener\">5/4</a>, una tercera menor <a href=\"https://en.xen.wiki/w/6/5\" target=\"_blank\" rel=\"noopener\">6/5</a>, i així successivament — així que per exemple en una quinta, quan el so greu ha oscil·lat 2 vegades, el so agut ha oscil·lat exactament 3 vegades."
   },
   "jargon.ji.p2": {
     "en": "Just intonation is based on the <a href=\"https://en.xen.wiki/w/Harmonic_series\" target=\"_blank\" rel=\"noopener\">harmonic series</a>, which is the collection of tones found at integer multiples of a fundamental frequency, and is the set of <a href=\"https://en.xen.wiki/w/Overtone\" target=\"_blank\" rel=\"noopener\">overtones</a> of a note played on a string or pipe instrument. All just intervals can be found as the interval between two notes in the harmonic series; for example, <a href=\"https://en.xen.wiki/w/5/3\" target=\"_blank\" rel=\"noopener\">5/3</a> is the interval between the <a href=\"https://en.xen.wiki/w/5/1\" target=\"_blank\" rel=\"noopener\">5th harmonic</a> and the <a href=\"https://en.xen.wiki/w/3/1\" target=\"_blank\" rel=\"noopener\">3rd harmonic</a>.",
-    "es": "La afinación justa se basa en la <a href=\"https://en.xen.wiki/w/Harmonic_series\" target=\"_blank\" rel=\"noopener\">serie armónica</a>, que es el conjunto de tonos que se encuentran en múltiplos enteros de una frecuencia fundamental, y es el conjunto de <a href=\"https://en.xen.wiki/w/Overtone\" target=\"_blank\" rel=\"noopener\">armónicos</a> de una nota tocada en una cuerda o un instrumento de viento. Todos los intervalos justos se pueden encontrar como el intervalo entre dos notas de la serie armónica; por ejemplo, <a href=\"https://en.xen.wiki/w/5/3\" target=\"_blank\" rel=\"noopener\">5/3</a> es el intervalo entre el <a href=\"https://en.xen.wiki/w/5/1\" target=\"_blank\" rel=\"noopener\">5.º armónico</a> y el <a href=\"https://en.xen.wiki/w/3/1\" target=\"_blank\" rel=\"noopener\">3.º armónico</a>."
+    "es": "La afinación justa se basa en la <a href=\"https://en.xen.wiki/w/Harmonic_series\" target=\"_blank\" rel=\"noopener\">serie armónica</a>, que es el conjunto de tonos que se encuentran en múltiplos enteros de una frecuencia fundamental, y es el conjunto de <a href=\"https://en.xen.wiki/w/Overtone\" target=\"_blank\" rel=\"noopener\">armónicos</a> de una nota tocada en una cuerda o un instrumento de viento. Todos los intervalos justos se pueden encontrar como el intervalo entre dos notas de la serie armónica; por ejemplo, <a href=\"https://en.xen.wiki/w/5/3\" target=\"_blank\" rel=\"noopener\">5/3</a> es el intervalo entre el <a href=\"https://en.xen.wiki/w/5/1\" target=\"_blank\" rel=\"noopener\">5.º armónico</a> y el <a href=\"https://en.xen.wiki/w/3/1\" target=\"_blank\" rel=\"noopener\">3.º armónico</a>.",
+    "ca": "L'afinació justa es basa en la <a href=\"https://en.xen.wiki/w/Harmonic_series\" target=\"_blank\" rel=\"noopener\">sèrie harmònica</a>, que és el conjunt de tons que es troben en múltiples enters d'una freqüència fonamental, i és el conjunt d'<a href=\"https://en.xen.wiki/w/Overtone\" target=\"_blank\" rel=\"noopener\">harmònics</a> d'una nota tocada en una corda o un instrument de vent. Tots els intervals justos es poden trobar com l'interval entre dues notes de la sèrie harmònica; per exemple, <a href=\"https://en.xen.wiki/w/5/3\" target=\"_blank\" rel=\"noopener\">5/3</a> és l'interval entre el <a href=\"https://en.xen.wiki/w/5/1\" target=\"_blank\" rel=\"noopener\">5è harmònic</a> i el <a href=\"https://en.xen.wiki/w/3/1\" target=\"_blank\" rel=\"noopener\">3r harmònic</a>."
   },
   "jargon.ji.p3": {
     "en": "Just intervals with frequency ratios of small numbers, called <a href=\"https://en.xen.wiki/w/Low-complexity_just_intonation\" target=\"_blank\" rel=\"noopener\">low-complexity just intonation</a> (LCJI) intervals, tend to be the most <a href=\"https://en.xen.wiki/w/Consonant\" target=\"_blank\" rel=\"noopener\">consonant</a>, in the sense that their sounds meld together.",
-    "es": "Los intervalos justos con razones de frecuencia de números pequeños, llamados intervalos de <a href=\"https://en.xen.wiki/w/Low-complexity_just_intonation\" target=\"_blank\" rel=\"noopener\">afinación justa de baja complejidad</a> (LCJI), tienden a ser los más <a href=\"https://en.xen.wiki/w/Consonant\" target=\"_blank\" rel=\"noopener\">consonantes</a>, en el sentido de que sus sonidos se funden entre sí."
+    "es": "Los intervalos justos con razones de frecuencia de números pequeños, llamados intervalos de <a href=\"https://en.xen.wiki/w/Low-complexity_just_intonation\" target=\"_blank\" rel=\"noopener\">afinación justa de baja complejidad</a> (LCJI), tienden a ser los más <a href=\"https://en.xen.wiki/w/Consonant\" target=\"_blank\" rel=\"noopener\">consonantes</a>, en el sentido de que sus sonidos se funden entre sí.",
+    "ca": "Els intervals justos amb raons de freqüència de números petits, anomenats intervals d'<a href=\"https://en.xen.wiki/w/Low-complexity_just_intonation\" target=\"_blank\" rel=\"noopener\">afinació justa de baixa complexitat</a> (LCJI), tendeixen a ser els més <a href=\"https://en.xen.wiki/w/Consonant\" target=\"_blank\" rel=\"noopener\">consonants</a>, en el sentit que els seus sons es fonen entre ells."
   },
   "jargon.ji.p4": {
     "en": "One consequence of just intonation is <a href=\"https://en.xen.wiki/w/Pitch_drift\" target=\"_blank\" rel=\"noopener\">pitch drift</a>: since just intervals are exact ratios rather than fixed equal steps, chaining several of them together in a progression can land you on a pitch noticeably different from where you started, even when the harmonic motion feels like it should have looped back home. Equal-step systems like 12ED2 or 31ED2 avoid this by rounding every interval to the nearest fixed step, at the cost of those intervals no longer being perfectly pure ratios.",
-    "es": "Una consecuencia de la afinación justa es el <a href=\"https://en.xen.wiki/w/Pitch_drift\" target=\"_blank\" rel=\"noopener\">pitch drift</a> (deriva de afinación): como los intervalos justos son razones exactas y no pasos fijos e iguales, encadenar varios de ellos en una progresión puede hacer que termines en una altura notablemente distinta de donde empezaste, aunque el movimiento armónico se sienta como si debiera haber vuelto al punto de partida. Los sistemas de pasos iguales como 12ED2 o 31ED2 evitan esto redondeando cada intervalo al paso fijo más cercano, a costa de que esos intervalos ya no sean razones puras perfectas."
+    "es": "Una consecuencia de la afinación justa es el <a href=\"https://en.xen.wiki/w/Pitch_drift\" target=\"_blank\" rel=\"noopener\">pitch drift</a> (deriva de afinación): como los intervalos justos son razones exactas y no pasos fijos e iguales, encadenar varios de ellos en una progresión puede hacer que termines en una altura notablemente distinta de donde empezaste, aunque el movimiento armónico se sienta como si debiera haber vuelto al punto de partida. Los sistemas de pasos iguales como 12ED2 o 31ED2 evitan esto redondeando cada intervalo al paso fijo más cercano, a costa de que esos intervalos ya no sean razones puras perfectas.",
+    "ca": "Una conseqüència de l'afinació justa és el <a href=\"https://en.xen.wiki/w/Pitch_drift\" target=\"_blank\" rel=\"noopener\">pitch drift</a> (deriva d'afinació): com que els intervals justos són raons exactes i no passos fixos i iguals, encadenar-ne uns quants en una progressió pot fer que acabis en una altura notablement diferent d'on vas començar, encara que el moviment harmònic se senti com si hagués d'haver tornat al punt de partida. Els sistemes de passos iguals com 12ED2 o 31ED2 eviten això arrodonint cada interval al pas fix més proper, a canvi que aquests intervals ja no siguin raons pures perfectes."
   },
   "jargon.octave.title": {
     "en": "Octave",
-    "es": "Octava"
+    "es": "Octava",
+    "ca": "Octava"
   },
   "jargon.octave.body": {
     "en": "An octave is a distance in pitch between two pitches, one of them having its sound wave oscillating 2 times faster than the other. It corresponds to the distance in pitch between one key on the piano and the one with the same name that is just higher or lower. So for example, a low C and the next higher-pitched C to its right are one octave apart.",
-    "es": "Una octava es una distancia de altura entre dos alturas, en la que una tiene su onda sonora oscilando 2 veces más rápido que la otra. Corresponde a la distancia de altura entre una tecla del piano y la siguiente con el mismo nombre que está justo más arriba o más abajo. Así, por ejemplo, un Do grave y el siguiente Do más agudo a su derecha están a una octava de distancia."
+    "es": "Una octava es una distancia de altura entre dos alturas, en la que una tiene su onda sonora oscilando 2 veces más rápido que la otra. Corresponde a la distancia de altura entre una tecla del piano y la siguiente con el mismo nombre que está justo más arriba o más abajo. Así, por ejemplo, un Do grave y el siguiente Do más agudo a su derecha están a una octava de distancia.",
+    "ca": "Una octava és una distància d'altura entre dues altures, en què una té la seva ona sonora oscil·lant 2 vegades més ràpid que l'altra. Correspon a la distància d'altura entre una tecla del piano i la següent amb el mateix nom que hi ha just més amunt o més avall. Així, per exemple, un Do greu i el següent Do més agut a la seva dreta estan a una octava de distància."
   },
   "hex.h2": {
     "en": "How can I use this hexagons?",
-    "es": "¿Cómo puedo usar estos hexágonos?"
+    "es": "¿Cómo puedo usar estos hexágonos?",
+    "ca": "Com puc fer servir aquests hexàgons?"
   },
   "hex.p1": {
     "en": "Every number on the hex map shows the note number of",
-    "es": "Cada número del mapa hexagonal indica el número de nota de"
+    "es": "Cada número del mapa hexagonal indica el número de nota de",
+    "ca": "Cada número del mapa hexagonal indica el número de nota de"
   },
   "hex.p1b": {
     "en": "that hexagon. Toward the bottom-right are the larger numbers — the higher-pitched notes — and toward the top-left are the smaller numbers — the lower-pitched notes.",
-    "es": "al que corresponde ese hexágono. En el extremo inferior derecho están los números más grandes, es decir las notas más agudas, y en el superior izquierdo los números más pequeños, es decir las notas más graves."
+    "es": "al que corresponde ese hexágono. En el extremo inferior derecho están los números más grandes, es decir las notas más agudas, y en el superior izquierdo los números más pequeños, es decir las notas más graves.",
+    "ca": "al qual correspon aquest hexàgon. A l'extrem inferior dret hi ha els números més grans, és a dir les notes més agudes, i al superior esquerre els números més petits, és a dir les notes més greus."
   },
   "hex.p2": {
     "en": "The distance between any hexagon's note and any other note is always the same no matter where you start from — this can be summarized as three axes.",
-    "es": "Entre la nota de cualquier hexágono y cualquier otra nota siempre hay la misma distancia — esto se puede resumir en tres ejes."
+    "es": "Entre la nota de cualquier hexágono y cualquier otra nota siempre hay la misma distancia — esto se puede resumir en tres ejes.",
+    "ca": "Entre la nota de qualsevol hexàgon i qualsevol altra nota sempre hi ha la mateixa distància — això es pot resumir en tres eixos."
   },
   "hex.diagram.root": {
     "en": "root",
-    "es": "root"
+    "es": "root",
+    "ca": "root"
   },
   "hex.diagram.semitone": {
     "en": "+3 \"semitone\"",
-    "es": "+3 \"semitono\""
+    "es": "+3 \"semitono\"",
+    "ca": "+3 \"semitò\""
   },
   "hex.diagram.minorthird": {
     "en": "+8 \"minor third\"",
-    "es": "+8 \"tercera menor\""
+    "es": "+8 \"tercera menor\"",
+    "ca": "+8 \"tercera menor\""
   },
   "hex.diagram.tone": {
     "en": "+5 \"tone\"",
-    "es": "+5 \"tono\""
+    "es": "+5 \"tono\"",
+    "ca": "+5 \"to\""
   },
   "hex.p3": {
     "en": "The map below shows what structure those 3 axes form. The large numbers show the <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> note that hexagon is. The fractions are the generally relevant low-complexity just-intonation intervals approximated by that note — <i>the ones in cursive have an approximation error higher than 5 cents of a semitone</i>.",
-    "es": "En el mapa de abajo podemos ver qué estructura forman esos 3 ejes. Los números grandes indican la nota de <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> a la que está ese hexágono. Las fracciones son los intervalos de afinación justa de baja complejidad generalmente relevantes que son aproximados por esa nota; <i>los que están en cursiva tienen un error de aproximación mayor de 5 cents de un semitono</i>."
+    "es": "En el mapa de abajo podemos ver qué estructura forman esos 3 ejes. Los números grandes indican la nota de <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> a la que está ese hexágono. Las fracciones son los intervalos de afinación justa de baja complejidad generalmente relevantes que son aproximados por esa nota; <i>los que están en cursiva tienen un error de aproximación mayor de 5 cents de un semitono</i>.",
+    "ca": "Al mapa de sota podem veure quina estructura formen aquests 3 eixos. Els números grans indiquen la nota de <span class=\"info-link\" onclick=\"switchToTuningInfo()\">31ED2</span> a la qual està aquest hexàgon. Les fraccions són els intervals d'afinació justa de baixa complexitat generalment rellevants que són aproximats per aquesta nota; <i>els que estan en cursiva tenen un error d'aproximació més gran de 5 cents d'un semitò</i>."
   },
   "hex.hint.h3": {
     "en": "A hint",
-    "es": "Una pista"
+    "es": "Una pista",
+    "ca": "Una pista"
   },
   "hex.hint.p": {
     "en": "Here's the shape of the chord commonly called the major chord (or 4:5:6 in just intonation). Hover a hexagon to hear it.",
-    "es": "Aquí está la forma del acorde comúnmente llamado acorde mayor (o 4:5:6 en afinación justa). Pasa el ratón por un hexágono para oírlo."
+    "es": "Aquí está la forma del acorde comúnmente llamado acorde mayor (o 4:5:6 en afinación justa). Pasa el ratón por un hexágono para oírlo.",
+    "ca": "Aquí està la forma de l'acord comunament anomenat acord major (o 4:5:6 en afinació justa). Passa el ratolí per un hexàgon per sentir-lo."
   },
   "hex.why.h3": {
     "en": "Why?",
-    "es": "¿Por qué?"
+    "es": "¿Por qué?",
+    "ca": "Per què?"
   },
   "hex.why.p1": {
     "en": "On a piano, the same chord takes a different shape in almost every key, because the black and white keys aren't laid out evenly. Here, every shape depends only on the intervals between its notes, never on where it sits on the board — so one fingering, once learned, works in any key. That makes patterns easier to recognize by ear and by eye, transposition a matter of just sliding your hand, and memory something you only have to build once per shape, not once per key.",
-    "es": "En un piano, el mismo acorde toma una forma distinta en casi cada tonalidad, porque las teclas blancas y negras no están distribuidas de manera uniforme. Aquí, cada forma depende solo de los intervalos entre sus notas, nunca de dónde se sitúa en el tablero — así que una forma, una vez aprendida, funciona en cualquier tonalidad. Eso hace que los patrones sean más fáciles de reconocer de oído y a la vista, que transponer sea cuestión de deslizar la mano, y que la memoria sea algo que solo tienes que construir una vez por forma, no una vez por tonalidad."
+    "es": "En un piano, el mismo acorde toma una forma distinta en casi cada tonalidad, porque las teclas blancas y negras no están distribuidas de manera uniforme. Aquí, cada forma depende solo de los intervalos entre sus notas, nunca de dónde se sitúa en el tablero — así que una forma, una vez aprendida, funciona en cualquier tonalidad. Eso hace que los patrones sean más fáciles de reconocer de oído y a la vista, que transponer sea cuestión de deslizar la mano, y que la memoria sea algo que solo tienes que construir una vez por forma, no una vez por tonalidad.",
+    "ca": "En un piano, el mateix acord pren una forma diferent en gairebé cada tonalitat, perquè les tecles blanques i negres no estan distribuïdes de manera uniforme. Aquí, cada forma depèn només dels intervals entre les seves notes, mai d'on se situa al tauler — així que una forma, un cop apresa, funciona en qualsevol tonalitat. Això fa que els patrons siguin més fàcils de reconèixer d'oïda i a la vista, que transposar sigui qüestió de lliscar la mà, i que la memòria sigui una cosa que només has de construir un cop per forma, no un cop per tonalitat."
   },
   "hex.why.p2": {
     "en": "This is what \"isomorphic\" means: the same shape always means the same intervals, everywhere on the board.",
-    "es": "Esto es lo que significa \"isomórfico\": la misma forma siempre significa los mismos intervalos, en cualquier parte del tablero."
+    "es": "Esto es lo que significa \"isomórfico\": la misma forma siempre significa los mismos intervalos, en cualquier parte del tablero.",
+    "ca": "Això és el que significa \"isomòrfic\": la mateixa forma sempre significa els mateixos intervals, a qualsevol lloc del tauler."
   },
   "help.close.sw": {
     "en": "✕ Close",
-    "es": "✕ Cerrar"
+    "es": "✕ Cerrar",
+    "ca": "✕ Tancar"
   },
   "help.close.tun": {
     "en": "✕ Close",
-    "es": "✕ Cerrar"
+    "es": "✕ Cerrar",
+    "ca": "✕ Tancar"
   },
   "help.close.hex": {
     "en": "✕ Close",
-    "es": "✕ Cerrar"
+    "es": "✕ Cerrar",
+    "ca": "✕ Tancar"
   },
   "cat.newprog": {
     "en": "+ New progression",
-    "es": "+ Nueva progresión"
+    "es": "+ Nueva progresión",
+    "ca": "+ Nova progressió"
   },
   "word.searchplaceholder": {
     "en": "Search by name or tag…",
-    "es": "Buscar por nombre o etiqueta…"
+    "es": "Buscar por nombre o etiqueta…",
+    "ca": "Cercar per nom o etiqueta…"
   },
   "word.sortby": {
     "en": "Sort by ▾",
-    "es": "Ordenar por ▾"
+    "es": "Ordenar por ▾",
+    "ca": "Ordenar per ▾"
   },
   "word.recent": {
     "en": "Recent",
-    "es": "Recientes"
+    "es": "Recientes",
+    "ca": "Recents"
   },
   "word.length": {
     "en": "Length",
-    "es": "Longitud"
+    "es": "Longitud",
+    "ca": "Longitud"
   },
   "cat.empty.title": {
     "en": "No progressions collected yet.",
-    "es": "Aún no has coleccionado ninguna progresión."
+    "es": "Aún no has coleccionado ninguna progresión.",
+    "ca": "Encara no has col·leccionat cap progressió."
   },
   "cat.empty.hint": {
     "en": "Collect some clicking + New progression above or by dragging 31ED2 MIDI files to the ARMODEX",
-    "es": "Colecciona algunas haciendo clic en + New progression arriba, o arrastrando archivos MIDI de 31ED2 al ARMODEX"
+    "es": "Colecciona algunas haciendo clic en + New progression arriba, o arrastrando archivos MIDI de 31ED2 al ARMODEX",
+    "ca": "Col·lecciona'n algunes fent clic a + New progression a dalt, o arrossegant arxius MIDI de 31ED2 a l'ARMODEX"
   },
   "word.nomatches": {
     "en": "No matches for that filter.",
-    "es": "No hay coincidencias para ese filtro."
+    "es": "No hay coincidencias para ese filtro.",
+    "ca": "No hi ha coincidències per a aquest filtre."
   },
   "interp.btn": {
     "en": "✨ Interpretation ▾",
-    "es": "✨ Interpretación ▾"
+    "es": "✨ Interpretación ▾",
+    "ca": "✨ Interpretació ▾"
   },
   "interp.bpm": {
     "en": "Play BPM",
-    "es": "BPM de reproducción"
+    "es": "BPM de reproducción",
+    "ca": "BPM de reproducció"
   },
   "interp.pitch": {
     "en": "General pitch",
-    "es": "Tono general"
+    "es": "Tono general",
+    "ca": "To general"
   },
   "interp.pitch.title": {
     "en": "Shift the pitch of everything higher or lower",
-    "es": "Sube o baja el tono de todo"
+    "es": "Sube o baja el tono de todo",
+    "ca": "Puja o baixa el to de tot"
   },
   "interp.timbre": {
     "en": "Timbre",
-    "es": "Timbre"
+    "es": "Timbre",
+    "ca": "Timbre"
   },
   "word.sine": {
     "en": "Sine",
-    "es": "Seno"
+    "es": "Seno",
+    "ca": "Sinus"
   },
   "word.guitar": {
     "en": "Guitar",
-    "es": "Guitarra"
+    "es": "Guitarra",
+    "ca": "Guitarra"
   },
   "interp.strum.title": {
     "en": "Listen on hover",
-    "es": "Escucha al pasar el ratón"
+    "es": "Escucha al pasar el ratón",
+    "ca": "Escolta en passar el ratolí"
   },
   "interp.strum": {
     "en": "Strum",
-    "es": "Rasgueo"
+    "es": "Rasgueo",
+    "ca": "Rasgueig"
   },
   "interp.strum.title2": {
     "en": "Play shapes strummed low-to-high instead of all at once",
-    "es": "Reproduce las formas rasgueadas de grave a agudo en vez de todas a la vez"
+    "es": "Reproduce las formas rasgueadas de grave a agudo en vez de todas a la vez",
+    "ca": "Reprodueix les formes rasguejades de greu a agut en comptes de totes alhora"
   },
   "interp.rootbass": {
     "en": "Root bass",
-    "es": "Bajo root"
+    "es": "Bajo root",
+    "ca": "Baix root"
   },
   "interp.rootbass.title": {
     "en": "Also sound the root two octaves lower",
-    "es": "También suena la root dos octavas más abajo"
+    "es": "También suena la root dos octavas más abajo",
+    "ca": "També sona la root dues octaves més avall"
   },
   "interp.topline.title": {
     "en": "Layer a random generative melody a fixed octave above each shape, regardless of the octave equivalence setting",
-    "es": "Superpone una melodía generativa aleatoria una octava fija por encima de cada forma, sin importar el ajuste de equivalencia de octava"
+    "es": "Superpone una melodía generativa aleatoria una octava fija por encima de cada forma, sin importar el ajuste de equivalencia de octava",
+    "ca": "Superposa una melodia generativa aleatòria una octava fixa per damunt de cada forma, sense importar l'ajust d'equivalència d'octava"
   },
   "interp.topline": {
     "en": "Random topline",
-    "es": "Melodía aleatoria"
+    "es": "Melodía aleatoria",
+    "ca": "Melodia aleatòria"
   },
   "interp.connectprogs.title": {
     "en": "Chains progressions together: the next progression you play starts on the pitch the previous one's last shape ended on, instead of restarting from the same fixed reference. Replaying the same progression keeps its current position. If the chained shift would drop (or raise) it more than 49 steps from where it was written, it's folded back by whole octaves so it can't drift into an extreme register.",
-    "es": "Encadena las progresiones: la siguiente progresión que toques empieza en la altura en la que terminó la última shape de la anterior, en vez de reiniciar desde la misma referencia fija. Repetir la misma progresión mantiene su posición actual. Si el desplazamiento la bajara (o subiera) más de 49 pasos respecto a donde fue escrita, se pliega por octavas enteras para que no se vaya a un registro extremo."
+    "es": "Encadena las progresiones: la siguiente progresión que toques empieza en la altura en la que terminó la última shape de la anterior, en vez de reiniciar desde la misma referencia fija. Repetir la misma progresión mantiene su posición actual. Si el desplazamiento la bajara (o subiera) más de 49 pasos respecto a donde fue escrita, se pliega por octavas enteras para que no se vaya a un registro extremo.",
+    "ca": "Encadena les progressions: la següent progressió que toquis comença a l'altura on va acabar l'última shape de l'anterior, en comptes de reiniciar des de la mateixa referència fixa. Repetir la mateixa progressió manté la seva posició actual. Si el desplaçament la baixés (o pugés) més de 49 passos respecte d'on va ser escrita, es plega per octaves senceres perquè no se'n vagi a un registre extrem."
   },
   "interp.connectprogs": {
     "en": "Connect progressions",
-    "es": "Conectar progresiones"
+    "es": "Conectar progresiones",
+    "ca": "Connectar progressions"
   },
   "interp.autoart.title": {
     "en": "Play each shape as a generative, polyrhythmic arpeggio across octaves instead of a static block",
-    "es": "Reproduce cada forma como un arpegio generativo y polirrítmico a través de octavas, en vez de un bloque estático"
+    "es": "Reproduce cada forma como un arpegio generativo y polirrítmico a través de octavas, en vez de un bloque estático",
+    "ca": "Reprodueix cada forma com un arpegi generatiu i polirítmic a través d'octaves, en comptes d'un bloc estàtic"
   },
   "interp.autoart": {
     "en": "Auto-articulation",
-    "es": "Auto-articulación"
+    "es": "Auto-articulación",
+    "ca": "Auto-articulació"
   },
   "interp.poly.title": {
     "en": "Two voices step through the shape at these two speeds — equal numbers feel plain, different numbers create a polyrhythm. Only applies while Auto-articulation is on.",
-    "es": "Dos voces recorren la forma a estas dos velocidades — números iguales se sienten planos, números distintos crean una polirritmia. Solo se aplica mientras Auto-articulación está activada."
+    "es": "Dos voces recorren la forma a estas dos velocidades — números iguales se sienten planos, números distintos crean una polirritmia. Solo se aplica mientras Auto-articulación está activada.",
+    "ca": "Dues veus recorren la forma a aquestes dues velocitats — números iguals se senten plans, números diferents creen una polirítmia. Només s'aplica mentre Auto-articulació està activada."
   },
   "interp.poly.label": {
     "en": "Polyrhythm maker",
-    "es": "Generador de polirritmia"
+    "es": "Generador de polirritmia",
+    "ca": "Generador de polirítmia"
   },
   "interp.reset.title": {
     "en": "Reset every Interpretation setting back to its default",
-    "es": "Restablece todos los ajustes de Interpretación a su valor por defecto"
+    "es": "Restablece todos los ajustes de Interpretación a su valor por defecto",
+    "ca": "Restableix tots els ajustos d'Interpretació al seu valor per defecte"
   },
   "interp.reset": {
     "en": "↺ Reset to defaults",
-    "es": "↺ Restablecer valores"
+    "es": "↺ Restablecer valores",
+    "ca": "↺ Restablir valors"
   },
   "connect.noprogsyet": {
     "en": "No progressions yet — collect some first.",
-    "es": "Aún no hay progresiones — colecciona alguna primero."
+    "es": "Aún no hay progresiones — colecciona alguna primero.",
+    "ca": "Encara no hi ha progressions — col·lecciona'n alguna primer."
   },
   "word.stop": {
     "en": "■ Stop",
-    "es": "■ Detener"
+    "es": "■ Detener",
+    "ca": "■ Aturar"
   },
   "word.play": {
     "en": "Play",
-    "es": "Reproducir"
+    "es": "Reproducir",
+    "ca": "Reproduir"
   },
   "word.playshape": {
     "en": "▶ Play shape",
-    "es": "▶ Reproducir forma"
+    "es": "▶ Reproducir forma",
+    "ca": "▶ Reproduir forma"
   },
   "word.shape": {
     "en": "Shape",
-    "es": "Forma"
+    "es": "Forma",
+    "ca": "Forma"
   },
   "word.playprog": {
     "en": "▶ Play progression",
-    "es": "▶ Reproducir progresión"
+    "es": "▶ Reproducir progresión",
+    "ca": "▶ Reproduir progressió"
   },
   "play.detail": {
     "en": null,
@@ -5482,231 +5817,288 @@ const I18N = {
   },
   "word.edit": {
     "en": "Edit",
-    "es": "Editar"
+    "es": "Editar",
+    "ca": "Editar"
   },
   "word.sure": {
     "en": "Sure?",
-    "es": "¿Seguro?"
+    "es": "¿Seguro?",
+    "ca": "Segur?"
   },
   "word.yesdelete": {
     "en": "Yes, delete",
-    "es": "Sí, borrar"
+    "es": "Sí, borrar",
+    "ca": "Sí, esborrar"
   },
   "word.delete": {
     "en": "Delete",
-    "es": "Borrar"
+    "es": "Borrar",
+    "ca": "Esborrar"
   },
   "word.settings": {
     "en": "Settings",
-    "es": "Ajustes"
+    "es": "Ajustes",
+    "ca": "Ajustos"
   },
   "eq.info.on": {
     "en": "Chords are recorded exactly as played, but grouped and matched by pitch class — the hex map highlights every repeat of a note.",
-    "es": "Los acordes se registran exactamente como se tocaron, pero se agrupan y emparejan por pitch class — el mapa hexagonal resalta cada repetición de una nota."
+    "es": "Los acordes se registran exactamente como se tocaron, pero se agrupan y emparejan por pitch class — el mapa hexagonal resalta cada repetición de una nota.",
+    "ca": "Els acords es registren exactament com es van tocar, però s'agrupen i emparellen per pitch class — el mapa hexagonal ressalta cada repetició d'una nota."
   },
   "eq.info.off": {
     "en": "Chords are grouped and matched by their exact recorded spacing — two voicings an octave apart count as different chords, and the hex map highlights only the notes you actually placed.",
-    "es": "Los acordes se agrupan y emparejan por su distancia exacta registrada — dos voicings a una octava de distancia cuentan como acordes distintos, y el mapa hexagonal resalta solo las notas que colocaste realmente."
+    "es": "Los acordes se agrupan y emparejan por su distancia exacta registrada — dos voicings a una octava de distancia cuentan como acordes distintos, y el mapa hexagonal resalta solo las notas que colocaste realmente.",
+    "ca": "Els acords s'agrupen i emparellen per la seva distància exacta registrada — dos voicings a una octava de distància compten com a acords diferents, i el mapa hexagonal ressalta només les notes que vas col·locar realment."
   },
   "stats.title": {
     "en": "📊 Stats",
-    "es": "📊 Estadísticas"
+    "es": "📊 Estadísticas",
+    "ca": "📊 Estadístiques"
   },
   "stats.eyelabel": {
     "en": "Stats",
-    "es": "Estadísticas"
+    "es": "Estadísticas",
+    "ca": "Estadístiques"
   },
   "stats.stepsused": {
     "en": "✦ 31ED2 steps used",
-    "es": "✦ Steps de 31ED2 usados"
+    "es": "✦ Steps de 31ED2 usados",
+    "ca": "✦ Steps de 31ED2 usats"
   },
   "stats.progscollected": {
     "en": "✦ Progressions collected",
-    "es": "✦ Progresiones coleccionadas"
+    "es": "✦ Progresiones coleccionadas",
+    "ca": "✦ Progressions col·leccionades"
   },
   "stats.shapescollected": {
     "en": "✦ Shapes collected",
-    "es": "✦ Formas coleccionadas"
+    "es": "✦ Formas coleccionadas",
+    "ca": "✦ Formes col·leccionades"
   },
   "stats.pitchrich": {
     "en": "✦ Most pitch-rich progression",
-    "es": "✦ Progresión más rica en frecuencias"
+    "es": "✦ Progresión más rica en frecuencias",
+    "ca": "✦ Progressió més rica en freqüències"
   },
   "stats.commonpair": {
     "en": "✦ Most common pair",
-    "es": "✦ Par más común"
+    "es": "✦ Par más común",
+    "ca": "✦ Parella més comuna"
   },
   "stats.commonpair.dash": {
     "en": "Most common shape pair",
-    "es": "Par de formas más común"
+    "es": "Par de formas más común",
+    "ca": "Parella de formes més comuna"
   },
   "word.open": {
     "en": "Open",
-    "es": "Abrir"
+    "es": "Abrir",
+    "ca": "Obrir"
   },
   "word.loading": {
     "en": "Loading your collection…",
-    "es": "Cargando tu colección…"
+    "es": "Cargando tu colección…",
+    "ca": "Carregant la teva col·lecció…"
   },
   "builder.tapkeys": {
     "en": "Tap keys",
-    "es": "Toca teclas"
+    "es": "Toca teclas",
+    "ca": "Toca tecles"
   },
   "ecosystem.btn": {
     "en": "Your ecosystem",
-    "es": "Tu ecosistema"
+    "es": "Tu ecosistema",
+    "ca": "El teu ecosistema"
   },
   "builder.viewtitle": {
     "en": "New progression",
-    "es": "Nueva progresión"
+    "es": "Nueva progresión",
+    "ca": "Nova progressió"
   },
   "map.viewtitle": {
     "en": "Hex map",
-    "es": "Mapa hexagonal"
+    "es": "Mapa hexagonal",
+    "ca": "Mapa hexagonal"
   },
   "ecosystem.needshape.h2": {
     "en": "No shapes yet",
-    "es": "Aun no hay shapes"
+    "es": "Aun no hay shapes",
+    "ca": "Encara no hi ha shapes"
   },
   "ecosystem.needshape.msg": {
     "en": "You need to catalogue at least 1 shape before you can see it living in your ecosystem.",
-    "es": "Necesitas catalogar al menos 1 shape antes de poder verla vivir en tu ecosistema."
+    "es": "Necesitas catalogar al menos 1 shape antes de poder verla vivir en tu ecosistema.",
+    "ca": "Necessites catalogar almenys 1 shape abans de poder veure-la viure al teu ecosistema."
   },
   "nickdupe.h2": {
     "en": "Nickname already in use",
-    "es": "Ese nickname ya esta en uso"
+    "es": "Ese nickname ya esta en uso",
+    "ca": "Aquest nickname ja està en ús"
   },
   "nickdupe.msg": {
     "en": "Another shape already has that nickname. Each shape needs its own unique nickname.",
-    "es": "Otra shape ya tiene ese nickname. Cada shape necesita un nickname unico."
+    "es": "Otra shape ya tiene ese nickname. Cada shape necesita un nickname unico.",
+    "ca": "Una altra shape ja té aquest nickname. Cada shape necessita un nickname únic."
   },
   "builder.ctx.transpose": {
     "en": "Transpose…",
-    "es": "Transponer…"
+    "es": "Transponer…",
+    "ca": "Transposar…"
   },
   "builder.transpose.h2": {
     "en": "Transpose",
-    "es": "Transponer"
+    "es": "Transponer",
+    "ca": "Transposar"
   },
   "builder.transpose.msg": {
     "en": "Steps (31ED2), positive or negative:",
-    "es": "Pasos (31ED2), positivos o negativos:"
+    "es": "Pasos (31ED2), positivos o negativos:",
+    "ca": "Passos (31ED2), positius o negatius:"
   },
   "builder.transpose.hint": {
     "en": "Applies to the whole current selection.",
-    "es": "Se aplica a toda la seleccion actual."
+    "es": "Se aplica a toda la seleccion actual.",
+    "ca": "S'aplica a tota la selecció actual."
   },
   "builder.transpose.placeholder": {
     "en": "e.g. 3 or -5",
-    "es": "ej. 3 o -5"
+    "es": "ej. 3 o -5",
+    "ca": "ex. 3 o -5"
   },
   "ecosystem.title": {
     "en": "A physics-based sandbox for wandering your collected shapes",
-    "es": "Un espacio de física para pasear por tus formas coleccionadas"
+    "es": "Un espacio de física para pasear por tus formas coleccionadas",
+    "ca": "Un espai de física per passejar per les teves formes col·leccionades"
   },
   "map.tapnotes.plate": {
     "en": "Tap notes, or play your MIDI controller",
-    "es": "Clica notas, o toca tu controlador MIDI"
+    "es": "Clica notas, o toca tu controlador MIDI",
+    "ca": "Clica notes, o toca el teu controlador MIDI"
   },
   "map.selectmode.title": {
     "en": "When off, tap notes (or play your MIDI controller) freely to hear them — nothing gets selected or added to a shape. A held MIDI note still lights up while it sounds.",
-    "es": "Cuando está desactivado, toca notas (o tu controlador MIDI) libremente para oírlas — no se selecciona ni se añade nada a una forma. Una nota MIDI sostenida sigue iluminándose mientras suena."
+    "es": "Cuando está desactivado, toca notas (o tu controlador MIDI) libremente para oírlas — no se selecciona ni se añade nada a una forma. Una nota MIDI sostenida sigue iluminándose mientras suena.",
+    "ca": "Quan està desactivat, toca notes (o el teu controlador MIDI) lliurement per sentir-les — no se selecciona ni s'afegeix res a una forma. Una nota MIDI sostinguda continua il·luminant-se mentre sona."
   },
   "map.selectmode.on": {
     "en": "✓ Select key when clicking it",
-    "es": "✓ Seleccionar tecla al hacer clic"
+    "es": "✓ Seleccionar tecla al hacer clic",
+    "ca": "✓ Seleccionar tecla en fer clic"
   },
   "map.selectmode.off": {
     "en": "○ Free play (not selecting)",
-    "es": "○ Toque libre (sin seleccionar)"
+    "es": "○ Toque libre (sin seleccionar)",
+    "ca": "○ Toc lliure (sense seleccionar)"
   },
   "builder.importmidi": {
     "en": "⬆ Import MIDI file",
-    "es": "⬆ Importar archivo MIDI"
+    "es": "⬆ Importar archivo MIDI",
+    "ca": "⬆ Importar arxiu MIDI"
   },
   "builder.importmidi.title": {
     "en": "Import a MIDI file and turn it into a progression: notes are grouped into chords by their start time, at a regular rhythm — a chord that lasts much longer than the rest is just repeated instead of preserved at length. MIDI note numbers are read directly as 31ED2 steps. You can also just drag a MIDI file anywhere onto the app.",
-    "es": "Importa un archivo MIDI y conviértelo en una progresión: las notas se agrupan en acordes según su momento de inicio, a un ritmo regular — un acorde que dura mucho más que el resto simplemente se repite en vez de conservarse con su duración real. Los números de nota MIDI se leen directamente como steps de 31ED2. También puedes simplemente arrastrar un archivo MIDI a cualquier parte de la app."
+    "es": "Importa un archivo MIDI y conviértelo en una progresión: las notas se agrupan en acordes según su momento de inicio, a un ritmo regular — un acorde que dura mucho más que el resto simplemente se repite en vez de conservarse con su duración real. Los números de nota MIDI se leen directamente como steps de 31ED2. También puedes simplemente arrastrar un archivo MIDI a cualquier parte de la app.",
+    "ca": "Importa un arxiu MIDI i converteix-lo en una progressió: les notes s'agrupen en acords segons el seu moment d'inici, a un ritme regular — un acord que dura molt més que la resta simplement es repeteix en comptes de conservar-se amb la seva durada real. Els números de nota MIDI es llegeixen directament com a steps de 31ED2. També pots simplement arrossegar un arxiu MIDI a qualsevol part de l'app."
   },
   "builder.freeplay.title": {
     "en": "Toggle between just hearing keys as you tap them, and having them added to the shape you're building.",
-    "es": "Alterna entre solo escuchar las teclas al tocarlas, o que se vayan añadiendo a la forma que estás construyendo."
+    "es": "Alterna entre solo escuchar las teclas al tocarlas, o que se vayan añadiendo a la forma que estás construyendo.",
+    "ca": "Alterna entre només escoltar les tecles en tocar-les, o que es vagin afegint a la forma que estàs construint."
   },
   "builder.freeplay.on": {
     "en": "✓ Select key when clicking it",
-    "es": "✓ Seleccionar tecla al hacer clic"
+    "es": "✓ Seleccionar tecla al hacer clic",
+    "ca": "✓ Seleccionar tecla en fer clic"
   },
   "builder.freeplay.off": {
     "en": "○ Play keys without selecting them",
-    "es": "○ Tocar teclas sin seleccionarlas"
+    "es": "○ Tocar teclas sin seleccionarlas",
+    "ca": "○ Tocar tecles sense seleccionar-les"
   },
   "map.freeplay": {
     "en": "Free play — tap any note (or play your controller) to hear it, nothing gets selected.",
-    "es": "Toque libre — toca cualquier nota (o tu controlador) para oírla, no se selecciona nada."
+    "es": "Toque libre — toca cualquier nota (o tu controlador) para oírla, no se selecciona nada.",
+    "ca": "Toc lliure — toca qualsevol nota (o el teu controlador) per sentir-la, no se selecciona res."
   },
   "word.clearselection": {
     "en": "Clear selection",
-    "es": "Vaciar selección"
+    "es": "Vaciar selección",
+    "ca": "Buidar selecció"
   },
   "word.clearselection2": {
     "en": "Clear selection",
-    "es": "Vaciar selección"
+    "es": "Vaciar selección",
+    "ca": "Buidar selecció"
   },
   "map.expand": {
     "en": "⤢ Expand",
-    "es": "⤢ Expandir"
+    "es": "⤢ Expandir",
+    "ca": "⤢ Expandir"
   },
   "map.compact": {
     "en": "⤡ Compact",
-    "es": "⤡ Compactar"
+    "es": "⤡ Compactar",
+    "ca": "⤡ Compactar"
   },
   "prog.clickchord": {
     "en": "Click a chord to see it in the Chords tab (nickname, related chords, every progression it's in) — or shift-click 2+ chords here to search for that sequence.",
-    "es": "Haz clic en un acorde para verlo en la pestaña Formas (apodo, acordes relacionados, cada progresión en la que está) — o shift-clic en 2 o más acordes aquí para buscar esa secuencia."
+    "es": "Haz clic en un acorde para verlo en la pestaña Formas (apodo, acordes relacionados, cada progresión en la que está) — o shift-clic en 2 o más acordes aquí para buscar esa secuencia.",
+    "ca": "Fes clic en un acord per veure'l a la pestanya Formes (sobrenom, acords relacionats, cada progressió on és) — o shift-clic en 2 o més acords aquí per cercar aquesta seqüència."
   },
   "map.allnotes.plate": {
     "en": "All notes in this progression",
-    "es": "Todas las notas de esta progresión"
+    "es": "Todas las notas de esta progresión",
+    "ca": "Totes les notes d'aquesta progressió"
   },
   "prog.searchseq": {
     "en": "🔎 Search by shape sequence",
-    "es": "🔎 Buscar por secuencia de formas"
+    "es": "🔎 Buscar por secuencia de formas",
+    "ca": "🔎 Cercar per seqüència de formes"
   },
   "word.showallchords": {
     "en": "← Show all chords",
-    "es": "← Ver todos los acordes"
+    "es": "← Ver todos los acordes",
+    "ca": "← Veure tots els acords"
   },
   "word.nonecatalogued": {
     "en": "None catalogued yet.",
-    "es": "Aún no hay ninguno catalogado."
+    "es": "Aún no hay ninguno catalogado.",
+    "ca": "Encara no n'hi ha cap de catalogat."
   },
   "cents.fromroot": {
     "en": "from root",
-    "es": "desde la root"
+    "es": "desde la root",
+    "ca": "des de la root"
   },
   "cents.abovelowest": {
     "en": "from the lowest note",
-    "es": "desde la nota más grave"
+    "es": "desde la nota más grave",
+    "ca": "des de la nota més greu"
   },
   "cents.abovebelow": {
     "en": "from the note below",
-    "es": "desde la nota de abajo"
+    "es": "desde la nota de abajo",
+    "ca": "des de la nota de sota"
   },
   "cents.belowabove": {
     "en": "from the note above",
-    "es": "desde la nota de arriba"
+    "es": "desde la nota de arriba",
+    "ca": "des de la nota de dalt"
   },
   "rank.mostcommonpairs": {
     "en": "📊 MOST COMMON PAIRS",
-    "es": "📊 PARES MÁS COMUNES"
+    "es": "📊 PARES MÁS COMUNES",
+    "ca": "📊 PARELLES MÉS COMUNES"
   },
   "rank.similarity": {
     "en": "📊 RANKING OF SIMILARITY",
-    "es": "📊 RANKING DE SIMILITUD"
+    "es": "📊 RANKING DE SIMILITUD",
+    "ca": "📊 RÀNQUING DE SIMILITUD"
   },
   "rank.similarity2": {
     "en": "📊 Ranking of similarity",
-    "es": "📊 Ranking de similitud"
+    "es": "📊 Ranking de similitud",
+    "ca": "📊 Rànquing de similitud"
   },
   "chord.seencount": {
     "en": null,
@@ -5714,51 +6106,63 @@ const I18N = {
   },
   "chord.seen": {
     "en": "seen",
-    "es": "visto"
+    "es": "visto",
+    "ca": "vist"
   },
   "word.time": {
     "en": "time",
-    "es": "vez"
+    "es": "vez",
+    "ca": "vegada"
   },
   "word.times": {
     "en": "times",
-    "es": "veces"
+    "es": "veces",
+    "ca": "vegades"
   },
   "word.in": {
     "en": "in",
-    "es": "en"
+    "es": "en",
+    "ca": "a"
   },
   "word.progressions_paren": {
     "en": "progression(s)",
-    "es": "progresión(es)"
+    "es": "progresión(es)",
+    "ca": "progressió(ns)"
   },
   "chord.wherepartof": {
     "en": "Where this shape occurs as a fragment of a bigger chord",
-    "es": "Dónde aparece esta forma como fragmento de un acorde más grande"
+    "es": "Dónde aparece esta forma como fragmento de un acorde más grande",
+    "ca": "On apareix aquesta forma com a fragment d'un acord més gran"
   },
   "rel.partiallyoctaved.direct": {
     "en": "PARTIALLY OCTAVED",
-    "es": "PARCIALMENTE OCTAVADO"
+    "es": "PARCIALMENTE OCTAVADO",
+    "ca": "PARCIALMENT OCTAVAT"
   },
   "rel.partiallyoctaved": {
     "en": "PARTIALLY OCTAVED",
-    "es": "PARCIALMENTE OCTAVADO"
+    "es": "PARCIALMENTE OCTAVADO",
+    "ca": "PARCIALMENT OCTAVAT"
   },
   "rel.partof.call": {
     "en": "PART OF",
-    "es": "PARTE DE"
+    "es": "PARTE DE",
+    "ca": "PART DE"
   },
   "rel.partof": {
     "en": "PART OF",
-    "es": "PARTE DE"
+    "es": "PARTE DE",
+    "ca": "PART DE"
   },
   "rel.includes.call": {
     "en": "INCLUDES",
-    "es": "INCLUYE"
+    "es": "INCLUYE",
+    "ca": "INCLOU"
   },
   "rel.includes": {
     "en": "INCLUDES",
-    "es": "INCLUYE"
+    "es": "INCLUYE",
+    "ca": "INCLOU"
   },
   "rel.combined.call": {
     "en": null,
@@ -5766,7 +6170,8 @@ const I18N = {
   },
   "rel.contains": {
     "en": "CONTAINS",
-    "es": "CONTIENE"
+    "es": "CONTIENE",
+    "ca": "CONTÉ"
   },
   "emergent.sentence": {
     "en": null,
@@ -5774,55 +6179,68 @@ const I18N = {
   },
   "emergent.p1": {
     "en": "taking into account all the notes in the progression, emerges",
-    "es": "teniendo en cuenta todas las notas de la progresión, emerge"
+    "es": "teniendo en cuenta todas las notas de la progresión, emerge",
+    "ca": "tenint en compte totes les notes de la progressió, emergeix"
   },
   "emergent.p2": {
     "en": "progression(s) where it's not seen",
-    "es": "progresión(es) donde no se ve"
+    "es": "progresión(es) donde no se ve",
+    "ca": "progressió(ns) on no es veu"
   },
   "word.nickname.placeholder": {
     "en": "nickname…",
-    "es": "apodo…"
+    "es": "apodo…",
+    "ca": "sobrenom…"
   },
   "word.dl.midi.title": {
     "en": "Download this shape as a MIDI file",
-    "es": "Descarga esta forma como archivo MIDI"
+    "es": "Descarga esta forma como archivo MIDI",
+    "ca": "Descarrega aquesta forma com a arxiu MIDI"
   },
   "word.searchprogstags": {
     "en": "Search progressions or tags…",
-    "es": "Buscar progresiones o etiquetas…"
+    "es": "Buscar progresiones o etiquetas…",
+    "ca": "Cercar progressions o etiquetes…"
   },
   "word.tags": {
     "en": "Tags",
-    "es": "Etiquetas"
+    "es": "Etiquetas",
+    "ca": "Etiquetes"
   },
   "word.commatags": {
     "en": "comma-separated tags…",
-    "es": "etiquetas separadas por comas…"
+    "es": "etiquetas separadas por comas…",
+    "ca": "etiquetes separades per comes…"
   },
   "chord.notyet": {
     "en": "Not in your collection yet — not even as part of a bigger chord.",
-    "es": "Aún no está en tu colección — ni siquiera como parte de un acorde más grande."
+    "es": "Aún no está en tu colección — ni siquiera como parte de un acorde más grande.",
+    "ca": "Encara no és a la teva col·lecció — ni tan sols com a part d'un acord més gran."
   },
   "word.files": {
     "en": "📁 Files ▾",
-    "es": "📁 Archivos ▾"
+    "es": "📁 Archivos ▾",
+    "ca": "📁 Arxius ▾"
   },
   "word.help": {
     "en": "Help",
-    "es": "Ayuda"
+    "es": "Ayuda",
+    "ca": "Ajuda"
   },
   "footer.builtby": {
     "en": "Built by",
-    "es": "Creado por"
+    "es": "Creado por",
+    "ca": "Creat per"
   },
   "footer.withclaude": {
     "en": "with Claude.",
-    "es": "con Claude."
+    "es": "con Claude.",
+    "ca": "amb Claude."
   },
   "footer.vibecoded": {
     "en": "Vibe coded by",
-    "es": "Vibe coded por"
+    "es": "Vibe coded por",
+    "ca": "Vibe coded per"
   },
   "builder.rootlockhint": {
     "en": null,
@@ -5830,27 +6248,33 @@ const I18N = {
   },
   "builder.rootlocked": {
     "en": "🔒 root is fixed at 0 for the first chord",
-    "es": "🔒 la root está fija en 0 para la primera forma"
+    "es": "🔒 la root está fija en 0 para la primera forma",
+    "ca": "🔒 la root està fixa a 0 per a la primera forma"
   },
   "builder.ctrlclickroot": {
     "en": "🔓 Ctrl + click a key to make it the root",
-    "es": "🔓 Ctrl + clic en una tecla para convertirla en la root"
+    "es": "🔓 Ctrl + clic en una tecla para convertirla en la root",
+    "ca": "🔓 Ctrl + clic en una tecla per convertir-la en la root"
   },
   "builder.dragfirst": {
     "en": "✋ Click a marked key to remove it. Dragging to move the whole shape isn't available for this first chord, since its root is fixed at 0.",
-    "es": "✋ Haz clic en una tecla marcada para quitarla. Arrastrar para mover toda la forma no está disponible en esta primera forma, ya que su root está fija en 0."
+    "es": "✋ Haz clic en una tecla marcada para quitarla. Arrastrar para mover toda la forma no está disponible en esta primera forma, ya que su root está fija en 0.",
+    "ca": "✋ Fes clic en una tecla marcada per treure-la. Arrossegar per moure tota la forma no està disponible en aquesta primera forma, ja que la seva root està fixa a 0."
   },
   "builder.dragother": {
     "en": "✋ On a marked key: click to remove it, or click-and-drag to move the whole shape at once. The key you land on lights up while you drag.",
-    "es": "✋ Sobre una tecla marcada: haz clic para quitarla, o haz clic y arrastra para mover toda la forma a la vez. La tecla donde aterrizas se ilumina mientras arrastras."
+    "es": "✋ Sobre una tecla marcada: haz clic para quitarla, o haz clic y arrastra para mover toda la forma a la vez. La tecla donde aterrizas se ilumina mientras arrastras.",
+    "ca": "✋ Sobre una tecla marcada: fes clic per treure-la, o fes clic i arrossega per moure tota la forma alhora. La tecla on aterres s'il·lumina mentre arrossegues."
   },
   "builder.addshape": {
     "en": "+ Add shape to progression",
-    "es": "+ Añadir forma a la progresión"
+    "es": "+ Añadir forma a la progresión",
+    "ca": "+ Afegir forma a la progressió"
   },
   "builder.editing": {
     "en": "Editing progression",
-    "es": "Editando progresión"
+    "es": "Editando progresión",
+    "ca": "Editant progressió"
   },
   "builder.editingshape": {
     "en": null,
@@ -5858,430 +6282,544 @@ const I18N = {
   },
   "builder.editingshape1": {
     "en": "✎ Editing shape",
-    "es": "✎ Editando la forma"
+    "es": "✎ Editando la forma",
+    "ca": "✎ Editant la forma"
   },
   "builder.editingshape2": {
     "en": "— tap notes on the hex map, then ✓ to save or ✕ to discard.",
-    "es": "— toca notas en el mapa hexagonal, y luego ✓ para guardar o ✕ para descartar."
+    "es": "— toca notas en el mapa hexagonal, y luego ✓ para guardar o ✕ para descartar.",
+    "ca": "— toca notes al mapa hexagonal, i després ✓ per desar o ✕ per descartar."
   },
   "builder.useregistered": {
     "en": "Use registered shapes",
-    "es": "Usar formas registradas"
+    "es": "Usar formas registradas",
+    "ca": "Fer servir formes registrades"
   },
   "builder.dblclick.hint": {
     "en": "double-click a result to place it from the current root",
-    "es": "haz doble clic en un resultado para colocarlo desde la root actual"
+    "es": "haz doble clic en un resultado para colocarlo desde la root actual",
+    "ca": "fes doble clic en un resultat per col·locar-lo des de la root actual"
   },
   "builder.searchplaceholder": {
     "en": "Search",
-    "es": "Buscar"
+    "es": "Buscar",
+    "ca": "Cercar"
   },
   "builder.dblclick.title": {
     "en": "Double-click to place, anchored at the current root",
-    "es": "Doble clic para colocar, anclado a la root actual"
+    "es": "Doble clic para colocar, anclado a la root actual",
+    "ca": "Doble clic per col·locar, ancorat a la root actual"
   },
   "builder.progname.label": {
     "en": "Progression name",
-    "es": "Nombre de la progresión"
+    "es": "Nombre de la progresión",
+    "ca": "Nom de la progressió"
   },
   "builder.progname.placeholder": {
     "en": "e.g. Floating bridge",
-    "es": "p. ej. Puente flotante"
+    "es": "p. ej. Puente flotante",
+    "ca": "p. ex. Pont flotant"
   },
   "builder.tags.label": {
     "en": "Tags (comma-separated)",
-    "es": "Etiquetas (separadas por comas)"
+    "es": "Etiquetas (separadas por comas)",
+    "ca": "Etiquetes (separades per comes)"
   },
   "builder.tags.placeholder": {
     "en": "ambient, superfifth, for the intro",
-    "es": "ambient, quintajusta, para la intro"
+    "es": "ambient, quintajusta, para la intro",
+    "ca": "ambient, quintajusta, per a la intro"
   },
   "builder.notes.label": {
     "en": "Notes",
-    "es": "Notas"
+    "es": "Notas",
+    "ca": "Notes"
   },
   "builder.notes.placeholder": {
     "en": "What caught your ear about this…",
-    "es": "Qué te llamó la atención de esto…"
+    "es": "Qué te llamó la atención de esto…",
+    "ca": "Què et va cridar l'atenció d'això…"
   },
   "builder.progression.label": {
     "en": "Progression",
-    "es": "Progresión"
+    "es": "Progresión",
+    "ca": "Progressió"
   },
   "builder.clearallshapes": {
     "en": "Clear all shapes",
-    "es": "Vaciar todas las formas"
+    "es": "Vaciar todas las formas",
+    "ca": "Buidar totes les formes"
   },
   "species.intro": {
     "en": "Every distinct interval structure you've used, catalogued once no matter which root it appeared on",
-    "es": "Cada estructura de intervalos distinta que has usado, catalogada una sola vez sin importar en qué root apareció"
+    "es": "Cada estructura de intervalos distinta que has usado, catalogada una sola vez sin importar en qué root apareció",
+    "ca": "Cada estructura d'intervals diferent que has fet servir, catalogada una sola vegada sense importar en quina root va aparèixer"
   },
   "species.intro.octoff": {
     "en": " — with octave equivalence off, a voicing spread across octaves counts as its own shape",
-    "es": " — con la equivalencia de octava desactivada, una voz repartida entre octavas cuenta como su propia forma"
+    "es": " — con la equivalencia de octava desactivada, una voz repartida entre octavas cuenta como su propia forma",
+    "ca": " — amb l'equivalència d'octava desactivada, una veu repartida entre octaves compta com la seva pròpia forma"
   },
   "species.intro.p2": {
     "en": "Hover a card to hear it; click it to see nicknames, related shapes, and every progression it's in.",
-    "es": "Pasa el ratón sobre una tarjeta para oírla; haz clic para ver apodos, formas relacionadas, y cada progresión en la que está."
+    "es": "Pasa el ratón sobre una tarjeta para oírla; haz clic para ver apodos, formas relacionadas, y cada progresión en la que está.",
+    "ca": "Passa el ratolí sobre una targeta per sentir-la; fes clic per veure sobrenoms, formes relacionades, i cada progressió on és."
   },
   "chord.searchplaceholder": {
     "en": "Search shapes by nickname or tag…",
-    "es": "Buscar formas por apodo o etiqueta…"
+    "es": "Buscar formas por apodo o etiqueta…",
+    "ca": "Cercar formes per sobrenom o etiqueta…"
   },
   "species.sortnumber": {
     "en": "Number",
-    "es": "Número"
+    "es": "Número",
+    "ca": "Número"
   },
   "species.sortamount": {
     "en": "Amount of Notes",
-    "es": "Cantidad de notas"
+    "es": "Cantidad de notas",
+    "ca": "Quantitat de notes"
   },
   "word.includes": {
     "en": "INCLUDES",
-    "es": "INCLUYE"
+    "es": "INCLUYE",
+    "ca": "INCLOU"
   },
   "word.partof": {
     "en": "PART OF",
-    "es": "PARTE DE"
+    "es": "PARTE DE",
+    "ca": "PART DE"
   },
   "word.nonecatalogued.partof": {
     "en": "None catalogued yet.",
-    "es": "Aún no hay ninguno catalogado."
+    "es": "Aún no hay ninguno catalogado.",
+    "ca": "Encara no n'hi ha cap de catalogat."
   },
   "word.nothingselected": {
     "en": "Nothing selected yet.",
-    "es": "Nada seleccionado aún."
+    "es": "Nada seleccionado aún.",
+    "ca": "Encara no hi ha res seleccionat."
   },
   "word.noshapesselected": {
     "en": "Shift + click to select shapes.",
-    "es": "Shift + clic para seleccionar formas."
+    "es": "Shift + clic para seleccionar formas.",
+    "ca": "Shift + clic per seleccionar formes."
   },
   "builder.noshapesyet": {
     "en": "No shapes yet. Build them with the hex map on the left.",
-    "es": "Aún no hay formas. Constrúyelas con el mapa hexagonal de la izquierda."
+    "es": "Aún no hay formas. Constrúyelas con el mapa hexagonal de la izquierda.",
+    "ca": "Encara no hi ha formes. Construeix-les amb el mapa hexagonal de l'esquerra."
   },
   "species.empty": {
     "en": "No shapes catalogued yet. Add progressions to start collecting them.",
-    "es": "Aún no hay formas catalogadas. Añade progresiones para empezar a coleccionarlas."
+    "es": "Aún no hay formas catalogadas. Añade progresiones para empezar a coleccionarlas.",
+    "ca": "Encara no hi ha formes catalogades. Afegeix progressions per començar a col·leccionar-les."
   },
   "word.clear": {
     "en": "Clear",
-    "es": "Vaciar"
+    "es": "Vaciar",
+    "ca": "Buidar"
   },
   "species.sortusage": {
     "en": "Times Used",
-    "es": "Veces usado"
+    "es": "Veces usado",
+    "ca": "Vegades usat"
   },
   "connect.saveasnew": {
     "en": "Save as new progression",
-    "es": "Guardar como nueva progresión"
+    "es": "Guardar como nueva progresión",
+    "ca": "Desar com a nova progressió"
   },
   "word.clear.connect": {
     "en": "Clear",
-    "es": "Vaciar"
+    "es": "Vaciar",
+    "ca": "Buidar"
   },
   "connect.dragempty": {
     "en": "Drag a progression or chord here to start a chain.",
-    "es": "Arrastra una progresión o acorde aquí para empezar una cadena."
+    "es": "Arrastra una progresión o acorde aquí para empezar una cadena.",
+    "ca": "Arrossega una progressió o acord aquí per començar una cadena."
   },
   "connect.dragfromprogs": {
     "en": "Drag from your progressions",
-    "es": "Arrastra desde tus progresiones"
+    "es": "Arrastra desde tus progresiones",
+    "ca": "Arrossega des de les teves progressions"
   },
   "connect.chordn": {
     "en": "chord",
-    "es": "acorde"
+    "es": "acorde",
+    "ca": "acord"
   },
   "connect.from": {
     "en": "from",
-    "es": "de"
+    "es": "de",
+    "ca": "de"
   },
   "prog.searchseq.hint": {
     "en": "Shift-click 2 or more shapes above, in order, to find other progressions containing that same sequence — the interval between each shape's root matters too, so a transposed repeat of the sequence still matches, but a different interval pattern won't.",
-    "es": "Shift-clic en 2 o más formas de arriba, en orden, para encontrar otras progresiones que contengan esa misma secuencia — el intervalo entre la root de cada forma también importa, así que una repetición transpuesta de la secuencia sigue coincidiendo, pero un patrón de intervalos distinto no."
+    "es": "Shift-clic en 2 o más formas de arriba, en orden, para encontrar otras progresiones que contengan esa misma secuencia — el intervalo entre la root de cada forma también importa, así que una repetición transpuesta de la secuencia sigue coincidiendo, pero un patrón de intervalos distinto no.",
+    "ca": "Shift-clic en 2 o més formes de dalt, en ordre, per trobar altres progressions que continguin aquesta mateixa seqüència — l'interval entre la root de cada forma també importa, així que una repetició transposada de la seqüència continua coincidint, però un patró d'intervals diferent no."
   },
   "map.allnotes.plate.js": {
     "en": "All notes in this progression",
-    "es": "Todas las notas de esta progresión"
+    "es": "Todas las notas de esta progresión",
+    "ca": "Totes les notes d'aquesta progressió"
   },
   "word.articulated": {
     "en": "articulated",
-    "es": "articulado"
+    "es": "articulado",
+    "ca": "articulat"
   },
   "word.exportcollectionfile": {
     "en": "⬇ Export as collection file",
-    "es": "⬇ Exportar como archivo de colección"
+    "es": "⬇ Exportar como archivo de colección",
+    "ca": "⬇ Exportar com a arxiu de col·lecció"
   },
   "word.exportcollectionfile.title": {
     "en": "Save just this progression (with its shapes' nicknames) as a file you can import later",
-    "es": "Guarda solo esta progresión (con los apodos de sus formas) como un archivo que puedes importar después"
+    "es": "Guarda solo esta progresión (con los apodos de sus formas) como un archivo que puedes importar después",
+    "ca": "Desa només aquesta progressió (amb els sobrenoms de les seves formes) com un arxiu que pots importar després"
   },
   "files.importprogs.hint": {
     "en": "Shape nicknames travel along with progression files — there's no separate chord import. To export just one progression, open it and use its own \"⬇ Export as collection file\" button.",
-    "es": "Los apodos de las formas viajan junto con los archivos de progresión — no hay una importación de acordes aparte. Para exportar solo una progresión, ábrela y usa su propio botón \"⬇ Exportar como archivo de colección\"."
+    "es": "Los apodos de las formas viajan junto con los archivos de progresión — no hay una importación de acordes aparte. Para exportar solo una progresión, ábrela y usa su propio botón \"⬇ Exportar como archivo de colección\".",
+    "ca": "Els sobrenoms de les formes viatgen juntament amb els arxius de progressió — no hi ha una importació d'acords a part. Per exportar només una progressió, obre-la i fes servir el seu propi botó \"⬇ Exportar com a arxiu de col·lecció\"."
   },
   "word.progression": {
     "en": "Progression",
-    "es": "Progresión"
+    "es": "Progresión",
+    "ca": "Progressió"
   },
   "help.hint.text": {
     "en": "New here? Tap Help to see how everything works",
-    "es": "¿Primera vez? Toca Ayuda para ver cómo funciona todo"
+    "es": "¿Primera vez? Toca Ayuda para ver cómo funciona todo",
+    "ca": "Primera vegada? Toca Ajuda per veure com funciona tot"
   },
   "midi.label": {
     "en": "MIDI",
-    "es": "MIDI"
+    "es": "MIDI",
+    "ca": "MIDI"
   },
   "midi.connect": {
     "en": "Connect MIDI (input &amp; output)",
-    "es": "Conectar MIDI (entrada y salida)"
+    "es": "Conectar MIDI (entrada y salida)",
+    "ca": "Connectar MIDI (entrada i sortida)"
   },
   "midi.intro": {
     "en": "One connection step covers both: bring in notes from a keyboard, and send this app’s own sound out to a DAW.",
-    "es": "Un solo paso de conexión cubre ambas cosas: trae notas desde un teclado, y envía el sonido propio de esta app a un DAW."
+    "es": "Un solo paso de conexión cubre ambas cosas: trae notas desde un teclado, y envía el sonido propio de esta app a un DAW.",
+    "ca": "Un sol pas de connexió cobreix totes dues coses: porta notes des d'un teclat, i envia el so propi d'aquesta app a un DAW."
   },
   "midi.input.label": {
     "en": "MIDI input",
-    "es": "Entrada MIDI"
+    "es": "Entrada MIDI",
+    "ca": "Entrada MIDI"
   },
   "midi.devices": {
     "en": "Device(s):",
-    "es": "Dispositivo(s):"
+    "es": "Dispositivo(s):",
+    "ca": "Dispositiu(s):"
   },
   "midi.nonedetected": {
     "en": "none detected yet",
-    "es": "ninguno detectado aún"
+    "es": "ninguno detectado aún",
+    "ca": "cap detectat encara"
   },
   "midi.calibrate": {
     "en": "Calibrate root (step 0)",
-    "es": "Calibrar root (paso 0)"
+    "es": "Calibrar root (paso 0)",
+    "ca": "Calibrar root (pas 0)"
   },
   "midi.waitingfornote": {
     "en": "Waiting for a note…",
-    "es": "Esperando una nota…"
+    "es": "Esperando una nota…",
+    "ca": "Esperant una nota…"
   },
   "midi.wraparound": {
     "en": "⚠️ MIDI notes only go from 0 to 127. If your controller is transposed far up or down, keys past that edge either don't come through at all or arrive wrapped around by 128 — the app auto-corrects wrapped notes within ±2 octaves of your calibrated root, but transposing your controller closer to the middle before calibrating is still the safest.",
-    "es": "⚠️ Las notas MIDI solo van de 0 a 127. Si tu controlador está transpuesto muy arriba o abajo, las teclas que pasan ese límite no llegan, o llegan repetidas al dar la vuelta cada 128 — la app corrige automáticamente las notas repetidas dentro de ±2 octavas de tu root calibrada, pero transponer tu controlador más cerca del centro antes de calibrar sigue siendo lo más seguro."
+    "es": "⚠️ Las notas MIDI solo van de 0 a 127. Si tu controlador está transpuesto muy arriba o abajo, las teclas que pasan ese límite no llegan, o llegan repetidas al dar la vuelta cada 128 — la app corrige automáticamente las notas repetidas dentro de ±2 octavas de tu root calibrada, pero transponer tu controlador más cerca del centro antes de calibrar sigue siendo lo más seguro.",
+    "ca": "⚠️ Les notes MIDI només van de 0 a 127. Si el teu controlador està transposat molt amunt o avall, les tecles que passen aquest límit no arriben, o arriben repetides en fer la volta cada 128 — l'app corregeix automàticament les notes repetides dins de ±2 octaves de la teva root calibrada, però transposar el teu controlador més a prop del centre abans de calibrar continua sent el més segur."
   },
   "midi.soundthrough.title": {
     "en": "When on, every MIDI note sounds immediately using the Hex map's Sine/Guitar, Strum, and Root bass settings — regardless of mode or what else is playing",
-    "es": "Cuando está activado, cada nota MIDI suena de inmediato usando los ajustes de Sine/Guitar, Strum y Root bass del mapa hexagonal — sin importar el modo o qué más esté sonando"
+    "es": "Cuando está activado, cada nota MIDI suena de inmediato usando los ajustes de Sine/Guitar, Strum y Root bass del mapa hexagonal — sin importar el modo o qué más esté sonando",
+    "ca": "Quan està activat, cada nota MIDI sona immediatament fent servir els ajustos de Sine/Guitar, Strum i Root bass del mapa hexagonal — sense importar el mode o què més estigui sonant"
   },
   "midi.sound.on": {
     "en": "🔊 MIDI sound: ON",
-    "es": "🔊 Sonido MIDI: ON"
+    "es": "🔊 Sonido MIDI: ON",
+    "ca": "🔊 So MIDI: ON"
   },
   "midi.sound.off": {
     "en": "🔇 MIDI sound: OFF",
-    "es": "🔇 Sonido MIDI: OFF"
+    "es": "🔇 Sonido MIDI: OFF",
+    "ca": "🔇 So MIDI: OFF"
   },
   "midi.step0": {
     "en": "Step 0 = MIDI note",
-    "es": "Paso 0 = nota MIDI"
+    "es": "Paso 0 = nota MIDI",
+    "ca": "Pas 0 = nota MIDI"
   },
   "midi.lastnote": {
     "en": "Last note: step",
-    "es": "Última nota: paso"
+    "es": "Última nota: paso",
+    "ca": "Última nota: pas"
   },
   "midi.hexmaplive": {
     "en": "On the Hex map, MIDI notes play live and join your selection directly.",
-    "es": "En el mapa hexagonal, las notas MIDI suenan en vivo y se añaden directamente a tu selección."
+    "es": "En el mapa hexagonal, las notas MIDI suenan en vivo y se añaden directamente a tu selección.",
+    "ca": "Al mapa hexagonal, les notes MIDI sonen en directe i s'afegeixen directament a la teva selecció."
   },
   "midi.output.label": {
     "en": "MIDI output (send to a DAW)",
-    "es": "Salida MIDI (enviar a un DAW)"
+    "es": "Salida MIDI (enviar a un DAW)",
+    "ca": "Sortida MIDI (enviar a un DAW)"
   },
   "midi.chooseoutput": {
     "en": "— choose a MIDI output —",
-    "es": "— elige una salida MIDI —"
+    "es": "— elige una salida MIDI —",
+    "ca": "— tria una sortida MIDI —"
   },
   "midi.sendingtodaw.title": {
     "en": "Every note this app plays also gets sent out live, in real time, to the chosen port",
-    "es": "Cada nota que reproduce esta app también se envía en vivo, en tiempo real, al puerto elegido"
+    "es": "Cada nota que reproduce esta app también se envía en vivo, en tiempo real, al puerto elegido",
+    "ca": "Cada nota que reprodueix aquesta app també s'envia en directe, en temps real, al port triat"
   },
   "midi.sendingtodaw.on": {
     "en": "🎛 ON",
-    "es": "🎛 ON"
+    "es": "🎛 ON",
+    "ca": "🎛 ON"
   },
   "midi.sendingtodaw.off": {
     "en": "🎛 OFF",
-    "es": "🎛 OFF"
+    "es": "🎛 OFF",
+    "ca": "🎛 OFF"
   },
   "midi.routehint": {
     "en": "Route that port to a track in your DAW (or a virtual MIDI cable) and it'll receive every note this app plays, live, with the same pitch-bend correction used for file export.",
-    "es": "Enruta ese puerto a una pista de tu DAW (o a un cable MIDI virtual) y recibirá cada nota que reproduce esta app, en vivo, con la misma corrección de pitch-bend usada al exportar el archivo."
+    "es": "Enruta ese puerto a una pista de tu DAW (o a un cable MIDI virtual) y recibirá cada nota que reproduce esta app, en vivo, con la misma corrección de pitch-bend usada al exportar el archivo.",
+    "ca": "Encamina aquest port a una pista del teu DAW (o a un cable MIDI virtual) i rebrà cada nota que reprodueix aquesta app, en directe, amb la mateixa correcció de pitch-bend usada en exportar l'arxiu."
   },
   "midi.nooutputports": {
     "en": "No MIDI output ports detected. On some systems you'll need a virtual MIDI port (e.g. IAC Driver on macOS, loopMIDI on Windows) for this app to \"see\" your DAW.",
-    "es": "No se detectaron puertos de salida MIDI. En algunos sistemas necesitarás un puerto MIDI virtual (p. ej. IAC Driver en macOS, loopMIDI en Windows) para que esta app pueda \"ver\" tu DAW."
+    "es": "No se detectaron puertos de salida MIDI. En algunos sistemas necesitarás un puerto MIDI virtual (p. ej. IAC Driver en macOS, loopMIDI en Windows) para que esta app pueda \"ver\" tu DAW.",
+    "ca": "No s'han detectat ports de sortida MIDI. En alguns sistemes necessitaràs un port MIDI virtual (p. ex. IAC Driver a macOS, loopMIDI a Windows) perquè aquesta app pugui \"veure\" el teu DAW."
   },
   "files.libinfo": {
     "en": "Export collection saves every progression, shape nickname, and the octave-equivalence setting to a .json file. Import collection adds them here — matching nicknames get overwritten or skipped per the \"On duplicate\" choice below, progressions are matched by name.",
-    "es": "Exportar colección guarda cada progresión, apodo de forma, y el ajuste de equivalencia de octava en un archivo .json. Importar colección los añade aquí — los apodos que coinciden se sobrescriben u omiten según la opción \"Si hay duplicado\" de abajo, las progresiones se emparejan por nombre."
+    "es": "Exportar colección guarda cada progresión, apodo de forma, y el ajuste de equivalencia de octava en un archivo .json. Importar colección los añade aquí — los apodos que coinciden se sobrescriben u omiten según la opción \"Si hay duplicado\" de abajo, las progresiones se emparejan por nombre.",
+    "ca": "Exportar col·lecció desa cada progressió, sobrenom de forma, i l'ajust d'equivalència d'octava en un arxiu .json. Importar col·lecció els afegeix aquí — els sobrenoms que coincideixen se sobreescriuen o s'ometen segons l'opció \"Si hi ha duplicat\" de sota, les progressions s'emparellen per nom."
   },
   "builder.identify": {
     "en": "Identify shape ▾",
-    "es": "Identificar forma ▾"
+    "es": "Identificar forma ▾",
+    "ca": "Identificar forma ▾"
   },
   "builder.identify.title": {
     "en": "Show the same recognition info shown on the Hex map: exact match, related shapes, similarity ranking, and every occurrence.",
-    "es": "Muestra la misma información de reconocimiento que aparece en el mapa hexagonal: coincidencia exacta, formas relacionadas, ranking de similitud, y cada aparición."
+    "es": "Muestra la misma información de reconocimiento que aparece en el mapa hexagonal: coincidencia exacta, formas relacionadas, ranking de similitud, y cada aparición.",
+    "ca": "Mostra la mateixa informació de reconeixement que apareix al mapa hexagonal: coincidència exacta, formes relacionades, rànquing de similitud, i cada aparició."
   },
   "chord.exactmatch": {
     "en": "Exact match — this shape is already in your collection:",
-    "es": "Coincidencia exacta — esta forma ya está en tu colección:"
+    "es": "Coincidencia exacta — esta forma ya está en tu colección:",
+    "ca": "Coincidència exacta — aquesta forma ja és a la teva col·lecció:"
   },
   "recog.identicroot.title": {
     "en": "Identic shapes with different root",
-    "es": "Formas idénticas con root distinta"
+    "es": "Formas idénticas con root distinta",
+    "ca": "Formes idèntiques amb root diferent"
   },
   "recog.identicroot.hint": {
     "en": "The same exact shape as above, transposed to other roots elsewhere in your collection.",
-    "es": "Exactamente la misma forma de arriba, transpuesta a otras raíces en tu colección."
+    "es": "Exactamente la misma forma de arriba, transpuesta a otras raíces en tu colección.",
+    "ca": "Exactament la mateixa forma de dalt, transposada a altres arrels de la teva col·lecció."
   },
   "word.root": {
     "en": "Root",
-    "es": "Root"
+    "es": "Root",
+    "ca": "Root"
   },
   "recog.partofroot.title": {
     "en": "Part of shape with different root",
-    "es": "Parte de forma con root distinta"
+    "es": "Parte de forma con root distinta",
+    "ca": "Part de forma amb root diferent"
   },
   "octave.caption": {
     "en": "octaves of the key you play are highlighted",
-    "es": "las octavas de la nota que tocas quedan resaltadas"
+    "es": "las octavas de la nota que tocas quedan resaltadas",
+    "ca": "les octaves de la nota que toques queden ressaltades"
   },
   "word.saveprogression": {
     "en": "Save progression",
-    "es": "Guardar progresión"
+    "es": "Guardar progresión",
+    "ca": "Desar progressió"
   },
   "word.saveasnewprogression": {
     "en": "Save as new progression",
-    "es": "Guardar como nueva progresión"
+    "es": "Guardar como nueva progresión",
+    "ca": "Desar com a nova progressió"
   },
   "word.saveasnewprogression.title": {
     "en": "Save these chords as a brand new progression, leaving the original untouched",
-    "es": "Guarda estos acordes como una progresión nueva, sin tocar la original"
+    "es": "Guarda estos acordes como una progresión nueva, sin tocar la original",
+    "ca": "Desa aquests acords com una progressió nova, sense tocar l'original"
   },
   "tun.table.centsexplainer": {
     "en": "You can easily see an interval's deviation from the current Western standard tuning system, 12ED2, by measuring it in hundredths of a 12ED2 semitone (also called cents, or ¢), since each note of 12ED2 is separated by 100 ¢ while some 31ED2 intervals, for example, fall at 116.13 ¢.",
-    "es": "Se puede ver la desviación de un intervalo respecto al actual sistema de afinación estándar occidental, 12ED2, fácilmente si lo medimos en centésimas de semitono de 12ED2 (también llamadas cents o ¢), ya que cada una de las notas de 12ED2 está separada por 100 ¢ mientras que algunos intervalos de 31ED2, por ejemplo, caen en 116.13 ¢."
+    "es": "Se puede ver la desviación de un intervalo respecto al actual sistema de afinación estándar occidental, 12ED2, fácilmente si lo medimos en centésimas de semitono de 12ED2 (también llamadas cents o ¢), ya que cada una de las notas de 12ED2 está separada por 100 ¢ mientras que algunos intervalos de 31ED2, por ejemplo, caen en 116.13 ¢.",
+    "ca": "Es pot veure la desviació d'un interval respecte de l'actual sistema d'afinació estàndard occidental, 12ED2, fàcilment si el mesurem en centèsimes de semitò de 12ED2 (també anomenades cents o ¢), ja que cadascuna de les notes de 12ED2 està separada per 100 ¢ mentre que alguns intervals de 31ED2, per exemple, cauen a 116.13 ¢."
   },
   "recog.identicroot.none": {
     "en": "This exact shape hasn't been recorded at any other root yet.",
-    "es": "Esta forma exacta aún no se ha registrado en ninguna otra root."
+    "es": "Esta forma exacta aún no se ha registrado en ninguna otra root.",
+    "ca": "Aquesta forma exacta encara no s'ha registrat en cap altra root."
   },
   "recog.partofroot.none": {
     "en": "Not a fragment of any bigger cataloged chord yet.",
-    "es": "Aún no es fragmento de ningún acorde catalogado más grande."
+    "es": "Aún no es fragmento de ningún acorde catalogado más grande.",
+    "ca": "Encara no és fragment de cap acord catalogat més gran."
   },
   "help.continuereading": {
     "en": "Keep reading",
-    "es": "Seguir leyendo"
+    "es": "Seguir leyendo",
+    "ca": "Continuar llegint"
   },
   "fullscreen.enter": {
     "en": "⛶ Full screen",
-    "es": "⛶ Pantalla completa"
+    "es": "⛶ Pantalla completa",
+    "ca": "⛶ Pantalla completa"
   },
   "fullscreen.exit": {
     "en": "⛶ Exit full screen",
-    "es": "⛶ Salir de pantalla completa"
+    "es": "⛶ Salir de pantalla completa",
+    "ca": "⛶ Sortir de pantalla completa"
   },
   "epilepsy.h2": {
     "en": "⚠️ Photosensitivity notice",
-    "es": "⚠️ Aviso de fotosensibilidad"
+    "es": "⚠️ Aviso de fotosensibilidad",
+    "ca": "⚠️ Avís de fotosensibilitat"
   },
   "epilepsy.p1": {
     "en": "This app uses moving backgrounds and pulsing color highlights tied to the music, which can grow fast and intense at high tempos or complex polyrhythms. If you have photosensitive epilepsy, or are sensitive to flashing or fast-moving visuals, please turn on safe mode below before continuing.",
-    "es": "Esta app usa fondos en movimiento y destellos de color ligados a la música, que pueden volverse rápidos e intensos con tempos altos o poliritmos complejos. Si tienes epilepsia fotosensible, o eres sensible a destellos o movimiento rápido, activa el modo seguro de abajo antes de continuar."
+    "es": "Esta app usa fondos en movimiento y destellos de color ligados a la música, que pueden volverse rápidos e intensos con tempos altos o poliritmos complejos. Si tienes epilepsia fotosensible, o eres sensible a destellos o movimiento rápido, activa el modo seguro de abajo antes de continuar.",
+    "ca": "Aquesta app fa servir fons en moviment i llampecs de color lligats a la música, que poden tornar-se ràpids i intensos amb tempos alts o polirítmies complexes. Si tens epilèpsia fotosensible, o ets sensible a llampecs o moviment ràpid, activa el mode segur de sota abans de continuar."
   },
   "epilepsy.toggle": {
-    "en": "⚕️ Photosensitivity safe mode",
-    "es": "⚕️ Modo seguro para fotosensibilidad"
+    "en": "Photosensitivity safe mode",
+    "es": "Modo seguro",
+    "ca": "Mode segur"
   },
   "epilepsy.toggle.title": {
     "en": "Slows down the pulsing background highlights",
-    "es": "Ralentiza los destellos del fondo"
+    "es": "Ralentiza los destellos del fondo",
+    "ca": "Alenteix els llampecs del fons"
   },
   "epilepsy.p2": {
     "en": "Safe mode keeps the same background effects, just eased much more slowly — it doesn't turn them off. You can change this anytime in Settings.",
-    "es": "El modo seguro mantiene los mismos efectos de fondo, solo que mucho más suaves — no los desactiva. Puedes cambiarlo cuando quieras en Ajustes."
+    "es": "El modo seguro mantiene los mismos efectos de fondo, solo que mucho más suaves — no los desactiva. Puedes cambiarlo cuando quieras en Ajustes.",
+    "ca": "El mode segur manté els mateixos efectes de fons, només que molt més suaus — no els desactiva. Pots canviar-ho quan vulguis a Ajustos."
   },
   "epilepsy.continue": {
     "en": "Got it",
-    "es": "Entendido"
+    "es": "Entendido",
+    "ca": "Entesos"
   },
   "tut.step1": {
     "en": "Tap keys to select them for your shape. Tap them again to deselect them.",
-    "es": "Toca teclas para seleccionarlas para tu forma. Vuelve a tocarlas para deseleccionarlas."
+    "es": "Toca teclas para seleccionarlas para tu forma. Vuelve a tocarlas para deseleccionarlas.",
+    "ca": "Toca tecles per seleccionar-les per a la teva forma. Torna a tocar-les per desseleccionar-les."
   },
   "tut.step2": {
     "en": "Then press <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Add shape to progression\"</span>.",
-    "es": "Luego pulsa <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Añadir forma a la progresión\"</span>."
+    "es": "Luego pulsa <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Añadir forma a la progresión\"</span>.",
+    "ca": "Després prem <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Afegir forma a la progressió\"</span>."
   },
   "tut.step3": {
     "en": "Nice! Now tap a second shape. You can click-and-drag a marked key to move the whole shape at once or ctrl + click a key to make it the root; ",
-    "es": "¡Bien! Ahora toca una segunda forma. Puedes hacer clic y arrastrar una tecla marcada para mover toda la forma a la vez, o ctrl + clic en una tecla para convertirla en la root."
+    "es": "¡Bien! Ahora toca una segunda forma. Puedes hacer clic y arrastrar una tecla marcada para mover toda la forma a la vez, o ctrl + clic en una tecla para convertirla en la root.",
+    "ca": "Bé! Ara toca una segona forma. Pots fer clic i arrossegar una tecla marcada per moure tota la forma alhora, o ctrl + clic en una tecla per convertir-la en la root."
   },
   "tut.step4": {
     "en": "Press <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>\"Play progression\"</span> to listen how your new shape combines with the previous one.<br><span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Add shape to progression\"</span> again when you feel like doing so.",
-    "es": "Pulsa <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>\"Progresión\"</span> para escuchar cómo combina tu nueva forma con la anterior.<br><span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Añadir forma a la progresión\"</span> otra vez cuando te apetezca."
+    "es": "Pulsa <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>\"Progresión\"</span> para escuchar cómo combina tu nueva forma con la anterior.<br><span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Añadir forma a la progresión\"</span> otra vez cuando te apetezca.",
+    "ca": "Prem <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>\"Progressió\"</span> per escoltar com combina la teva nova forma amb l'anterior.<br><span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"Afegir forma a la progressió\"</span> un altre cop quan et vingui de gust."
   },
   "tut.step5": {
     "en": "Press \"Save progression\" to finish — or tap another shape first if you want to preview it with <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>▶ Progression</span>.",
-    "es": "Pulsa \"Guardar progresión\" para terminar — o toca otra forma primero si quieres previsualizarla con <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>▶ Progresión</span>."
+    "es": "Pulsa \"Guardar progresión\" para terminar — o toca otra forma primero si quieres previsualizarla con <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>▶ Progresión</span>.",
+    "ca": "Prem \"Desar progressió\" per acabar — o toca una altra forma primer si vols previsualitzar-la amb <span style='color:#d6ac2c; text-shadow:0 0 6px rgba(214,172,44,.7);'>▶ Progressió</span>."
   },
   "word.backtoprogressions": {
     "en": "← Back to progressions",
-    "es": "← Volver a progresiones"
+    "es": "← Volver a progresiones",
+    "ca": "← Tornar a progressions"
   },
   "tut.title.write": {
     "en": "✍️ Build a shape",
-    "es": "✍️ Crea una forma"
+    "es": "✍️ Crea una forma",
+    "ca": "✍️ Crea una forma"
   },
   "tut.demo.caption": {
     "en": "Example — tapping out a chord:",
-    "es": "Ejemplo — tocando un acorde:"
+    "es": "Ejemplo — tocando un acorde:",
+    "ca": "Exemple — tocant un acord:"
   },
   "tut.tip.playshape": {
     "en": "Press <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"▶ Shape\"</span> anytime to hear it.",
-    "es": "Pulsa <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"▶ Forma\"</span> cuando quieras para escucharlo."
+    "es": "Pulsa <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"▶ Forma\"</span> cuando quieras para escucharlo.",
+    "ca": "Prem <span style='color:#8ec9ff; text-shadow:0 0 6px rgba(142,201,255,.7);'>\"▶ Forma\"</span> quan vulguis per escoltar-ho."
   },
   "tut.tip.hoverlist": {
     "en": "🖱️ Hover a shape to hear it, you can also edit it.",
-    "es": "🖱️ Pasa el ratón por una forma para escucharla, también puedes editarla."
+    "es": "🖱️ Pasa el ratón por una forma para escucharla, también puedes editarla.",
+    "ca": "🖱️ Passa el ratolí per una forma per escoltar-la, també pots editar-la."
   },
   "tut.tip.addmore": {
     "en": "Add more shapes or \"Save progression\" to finish —",
-    "es": "Añade más formas o pulsa \"Guardar progresión\" para terminar —"
+    "es": "Añade más formas o pulsa \"Guardar progresión\" para terminar —",
+    "ca": "Afegeix més formes o prem \"Desar progressió\" per acabar —"
   },
   "tut.savemsg": {
     "en": "🎉 Saved! Its shapes are now in Shapes too.",
-    "es": "🎉 ¡Guardada! Sus formas ya están también en Shapes."
+    "es": "🎉 ¡Guardada! Sus formas ya están también en Shapes.",
+    "ca": "🎉 Desada! Les seves formes ja són també a Shapes."
   },
   "tut.main.h2": {
     "en": "Hi",
-    "es": "Hola"
+    "es": "Hola",
+    "ca": "Hola"
   },
   "tut.main.msg": {
     "en": "This app is a catalog and a hex-controller playground for writing and revisiting chord progressions in 31ED2 microtonal tuning.",
-    "es": "Esta app es un catálogo y un espacio de juego con controlador hexagonal para escribir y revisar progresiones de acordes en la afinación microtonal 31ED2."
+    "es": "Esta app es un catálogo y un espacio de juego con controlador hexagonal para escribir y revisar progresiones de acordes en la afinación microtonal 31ED2.",
+    "ca": "Aquesta app és un catàleg i un espai de joc amb controlador hexagonal per escriure i revisar progressions d'acords en l'afinació microtonal 31ED2."
   },
   "tut.main.msg2": {
     "en": "For deeper explanations of every feature, the tuning system, and keyboard shortcuts, check out the <b>Help</b> section any time.",
-    "es": "Para explicaciones más profundas de cada función, del sistema de afinación, y de los atajos de teclado, revisa la sección <b>Help</b> cuando quieras."
+    "es": "Para explicaciones más profundas de cada función, del sistema de afinación, y de los atajos de teclado, revisa la sección <b>Help</b> cuando quieras.",
+    "ca": "Per a explicacions més profundes de cada funció, del sistema d'afinació, i de les dreceres de teclat, revisa la secció <b>Help</b> quan vulguis."
   },
   "tut.restart": {
     "en": "Tutorial",
-    "es": "Tutorial"
+    "es": "Tutorial",
+    "ca": "Tutorial"
   },
   "tut.restart.title": {
     "en": "Replay the mini-tutorial",
-    "es": "Repetir el mini tutorial"
+    "es": "Repetir el mini tutorial",
+    "ca": "Repetir el mini tutorial"
   }
 };
-function t(key){ const d = I18N[key]; if(!d) return key; return d[state.lang] || d.en || key; }
+const LANG_ORDER = ['en','es','ca'];
+const LANG_NAMES = { en:'English', es:'Español', ca:'Català' };
+// Catalan falls back to Spanish (not English) for any key not yet translated: the two are far
+// closer, so a gap reads as a near-miss rather than a jarring language switch.
+function t(key){
+  const d = I18N[key]; if(!d) return key;
+  if(state.lang==='ca') return d.ca || d.es || d.en || key;
+  return d[state.lang] || d.en || key;
+}
 const state = {
   tab:'catalog', view:'list',
   progressions: [], nicknames: {}, octaveEquivalence: false,
@@ -6297,6 +6835,7 @@ const state = {
   expandedSimilaritySig:null, expandedProgSimilarity:null,
   builder:{ editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[], selectedOrderQr:{}, lastClicked:null, error:'', editingChordIdx:null, editingChordBackup:null, selectedIdxs:[], selectAnchor:null },
   builderCtxMenu:null, builderTransposeModal:null,
+  setSub:{ backup:false, cloud:false, importprogs:false, danger:false },
   connectProgressions:true,
   gdrive:{ signedIn:false, email:null, busy:false, msg:'', lastSyncAt:null },
   connect:{ chain:[] }, connectFilter:'',
@@ -6346,15 +6885,17 @@ async function loadData(){
   try{ const r = await storageGet('midiCalibration'); if(r){ const d=JSON.parse(r.value); if(typeof d.baseNote==='number') state.midi.baseNote=d.baseNote; } }catch(e){}
   try{
     const r = await storageGet('lang');
-    if(r && (JSON.parse(r.value)==='en' || JSON.parse(r.value)==='es')){
+    if(r && LANG_ORDER.indexOf(JSON.parse(r.value))>=0){
       state.lang = JSON.parse(r.value);
     } else {
       // No saved preference yet: default to English, unless the browser itself is set to
       // Spanish, Catalan, Galician, or Basque (i.e. a language spoken as the majority language
       // in Spain or Latin America) -- in which case default to Spanish instead.
       const browserLangs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
-      const spanishLeaning = /^(es|ca|gl|eu)\b/i;
-      state.lang = browserLangs.some(l=>spanishLeaning.test(l||'')) ? 'es' : 'en';
+      // A Catalan-set browser gets Catalan; Spanish/Galician/Basque get Spanish; anything else English.
+      if(browserLangs.some(l=>/^ca\b/i.test(l||''))) state.lang = 'ca';
+      else if(browserLangs.some(l=>/^(es|gl|eu)\b/i.test(l||''))) state.lang = 'es';
+      else state.lang = 'en';
     }
   }catch(e){}
   try{ const r = await storageGet('seenHelpHint'); if(!r || JSON.parse(r.value)!==true) state.showHelpHint = true; }catch(e){ state.showHelpHint = true; }
@@ -7996,95 +8537,124 @@ function render(){
 <span class="help-dropdown-wrap">
         <button class="btn mini ${state.showSettingsMenu?'primary':''}" onclick="toggleSettingsMenu()" title="${t('word.settings')}"><span class="header-btn-emoji header-btn-emoji-stroke">⚙️</span></button>
         ${state.showSettingsMenu ? `
-          <div class="help-dropdown-menu settings-menu" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="help-dropdown-menu settings-menu">
 
-            <div class="settings-section">
-              <div class="settings-section-title">${t('set.sec.collection')}</div>
-              <button class="btn small ${state.showFilesMenu?'primary':''}" onclick="toggleFilesMenu()">${t('word.files')} ▾</button>
-              ${state.showFilesMenu ? `
-                <div class="settings-sub">
+            <button class="set-row set-l1 ${state.showFilesMenu?'open':''}" onclick="toggleFilesMenu()">
+              <span class="set-ico">🗂️</span><span class="set-label">${t('set.sec.collection')}</span><span class="set-chev">${state.showFilesMenu?'▾':'▸'}</span>
+            </button>
+            ${state.showFilesMenu ? `
+              <div class="set-body">
 
-                  <div class="settings-subgroup">
-                    <div class="row" style="justify-content:space-between; align-items:center;">
-                      <div class="settings-sub-title">${t('set.sub.backup')}</div>
-                      <button class="btn mini ghost" onclick="toggleLibInfo()" title="${t('word.whatdoes.2')}">?</button>
-                    </div>
-                    ${state.showLibInfo ? `<p class="sub settings-note">${t('files.libinfo')}</p>` : ''}
-                    <div class="settings-field-label">${t('files.whole')}</div>
+                <button class="set-row set-l2 ${setSubOpen('backup')?'open':''}" onclick="toggleSetSub('backup')">
+                  <span class="set-ico">💾</span><span class="set-label">${t('set.sub.backup')}</span><span class="set-chev">${setSubOpen('backup')?'▾':'▸'}</span>
+                </button>
+                ${setSubOpen('backup') ? `
+                  <div class="set-body2">
+                    <span class="set-inline" style="align-items:center;">
+                      <span class="set-caption" style="margin:0;">${t('files.whole')}</span>
+                      <button class="set-info-btn" onclick="event.stopPropagation(); toggleLibInfo()" title="${t('word.whatdoes.2')}">?</button>
+                    </span>
+                    ${state.showLibInfo ? `<p class="sub set-note">${t('files.libinfo')}</p>` : ''}
                     <button class="btn small" onclick="exportLibrary()">${t('files.export')}</button>
                     <button class="btn small" onclick="triggerImport()">${t('files.import')}</button>
+                    <div class="set-caption">MIDI</div>
                     <button class="btn small" onclick="exportAllShapesMidi()">${t('files.exportshapesmidi')}</button>
                     <button class="btn small" onclick="exportAllProgressionsMidi()">${t('files.exportprogsmidi')}</button>
                   </div>
+                ` : ''}
 
-                  <div class="settings-subgroup">
-                    <div class="row" style="justify-content:space-between; align-items:center;">
-                      <div class="settings-sub-title">${t('files.importprogs.label')}</div>
-                      <button class="btn mini ghost" onclick="toggleProgImportInfo()" title="${t('word.whatdoes.3')}">?</button>
-                    </div>
-                    ${state.showProgImportInfo ? `<p class="sub settings-note">${t('files.importprogs.hint')}</p>` : ''}
-                    <button class="btn small" onclick="triggerImportProgressions()">${t('files.importprogs.btn')}</button>
-                    <div class="settings-field-label">${t('files.onduplicate')}</div>
-                    <span class="row" style="gap:6px;">
-                      <button class="btn small ${state.importDuplicateMode!=='overwrite'?'primary':''}" onclick="setImportDuplicateMode('skip')">${t('word.skip')}</button>
-                      <button class="btn small ${state.importDuplicateMode==='overwrite'?'primary':''}" onclick="setImportDuplicateMode('overwrite')">${t('word.overwrite')}</button>
-                    </span>
-                  </div>
-
-                  <div class="settings-subgroup">
-                    <div class="settings-sub-title">${t('set.sub.cloud')}</div>
+                <button class="set-row set-l2 ${setSubOpen('cloud')?'open':''}" onclick="toggleSetSub('cloud')">
+                  <span class="set-ico">☁️</span><span class="set-label">${t('set.sub.cloud')}</span><span class="set-chev">${setSubOpen('cloud')?'▾':'▸'}</span>
+                </button>
+                ${setSubOpen('cloud') ? `
+                  <div class="set-body2">
                     ${state.gdrive.signedIn ? `
                       <div class="gdrive-status">${t('gd.connected')}${state.gdrive.email ? `<br><b>${escapeHtml(state.gdrive.email)}</b>` : ''}</div>
                       <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveSaveCollection()">${state.gdrive.busy ? t('gd.working') : t('gd.save')}</button>
                       <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveLoadCollection()">${state.gdrive.busy ? t('gd.working') : t('gd.load')}</button>
                       <button class="btn small gdrive-btn" onclick="gdriveSignOut()">${t('gd.signout')}</button>
-                      <p class="sub settings-note">${t('gd.hint')}</p>
+                      <p class="sub set-note">${t('gd.hint')}</p>
                     ` : `
-                      <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveSignIn()">${state.gdrive.busy ? t('gd.working') : t('gd.sync')}</button>
+                      <button class="btn small gdrive-btn" ${state.gdrive.busy?'disabled':''} onclick="gdriveSignIn()"><span class="g-mark">G</span>${state.gdrive.busy ? t('gd.working') : t('gd.sync')}</button>
                     `}
-                    ${state.gdrive.msg ? `<p class="sub settings-note">${escapeHtml(state.gdrive.msg)}</p>` : ''}
+                    ${state.gdrive.msg ? `<p class="sub set-note">${escapeHtml(state.gdrive.msg)}</p>` : ''}
                   </div>
+                ` : ''}
 
-                  <div class="settings-subgroup settings-danger">
-                    <div class="settings-sub-title">${t('files.dangerzone')}</div>
+                <button class="set-row set-l2 ${setSubOpen('importprogs')?'open':''}" onclick="toggleSetSub('importprogs')">
+                  <span class="set-ico">📥</span><span class="set-label">${t('files.importprogs.label')}</span><span class="set-chev">${setSubOpen('importprogs')?'▾':'▸'}</span>
+                </button>
+                ${setSubOpen('importprogs') ? `
+                  <div class="set-body2">
+                    <span class="set-inline" style="align-items:center;">
+                      <span class="set-caption" style="margin:0;">${t('files.importprogs.label')}</span>
+                      <button class="set-info-btn" onclick="event.stopPropagation(); toggleProgImportInfo()" title="${t('word.whatdoes.3')}">?</button>
+                    </span>
+                    ${state.showProgImportInfo ? `<p class="sub set-note">${t('files.importprogs.hint')}</p>` : ''}
+                    <button class="btn small" onclick="triggerImportProgressions()">${t('files.importprogs.btn')}</button>
+                    <div class="set-caption">${t('files.onduplicate')}</div>
+                    <span class="set-inline">
+                      <button class="btn small ${state.importDuplicateMode!=='overwrite'?'primary':''}" onclick="setImportDuplicateMode('skip')">${t('word.skip')}</button>
+                      <button class="btn small ${state.importDuplicateMode==='overwrite'?'primary':''}" onclick="setImportDuplicateMode('overwrite')">${t('word.overwrite')}</button>
+                    </span>
+                  </div>
+                ` : ''}
+
+                <button class="set-row set-l2 set-danger ${setSubOpen('danger')?'open':''}" onclick="toggleSetSub('danger')">
+                  <span class="set-ico">⚠️</span><span class="set-label">${t('files.dangerzone')}</span><span class="set-chev">${setSubOpen('danger')?'▾':'▸'}</span>
+                </button>
+                ${setSubOpen('danger') ? `
+                  <div class="set-body2">
                     ${state.confirmResetLibrary ? `
-                      <span class="sub" style="margin:0; display:block;">${t('files.confirmdelete')}</span>
-                      <span class="row" style="gap:6px; margin-top:4px;">
+                      <p class="sub set-note">${t('files.confirmdelete')}</p>
+                      <span class="set-inline">
                         <button class="btn small danger" onclick="resetLibrary()">${t('files.yesdelete')}</button>
                         <button class="btn small ghost" onclick="cancelResetLibrary()">${t('word.cancel')}</button>
                       </span>
                     ` : `<button class="btn small danger" onclick="askResetLibrary()" title="${t('files.eraseall')}">${t('files.reset')}</button>`}
                   </div>
+                ` : ''}
 
+              </div>
+            ` : ''}
+
+            <button class="set-row set-l1 ${state.showMidiPanel?'open':''}" onclick="toggleMidiPanel()">
+              <span class="set-ico">🔌</span><span class="set-label">${t('set.midiio')}</span><span class="set-chev">${state.showMidiPanel?'▾':'▸'}</span>
+            </button>
+            ${state.showMidiPanel ? `<div class="set-body">${renderMidiPanel()}</div>` : ''}
+
+            <button class="set-row set-leaf" onclick="toggleOctaveEquivalence()">
+              <span class="set-ico">⬡</span><span class="set-label">${t('eq.label')}</span>
+              <span class="set-info-btn" style="margin-left:auto;" onclick="event.stopPropagation(); toggleEqInfo()" title="${t('word.whatdoes')}">?</span>
+              <span class="set-pill ${state.octaveEquivalence?'on':''}" style="margin-left:7px;">${state.octaveEquivalence?t('word.on'):t('word.off')}</span>
+            </button>
+            ${state.showEqInfo ? `<p class="sub set-note" style="padding-left:10px;">${state.octaveEquivalence ? t('eq.info.on') : t('eq.info.off')}</p>` : ''}
+
+            <button class="set-row set-leaf" onclick="toggleMuted()" title="${t('mute.title')}">
+              <span class="set-ico">${state.muted?'🔇':'🔊'}</span><span class="set-label">${t('set.mute')}</span>
+              <span class="set-pill ${state.muted?'on':''}">${state.muted?t('word.on'):t('word.off')}</span>
+            </button>
+
+            <button class="set-row set-leaf" onclick="toggleFullscreen()">
+              <span class="set-ico">⛶</span><span class="set-label">${t('set.fullscreen')}</span>
+              <span class="set-pill ${document.fullscreenElement?'on':''}">${document.fullscreenElement?t('word.on'):t('word.off')}</span>
+            </button>
+
+            <button class="set-row set-leaf" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">
+              <span class="set-ico">⚕️</span><span class="set-label">${t('epilepsy.toggle')}</span>
+              <span class="set-pill ${state.epilepsySafeMode?'on':''}">${state.epilepsySafeMode?t('word.on'):t('word.off')}</span>
+            </button>
+
+            <button class="set-row set-l1 ${state.showLangMenu?'open':''}" onclick="toggleLangMenu()">
+              <span class="set-ico">🌐</span><span class="set-label">${LANG_NAMES[state.lang]||'English'}</span><span class="set-chev">${state.showLangMenu?'▾':'▸'}</span>
+            </button>
+            ${state.showLangMenu ? `
+              <div class="set-body">
+                <div class="set-body2" style="margin-left:0; padding-left:0; border-left:none;">
+                  ${LANG_ORDER.map(code=>`<button class="btn small ${state.lang===code?'primary':''}" onclick="setLang('${code}')">${LANG_NAMES[code]}</button>`).join('')}
                 </div>
-              ` : ''}
-            </div>
-
-            <div class="settings-section">
-              <div class="settings-section-title">${t('set.sec.devices')}</div>
-              <button class="btn small ${state.showMidiPanel?'primary':''}" onclick="toggleMidiPanel()"><span class="help-menu-emoji">🔌</span>${state.lang==='es'?'MIDI Entrada/Salida':'MIDI In/Out'} ▾</button>
-              ${state.showMidiPanel ? `<div class="settings-sub">${renderMidiPanel()}</div>` : ''}
-            </div>
-
-            <div class="settings-section">
-              <div class="settings-section-title">${t('set.sec.sound')}</div>
-              <button class="btn small ${state.muted?'primary':''}" onclick="toggleMuted()" title="${t('mute.title')}">${state.muted?t('mute.muted'):t('mute.mute')}</button>
-            </div>
-
-            <div class="settings-section">
-              <div class="settings-section-title">${t('set.sec.theory')}</div>
-              <span class="row" style="gap:6px;">
-                <button class="eq-toggle ${state.octaveEquivalence?'on':''}" onclick="toggleOctaveEquivalence()">${t('eq.label')}: ${state.octaveEquivalence ? t('word.on') : t('word.off')}</button>
-                <button class="btn mini ghost" onclick="toggleEqInfo()" title="${t('word.whatdoes')}">?</button>
-              </span>
-              ${state.showEqInfo ? `<p class="sub settings-note">${state.octaveEquivalence ? t('eq.info.on') : t('eq.info.off')}</p>` : ''}
-            </div>
-
-            <div class="settings-section settings-section-last">
-              <div class="settings-section-title">${t('set.sec.display')}</div>
-              <button class="btn small" onclick="toggleFullscreen()">${document.fullscreenElement ? t('fullscreen.exit') : t('fullscreen.enter')}</button>
-              <button class="eq-toggle ${state.epilepsySafeMode?'on':''}" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">${t('epilepsy.toggle')}: ${state.epilepsySafeMode ? t('word.on') : t('word.off')}</button>
-            </div>
+              </div>
+            ` : ''}
 
           </div>
         ` : ''}
@@ -8095,20 +8665,11 @@ function render(){
       <span class="help-dropdown-wrap">
         <button id="helpBtn" class="btn mini ${state.showHelpMenu?'primary':''} ${state.showHelpHint?'help-hint-glow':''}" onclick="dismissHelpHint(); toggleHelpMenu();"><span class="header-btn-emoji">🙋‍♀️</span> ${t('word.help')}</button>
         ${state.showHelpMenu ? `
-          <div class="help-dropdown-menu">
-            <button class="btn small" onclick="toggleInfoSoftware(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🤖</span>${t('help.menu.software')}</button>
-            <button class="btn small" onclick="toggleInfoTuning(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🎼</span>${t('help.menu.tuning')}</button>
-            <button class="btn small" onclick="toggleInfoHexagons(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">⬡</span>${t('help.menu.hexagons')}</button>
-            <button class="btn small" onclick="toggleInfoShortcuts(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🐇</span>${t('help.menu.faster')}</button>
-          </div>
-        ` : ''}
-      </span>
-      <span class="help-dropdown-wrap">
-        <button class="btn mini ${state.showLangMenu?'primary':''}" onclick="toggleLangMenu()"><span class="header-btn-emoji">🌐</span> ${state.lang==='es'?'Español':'English'}</button>
-        ${state.showLangMenu ? `
-          <div class="help-dropdown-menu">
-            <button class="btn small ${state.lang==='en'?'primary':''}" onclick="setLang('en')">English</button>
-            <button class="btn small ${state.lang==='es'?'primary':''}" onclick="setLang('es')">Español</button>
+          <div class="help-dropdown-menu help-menu-rows">
+            <button class="set-row set-l1" onclick="toggleInfoSoftware(); state.showHelpMenu=false; render();"><span class="set-ico">🤖</span><span class="set-label">${t('help.menu.software')}</span></button>
+            <button class="set-row set-l1" onclick="toggleInfoTuning(); state.showHelpMenu=false; render();"><span class="set-ico">🎼</span><span class="set-label">${t('help.menu.tuning')}</span></button>
+            <button class="set-row set-l1" onclick="toggleInfoHexagons(); state.showHelpMenu=false; render();"><span class="set-ico">⬡</span><span class="set-label">${t('help.menu.hexagons')}</span></button>
+            <button class="set-row set-l1" onclick="toggleInfoShortcuts(); state.showHelpMenu=false; render();"><span class="set-ico">🐇</span><span class="set-label">${t('help.menu.faster')}</span></button>
           </div>
         ` : ''}
       </span>
@@ -8178,9 +8739,24 @@ function render(){
   renderStatsPlate();
   updateMasonryColumnCounts();
   positionHelpHint();
+  fitWideDropdowns();
   dismissStaleFloatingPreviews();
   updateScrollLock();
 }
+// The Help menu sizes itself to its longest question so nothing wraps, which means it can end up
+// wider than the space to the right of its anchor. Rather than capping the width (which would
+// bring the wrapping straight back), measure it and slide it left by exactly the overflow.
+function fitWideDropdowns(){
+  try{
+    document.querySelectorAll('.help-menu-rows').forEach(el=>{
+      el.style.marginLeft = '0px';
+      const r = el.getBoundingClientRect();
+      const overflowRight = r.right - (window.innerWidth - 8);
+      if(overflowRight > 0) el.style.marginLeft = (-Math.min(overflowRight, Math.max(0, r.left - 8))) + 'px';
+    });
+  }catch(e){}
+}
+window.addEventListener('resize', fitWideDropdowns);
 // Scrolling is fully blocked (and its bar hidden -- see the scrollbar-width/::-webkit-scrollbar
 // CSS rules) UNLESS the page's actual content is taller than the viewport, i.e. unless there's a
 // button or other bit of content that has genuinely fallen out of reach and needs scrolling to
@@ -8470,7 +9046,7 @@ function updateNavHistoryButtons(){
   if(fwd) fwd.disabled = state.navIndex>=state.navHistory.length-1;
 }
 function toggleHelpMenu(){ state.showHelpMenu = !state.showHelpMenu; if(state.showHelpMenu){ if(state.showSettingsMenu) closeSettingsSubWindows(); state.showSettingsMenu=false; state.showLangMenu=false; } render(); }
-function toggleLangMenu(){ state.showLangMenu = !state.showLangMenu; if(state.showLangMenu){ if(state.showSettingsMenu) closeSettingsSubWindows(); state.showSettingsMenu=false; state.showHelpMenu=false; } render(); }
+function toggleLangMenu(){ state.showLangMenu = !state.showLangMenu; if(state.showLangMenu) state.showHelpMenu=false; render(); }
 function setLang(l){ state.lang = l; state.showLangMenu=false; storageSet('lang', JSON.stringify(l)).catch(()=>{}); render(); }
 // Any jargon popup (like the Bosanquet-Wilson one) is plain DOM state (a '.show' class), not
 // tracked in `state` -- so closing/switching help sections or windows won't clear it on its own
@@ -9510,11 +10086,11 @@ function renderBuilder(content){
               <span class="help-dropdown-wrap" style="width:auto; flex:0 0 auto;">
                 <button class="btn mini ${state.showHelpMenu?'primary':''}" onclick="toggleHelpMenu()"><span class="header-btn-emoji" style="font-size:18px;">🙋‍♀️</span> ${t('word.help')}</button>
                 ${state.showHelpMenu ? `
-                  <div class="help-dropdown-menu" style="top:auto; bottom:calc(100% + 6px);">
-                    <button class="btn small" onclick="toggleInfoSoftware(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🤖</span>${t('help.menu.software')}</button>
-                    <button class="btn small" onclick="toggleInfoTuning(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🎼</span>${t('help.menu.tuning')}</button>
-                    <button class="btn small" onclick="toggleInfoHexagons(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">⬡</span>${t('help.menu.hexagons')}</button>
-                    <button class="btn small" onclick="toggleInfoShortcuts(); state.showHelpMenu=false; render();"><span class="help-menu-emoji">🐇</span>${t('help.menu.faster')}</button>
+                  <div class="help-dropdown-menu help-menu-rows" style="top:auto; bottom:calc(100% + 6px);">
+                    <button class="set-row set-l1" onclick="toggleInfoSoftware(); state.showHelpMenu=false; render();"><span class="set-ico">🤖</span><span class="set-label">${t('help.menu.software')}</span></button>
+                    <button class="set-row set-l1" onclick="toggleInfoTuning(); state.showHelpMenu=false; render();"><span class="set-ico">🎼</span><span class="set-label">${t('help.menu.tuning')}</span></button>
+                    <button class="set-row set-l1" onclick="toggleInfoHexagons(); state.showHelpMenu=false; render();"><span class="set-ico">⬡</span><span class="set-label">${t('help.menu.hexagons')}</span></button>
+                    <button class="set-row set-l1" onclick="toggleInfoShortcuts(); state.showHelpMenu=false; render();"><span class="set-ico">🐇</span><span class="set-label">${t('help.menu.faster')}</span></button>
                   </div>
                 ` : ''}
               </span>
@@ -9874,7 +10450,7 @@ function renderSpecies(content){
   const species = computeSpecies(state.progressions);
   // Kept reachable even with nothing catalogued yet -- the Hex Map is exactly where a brand new
   // user goes to explore before they have any shapes to list here.
-  const hexMapBtn = `<button class="btn mini hexmap-jump-btn" data-hotkey="D" onclick="switchTab('map')">${t('tab.hexmap')}</button>`;
+  const hexMapBtn = `<button class="btn primary hexmap-jump-btn" data-hotkey="D" onclick="switchTab('map')">${t('tab.hexmap')}</button>`;
   if(species.list.length===0){
     content.innerHTML = `<div class="list-toolbar" id="speciesTabTop">${hexMapBtn}</div><div class="empty"><div class="glyph">⬡</div>${t('species.empty')}</div>`;
     return;
