@@ -1483,8 +1483,12 @@
     // Spanish speaker gets a splash in English and then an app in their own language.
     if(!lang){
       var ls = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
-      if(ls.some(function(l){ return /^ca\b/i.test(l||''); })) lang = 'ca';
-      else if(ls.some(function(l){ return /^(es|gl|eu)\b/i.test(l||''); })) lang = 'es';
+      for(var i=0;i<ls.length;i++){
+        var l = (ls[i]||'').toLowerCase();
+        if(/^ca\b/.test(l)){ lang='ca'; break; }
+        if(/^(es|gl|eu)\b/.test(l)){ lang='es'; break; }
+        if(/^en\b/.test(l)){ lang='en'; break; }
+      }
     }
     var t = TXT[lang];
     if(t){
@@ -6865,6 +6869,18 @@ const I18N = {
 };
 const LANG_ORDER = ['en','es','ca'];
 const LANG_NAMES = { en:'English', es:'Español', ca:'Català' };
+// NOTE: browsers report the WEB CONTENT language preference here, which is a separate setting
+// from the browser's own interface language -- switching Chrome's UI to Catalan does not by
+// itself put 'ca' in this list. A language chosen in Settings is saved and always wins over this.
+function detectLangFromTags(tags){
+  for(const raw of (tags||[])){
+    const l = (raw||'').toLowerCase();
+    if(/^ca\b/.test(l)) return 'ca';
+    if(/^(es|gl|eu)\b/.test(l)) return 'es';
+    if(/^en\b/.test(l)) return 'en';
+  }
+  return 'en';
+}
 // Catalan falls back to Spanish (not English) for any key not yet translated: the two are far
 // closer, so a gap reads as a near-miss rather than a jarring language switch.
 function t(key){
@@ -6944,10 +6960,10 @@ async function loadData(){
       // Spanish, Catalan, Galician, or Basque (i.e. a language spoken as the majority language
       // in Spain or Latin America) -- in which case default to Spanish instead.
       const browserLangs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
-      // A Catalan-set browser gets Catalan; Spanish/Galician/Basque get Spanish; anything else English.
-      if(browserLangs.some(l=>/^ca\b/i.test(l||''))) state.lang = 'ca';
-      else if(browserLangs.some(l=>/^(es|gl|eu)\b/i.test(l||''))) state.lang = 'es';
-      else state.lang = 'en';
+      // Walk the list IN ORDER and take the first tag we support, instead of testing Catalan
+      // against the whole list first -- that made ['es-ES','ca'] come out Catalan even though the
+      // person had ranked Spanish above it. Galician/Basque map to Spanish, everything else English.
+      state.lang = detectLangFromTags(browserLangs);
     }
   }catch(e){}
   try{ const r = await storageGet('seenHelpHint'); if(!r || JSON.parse(r.value)!==true) state.showHelpHint = true; }catch(e){ state.showHelpHint = true; }
