@@ -764,7 +764,10 @@
   .prog-card .chip-row{ row-gap:0; column-gap:5px; }
   .prog-card .mini-chip{ display:inline-flex; align-items:center; gap:5px; padding-top:0; padding-bottom:0; }
   .prog-card .root-hex-chip.mini-chip-root{ margin:-1px 0; }
-  .mini-chip.now-sounding{ box-shadow:0 0 0 2.5px #f4e04d; border-radius:6px; }
+  /* A box-shadow paints within its own element's layer, so the chips rendered after this one were
+     drawn straight over the ring. Lifting it into its own stacking position keeps the highlight
+     on top of its neighbours. */
+  .mini-chip.now-sounding{ box-shadow:0 0 0 2.5px #f4e04d; border-radius:6px; position:relative; z-index:3; }
   .built-chord .builder-card-chip{ cursor:inherit; }
   /* Live insertion preview while dragging to reorder: a real gap opens BETWEEN cards at the
      computed slot, with an accent bar marking the seam -- the list is literally showing the
@@ -1564,8 +1567,8 @@
   /* Steady glow, no flashing/pulsing -- deliberately calm so it can't run afoul of the
      photosensitivity precautions taken elsewhere in the app (this is a slow CSS transition,
      never a rapid repeat). */
-  .built-chord.now-playing{ outline:3px solid #f5c518; outline-offset:1px; box-shadow:0 0 14px rgba(245,197,24,.55); transition:outline-color .2s ease, box-shadow .2s ease; }
-  .chord-chip.now-playing{ outline:3px solid #f5c518; outline-offset:1px; box-shadow:0 0 14px rgba(245,197,24,.55); transition:outline-color .2s ease, box-shadow .2s ease; }
+  .built-chord.now-playing{ outline:3px solid #f5c518; outline-offset:1px; box-shadow:0 0 14px rgba(245,197,24,.55); transition:outline-color .2s ease, box-shadow .2s ease; position:relative; z-index:3; }
+  .chord-chip.now-playing{ outline:3px solid #f5c518; outline-offset:1px; box-shadow:0 0 14px rgba(245,197,24,.55); transition:outline-color .2s ease, box-shadow .2s ease; position:relative; z-index:3; }
   .hex-frame.now-playing-map{ box-shadow:0 0 0 3px var(--accent2), 0 0 22px 2px var(--accent2-soft); border-radius:var(--radius); transition:box-shadow .2s ease; }
 </style>
 <style id="cursorHueStyle"></style>
@@ -1831,10 +1834,14 @@ function buildHexSVG(opts){
     // cellAccents outlines whole hexagons (not their numbers) in gold: used by the progression map
     // to ring every shape's own root, with the progression's anchor (0) ringed more heavily so it
     // still reads as the reference point.
-    if(cellAccents){
+    // Only cells that are ACTUALLY part of the shape may take the gold ring. Matching on the note
+    // value alone also hit every other cell on the board carrying that same number -- unmarked
+    // repetitions of a root, sitting far from where the chord was really written, ended up ringed
+    // in gold with no colour fill, reading as notes that were never played.
+    if(cellAccents && (isRoot || isTone)){
       const akey = (mode==='pc') ? c.pc : c.raw;
-      if(cellAccents.thick && cellAccents.thick.has(akey)){ stroke = 'var(--accent)'; sw = size*0.22; }
-      else if(cellAccents.thin && cellAccents.thin.has(akey)){ stroke = 'var(--accent)'; sw = size*0.12; }
+      if(cellAccents.thick && cellAccents.thick.has(akey)){ stroke = 'var(--accent)'; sw = size*0.32; }
+      else if(cellAccents.thin && cellAccents.thin.has(akey)){ stroke = 'var(--accent)'; sw = size*0.19; }
     }
     poly.setAttribute('fill', fill);
     poly.setAttribute('stroke', stroke);
@@ -2561,9 +2568,48 @@ function stopBuilderProgressionPlay(){
   activeProgressionSessions.forEach(s=>stopAudioSession(s));
   activeProgressionSessions = [];
 }
+/* ---------- Builder shape list: scroll position + follow-the-playhead ----------
+   Every chord change calls render(), which rebuilds the list and would drop its scrollTop back to
+   0 -- that is what read as "the scroll is blocked" during playback: you scrolled, and the next
+   chord snapped you back. The position is now carried across renders.
+
+   On top of that: while a progression plays, the list follows whichever shape is sounding. The
+   moment YOU scroll it by hand, following stops for the rest of that playback and does not come
+   back until you pause and press play again. */
+let builderListScrollTop = 0;
+let builderListUserScrolled = false;
+let builderListProgrammaticScroll = false;
+function rememberBuilderListScroll(el){
+  if(builderListProgrammaticScroll) return; // our own scrolling must not count as the user's
+  builderListScrollTop = el.scrollTop;
+  if(builderProgLoopActive) builderListUserScrolled = true;
+}
+function restoreBuilderListScroll(){
+  const list = document.getElementById('builderChordsList');
+  if(!list) return;
+  builderListProgrammaticScroll = true;
+  list.scrollTop = builderListScrollTop;
+  // Follow the sounding shape, unless the person has taken over scrolling.
+  if(builderProgLoopActive && !builderListUserScrolled && builderPlayingIdx!=null){
+    const card = list.children[builderPlayingIdx];
+    if(card){
+      const target = card.offsetTop - (list.clientHeight - card.offsetHeight)/2;
+      const max = Math.max(0, list.scrollHeight - list.clientHeight);
+      list.scrollTop = Math.max(0, Math.min(max, target));
+      builderListScrollTop = list.scrollTop;
+    }
+  }
+  // Released on the next frame so the scroll event our own assignment fires is ignored.
+  if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(()=>{ builderListProgrammaticScroll = false; });
+  else setTimeout(()=>{ builderListProgrammaticScroll = false; }, 0);
+}
 function toggleBuilderProgressionPlay(){
   if(builderProgLoopActive) stopBuilderProgressionPlay();
-  else startBuilderProgressionPlay();
+  else {
+    // A fresh press of play re-arms following, whatever happened during the previous run.
+    builderListUserScrolled = false;
+    startBuilderProgressionPlay();
+  }
   render();
 }
 let builderShapePlayActive = false;
@@ -3694,6 +3740,7 @@ function closeSettingsSubWindows(){
   // predictable shape rather than however it happened to be left last time.
   state.setSub = { backup:false, cloud:false, importprogs:false, danger:false };
   state.showLangMenu=false;
+  state.showAudiovisuals=false;
 }
 function toggleFullscreen(){
   if(document.fullscreenElement){
@@ -5172,6 +5219,11 @@ const I18N = {
     "en": "Collection",
     "es": "Colección",
     "ca": "Col·lecció"
+  },
+  "set.sec.audiovisuals": {
+    "en": "Audiovisuals",
+    "es": "Audiovisuales",
+    "ca": "Audiovisuals"
   },
   "set.sec.devices": {
     "en": "Devices",
@@ -7122,7 +7174,7 @@ const state = {
   builder:{ editingId:null, name:'', tags:'', notesText:'', chords:[], selectedOrder:[], selectedOrderQr:{}, lastClicked:null, error:'', editingChordIdx:null, editingChordBackup:null, selectedIdxs:[], selectAnchor:null },
   builderCtxMenu:null, builderTransposeModal:null,
   setSub:{ backup:false, cloud:false, importprogs:false, danger:false },
-  mobileUseRegOpen:false,
+  mobileUseRegOpen:false, showAudiovisuals:false,
   connectProgressions:true,
   gdrive:{ signedIn:false, email:null, busy:false, msg:'', lastSyncAt:null },
   connect:{ chain:[] }, connectFilter:'',
@@ -9060,20 +9112,25 @@ function render(){
             </button>
             ${state.showEqInfo ? `<p class="sub set-note" style="padding-left:10px;">${state.octaveEquivalence ? t('eq.info.on') : t('eq.info.off')}</p>` : ''}
 
-            <button class="set-row set-leaf" onclick="toggleMuted()" title="${t('mute.title')}">
-              <span class="set-ico">${state.muted?'🔇':'🔊'}</span><span class="set-label">${t('set.mute')}</span>
-              <span class="set-pill ${state.muted?'on':''}">${state.muted?t('word.on'):t('word.off')}</span>
+            <button class="set-row set-l1 ${state.showAudiovisuals?'open':''}" onclick="toggleAudiovisualsMenu()">
+              <span class="set-ico">🎚️</span><span class="set-label">${t('set.sec.audiovisuals')}</span><span class="set-chev">${state.showAudiovisuals?'▾':'▸'}</span>
             </button>
-
-            <button class="set-row set-leaf" onclick="toggleFullscreen()">
-              <span class="set-ico">⛶</span><span class="set-label">${t('set.fullscreen')}</span>
-              <span class="set-pill ${document.fullscreenElement?'on':''}">${document.fullscreenElement?t('word.on'):t('word.off')}</span>
-            </button>
-
-            <button class="set-row set-leaf" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">
-              <span class="set-ico">⚕️</span><span class="set-label">${t('epilepsy.toggle')}</span>
-              <span class="set-pill ${state.epilepsySafeMode?'on':''}">${state.epilepsySafeMode?t('word.on'):t('word.off')}</span>
-            </button>
+            ${state.showAudiovisuals ? `
+              <div class="set-body">
+                <button class="set-row set-leaf" onclick="toggleMuted()" title="${t('mute.title')}">
+                  <span class="set-ico">${state.muted?'🔇':'🔊'}</span><span class="set-label">${t('set.mute')}</span>
+                  <span class="set-pill ${state.muted?'on':''}">${state.muted?t('word.on'):t('word.off')}</span>
+                </button>
+                <button class="set-row set-leaf" onclick="toggleFullscreen()">
+                  <span class="set-ico">⛶</span><span class="set-label">${t('set.fullscreen')}</span>
+                  <span class="set-pill ${document.fullscreenElement?'on':''}">${document.fullscreenElement?t('word.on'):t('word.off')}</span>
+                </button>
+                <button class="set-row set-leaf" onclick="toggleEpilepsySafeMode()" title="${t('epilepsy.toggle.title')}">
+                  <span class="set-ico">⚕️</span><span class="set-label">${t('epilepsy.toggle')}</span>
+                  <span class="set-pill ${state.epilepsySafeMode?'on':''}">${state.epilepsySafeMode?t('word.on'):t('word.off')}</span>
+                </button>
+              </div>
+            ` : ''}
 
             <button class="set-row set-l1 ${state.showLangMenu?'open':''}" onclick="toggleLangMenu()">
               <span class="set-ico">🌐</span><span class="set-label">${LANG_NAMES[state.lang]||'English'}</span><span class="set-chev">${state.showLangMenu?'▾':'▸'}</span>
@@ -9488,6 +9545,7 @@ function updateNavHistoryButtons(){
 }
 function toggleHelpMenu(){ state.showHelpMenu = !state.showHelpMenu; if(state.showHelpMenu){ if(state.showSettingsMenu) closeSettingsSubWindows(); state.showSettingsMenu=false; state.showLangMenu=false; } render(); }
 function toggleLangMenu(){ state.showLangMenu = !state.showLangMenu; if(state.showLangMenu) state.showHelpMenu=false; render(); }
+function toggleAudiovisualsMenu(){ state.showAudiovisuals = !state.showAudiovisuals; render(); }
 function setLang(l){ state.lang = l; state.showLangMenu=false; storageSet('lang', JSON.stringify(l)).catch(()=>{}); render(); }
 // Any jargon popup (like the Bosanquet-Wilson one) is plain DOM state (a '.show' class), not
 // tracked in `state` -- so closing/switching help sections or windows won't clear it on its own
@@ -10613,7 +10671,7 @@ function renderBuilder(content){
             </span>
             <button class="btn mini ghost" data-hotkey="C" onclick="builderClearAllChords()">${t('builder.clearallshapes')}</button>
           </div>
-          <div class="chords-built" id="builderChordsList" ondragover="builderDragOverList(event)" ondrop="builderDropOnList(event)" onclick="builderChordsListClick(event)">
+          <div class="chords-built" id="builderChordsList" ondragover="builderDragOverList(event)" ondrop="builderDropOnList(event)" onclick="builderChordsListClick(event)" onscroll="rememberBuilderListScroll(this)">
             ${(()=>{
                 const species = computeSpecies(state.progressions);
                 return b.chords.map((cRaw,idx)=>{
@@ -10671,6 +10729,7 @@ function renderBuilder(content){
   syncBuilderSearchPanelHeight();
   repositionBuilderZoomHint();
   capBuilderProgressionHeight();
+  restoreBuilderListScroll();
   alignUseRegisteredTitle();
 }
 // Aligns "Usar formas registradas"'s title baseline with "Toca teclas"'s title baseline, measured

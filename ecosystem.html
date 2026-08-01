@@ -1425,46 +1425,211 @@ function pointInPolygonLocal(px, py, ring) {
   }
   return inside;
 }
-// TASK (this round, item 5): allowNarrow (default true, so every existing
-// caller/unit test keeps its old behavior unless it opts in) -- when false,
-// segments/chambers tagged `narrow` (see createGaudiBrainTunnels) are
-// skipped entirely, so the nearest OPEN point returned for a chord that
-// isn't allowed through the narrow tunnel is always somewhere in the wide
-// network instead. This is what makes the narrow tunnel an actual hard size
-// gate rather than just a visual suggestion: stepWorld's collision pass
-// below calls this with allowNarrow = (b.sizeTier===1), so a medium/big
-// chord approaching the narrow tunnel's mouth finds its nearest legal open
-// point is back in the wide network -- i.e. it gets pushed off/away from the
-// narrow opening exactly like it would off solid rock.
-function nearestPointOnMoundTunnels(px, py, tunnels, allowNarrow) {
-  if (allowNarrow === undefined) allowNarrow = true;
-  let bestD = Infinity, bestPt = null, bestHalfWidth = 20, bestNarrow = false;
-  tunnels.segments.forEach(seg => {
-    if (seg.narrow && !allowNarrow) return;
-    const pts = seg.pts;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const a = pts[i], b = pts[i + 1];
-      const abx = b.x - a.x, aby = b.y - a.y;
-      const len2 = abx * abx + aby * aby || 1;
-      let t = ((px - a.x) * abx + (py - a.y) * aby) / len2;
-      t = Math.max(0, Math.min(1, t));
-      const cx = a.x + abx * t, cy = a.y + aby * t;
-      const d = Math.hypot(px - cx, py - cy);
-      if (d < bestD) { bestD = d; bestPt = { x: cx, y: cy }; bestHalfWidth = seg.width / 2; bestNarrow = !!seg.narrow; }
+// TASK (this round): replaced the old procedural segment/chamber tunnel
+// model with the user's OWN vectorized reference artwork -- two FIXED
+// closed polygons (envelope = outer solid silhouette, tunnel = the entire
+// open/hollow network as ONE region), both in the same LOCAL coordinate
+// space. Nearest-point-on-boundary is now a plain generic polygon-edge
+// query (no more per-segment width/chamber-radius bookkeeping) since a
+// fixed polygon just IS the wall.
+function nearestPointOnPolygonEdge(px, py, ring) {
+  let bestD = Infinity, bestPt = null;
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const a = ring[i], b = ring[(i + 1) % n];
+    const abx = b.x - a.x, aby = b.y - a.y;
+    const len2 = abx * abx + aby * aby || 1;
+    let t = ((px - a.x) * abx + (py - a.y) * aby) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = a.x + abx * t, cy = a.y + aby * t;
+    const d = Math.hypot(px - cx, py - cy);
+    if (d < bestD) { bestD = d; bestPt = { x: cx, y: cy }; }
+  }
+  return { x: bestPt.x, y: bestPt.y, d: bestD };
+}
+// TASK (this round, item 6): narrowZone is an ellipse {cx,cy,rx,ry} in the
+// same LOCAL space as tunnelRing -- the one tunnel patch identified from the
+// real artwork's own narrow point (see GAUDI_NARROW_ZONE_NORM in the ECO
+// layer) that only sizeTier-1 (small) bodies may occupy. For any non-small
+// body this returns the nearest OPEN tunnel-boundary point with that patch
+// treated as if it weren't open: if the naive nearest boundary point itself
+// falls inside the forbidden ellipse, it's radially projected out to just
+// past the ellipse's own edge, so the push-back target a non-small body is
+// shoved toward is never inside the very patch it isn't allowed to be in.
+// This is what makes the narrow tunnel an actual hard size gate rather than
+// just a visual suggestion.
+function nearestOpenGaudiPoint(px, py, tunnelRing, narrowZone, isSmall) {
+  let best = nearestPointOnPolygonEdge(px, py, tunnelRing);
+  if (!isSmall && narrowZone) {
+    const ex = (best.x - narrowZone.cx) / narrowZone.rx, ey = (best.y - narrowZone.cy) / narrowZone.ry;
+    const e2 = ex * ex + ey * ey;
+    if (e2 < 1) {
+      const e = Math.sqrt(e2) || 1e-4;
+      const scale = 1.06 / e;
+      best = { x: narrowZone.cx + (best.x - narrowZone.cx) * scale, y: narrowZone.cy + (best.y - narrowZone.cy) * scale, d: best.d };
     }
-  });
-  tunnels.chambers.forEach(ch => {
-    if (ch.narrow && !allowNarrow) return;
-    const d = Math.max(0, Math.hypot(px - ch.x, py - ch.y) - ch.r * 0.35);
-    if (d < bestD) { bestD = d; bestPt = { x: ch.x, y: ch.y }; bestHalfWidth = ch.r * 0.7; bestNarrow = !!ch.narrow; }
-  });
-  return { point: bestPt, d: bestD, halfWidth: bestHalfWidth, narrow: bestNarrow };
+  }
+  return best;
 }
 if (typeof module !== 'undefined' && module.exports) {
   // exported early (stepWorld itself is exported further below, once
   // defined) purely so the verification harness can unit-test the geometry
   // check in isolation without dragging in the rest of physics.js.
-  module.exports = Object.assign(module.exports || {}, { pointInPolygonLocal, nearestPointOnMoundTunnels });
+  module.exports = Object.assign(module.exports || {}, { pointInPolygonLocal, nearestPointOnPolygonEdge, nearestOpenGaudiPoint });
+}
+
+// TASK (this round, item 2 + item 4): "Green Obsidian" (and, by the same
+// mechanism, any other freely-moving body) was able to visibly pass through
+// the risen Gaudi structure even though the collision pass below already
+// applied to EVERY body in world.bodies (no kind==='chord' filter exists or
+// ever existed on this pass -- verified by reading it end to end). The real
+// gap was ORDER: this used to run exactly once per tick, before the
+// circle-circle body-body collision pass further down stepWorld. A body
+// that gets shoved hard by that LATER pass (e.g. Green Obsidian getting
+// bumped by one or more chords piling into it, or any body flung by the
+// tornado/black-hole/collision-overlap correction) could end this tick's
+// step sitting fully inside or past solid rock with no further check ever
+// applied to that position until NEXT tick -- and if the shove was big
+// enough (several chords' overlap-correction stacking in one step), the
+// body could clear the wall's local thickness in that single jump, i.e.
+// genuinely tunnel through with zero visible resistance. Fix: this is now a
+// standalone function called TWICE per tick from stepWorld -- once in its
+// original spot (catches bodies that walked into rock under their own
+// gravity/steering) and again immediately after the circle-circle pass
+// (catches bodies that got shoved into rock BY that pass, same tick).
+// `trackStuck` is only true on the first call so the item-4 stuck-timer
+// below only accumulates once per tick rather than double-counting.
+//
+// item 4 (no-permanent-trap safeguard): a body can end up rammed deep into
+// solid rock (e.g. spawned/teleported/flung into the silhouette, or pinned
+// against a dead-end pocket by a size-gate it can't pass) where the normal
+// push-to-nearest-open-tunnel-point correction oscillates or makes no real
+// progress. b._gaudiStuckMs accumulates real elapsed time (dt) every tick
+// the body is found "in solid rock" and resets to 0 the instant it's
+// genuinely inside the open tunnel OR outside the envelope entirely. If it
+// stays stuck past GAUDI_STUCK_ESCAPE_MS, it's ejected straight OUT of the
+// envelope entirely (open water), rather than toward a tunnel mouth it may
+// never reach -- a true escape hatch, not another attempt at the same
+// tunnel-seeking correction that already isn't working for it.
+//
+// item 4 (anchored-object exemption, judgment call -- REVISED this round):
+// this used to skip any b.dragging body, on the theory that dragging:true
+// only ever meant "permanently-anchored fixture" (Gaudi sphere:
+// obj_gaudisphere, nectar flower: obj_flower, Ocean Shroom stem:
+// obj_padhold -- see pinObjectToHomePlatform/updatePadholdStem). That
+// theory was WRONG: dragging:true is reused throughout this file as a
+// generic "position driven externally this frame, don't let normal gravity/
+// steering integration touch it" flag -- e.g. updateCelestialSatellites
+// (small chords orbiting the sun/moon), updateEatingBodies (a chord being
+// eaten, position driven by its eater), nursery pinning, hunting capture,
+// and genuine user mouse-drag all also set dragging:true, none of which are
+// anchored to a fixed spot -- they're actively moving under their OWN
+// positioning systems and were silently exempted from Gaudi solidity too,
+// which is exactly how e.g. an orbiting satellite chord or a user dragging
+// an object by hand could pass straight through the risen structure with
+// zero resistance. The actual invariant this exemption needs is narrower:
+// only bodies whose position is PERMANENTLY fixed relative to a host that
+// itself re-derives their x/y every frame (so fighting them here would
+// just cause jitter, never a real "passed through" bug) should be skipped.
+// Those bodies all set the dedicated `_anchored` flag (pinObjectToHomePlatform,
+// updatePadholdStem, stickChordToTree) -- checking that instead of `dragging`
+// keeps the 3 anchored fixtures + tree-stuck chord exempt for the same
+// jitter-avoidance reason as before, while every other dragging-but-actually-
+// moving body (satellite orbits, user drags, eating victims, nursery sway,
+// hunting captures, etc.) is now correctly subject to this solidity check,
+// per the "nothing should pass through, for all elements" requirement.
+// Actual world.platforms entries are a wholly separate array from
+// world.bodies and were never touched by this pass in the first place.
+const GAUDI_STUCK_ESCAPE_MS = 3000;
+// Core per-point solidity correction, factored out of gaudiSolidCollisionPass
+// so any x/y-bearing object -- not just a world.bodies physics body -- can be
+// pushed out of the Gaudi structure the same way. Used directly by
+// gaudiSolidCollisionPass below (per body) and by gaudiSolidPushObject
+// (for cosmetic/ambient entities tracked in their OWN arrays outside
+// world.bodies, e.g. ECO.seedHexagons / ECO.honeycombFlyers -- see those
+// call sites for why they needed this too: a world.bodies-scoped pass
+// structurally cannot reach an object that was never added to world.bodies
+// in the first place, no matter how inclusive its own internal filters are).
+// `obj` just needs numeric x/y; vx/vy, sizeTier and _gaudiStuckMs are all
+// optional and behave the same as "absent" on a plain physics body.
+function gaudiSolidPushPoint(m, moundSkipR2, obj, dt, trackStuck) {
+  const lx = obj.x - m.cx, ly = obj.y - m.cy;
+  if (lx*lx + ly*ly > moundSkipR2) { if (obj.gaudiInMound) obj.gaudiInMound = false; obj._gaudiStuckMs = 0; return; }
+  const insideEnvelope = pointInPolygonLocal(lx, ly, m.envelope);
+  if (!insideEnvelope) { obj.gaudiInMound = false; obj._gaudiStuckMs = 0; return; }
+  const isSmall = obj.sizeTier === 1;
+  let insideTunnel = pointInPolygonLocal(lx, ly, m.tunnel);
+  if (insideTunnel && !isSmall && m.narrowZone) {
+    const ex = (lx - m.narrowZone.cx) / m.narrowZone.rx, ey = (ly - m.narrowZone.cy) / m.narrowZone.ry;
+    if (ex*ex + ey*ey <= 1) insideTunnel = false;
+  }
+  if (insideTunnel) {
+    obj.gaudiInMound = true;
+    obj._gaudiStuckMs = 0;
+    return;
+  }
+  // In solid rock. item 4: accumulate the stuck timer (real elapsed dt,
+  // only on the pass stepWorld marks as the tick's authoritative one) and
+  // check the escape hatch BEFORE attempting the ordinary tunnel-seeking
+  // push, so a body that's already timed out doesn't get one more
+  // ineffective nudge toward the tunnel first.
+  if (trackStuck) obj._gaudiStuckMs = (obj._gaudiStuckMs || 0) + dt * 1000;
+  if ((obj._gaudiStuckMs || 0) > GAUDI_STUCK_ESCAPE_MS) {
+    // Escape hatch: eject straight out of the envelope entirely (open
+    // water), not toward the nearest tunnel opening -- a body that's been
+    // fighting the tunnel-ward correction for 3s+ without resolving is
+    // exactly the case where "nearest tunnel point" is a bad target (dead
+    // pocket, oscillation, spawned too deep). nearestPointOnPolygonEdge
+    // against the OUTER envelope gives the nearest silhouette boundary;
+    // pushing well past it clears the body of solid rock unconditionally.
+    const edge = nearestPointOnPolygonEdge(lx, ly, m.envelope);
+    const dx = edge.x - lx, dy = edge.y - ly;
+    const dl = Math.max(1, Math.hypot(dx, dy));
+    const nx = dx / dl, ny = dy / dl;
+    const push = dl + 40; // clear past the envelope boundary, not just up to it
+    obj.x += nx * push; obj.y += ny * push;
+    if (obj.vx !== undefined) obj.vx = 0;
+    if (obj.vy !== undefined) obj.vy = 0;
+    obj.gaudiInMound = false;
+    obj._gaudiStuckMs = 0;
+    return;
+  }
+  const near = nearestOpenGaudiPoint(lx, ly, m.tunnel, m.narrowZone, isSmall);
+  const dx = near.x - lx, dy = near.y - ly;
+  const dl = Math.max(1, Math.hypot(dx, dy));
+  const nx = dx / dl, ny = dy / dl;
+  const push = dl + 1;
+  obj.x += nx * push; obj.y += ny * push;
+  if (obj.vx !== undefined && obj.vy !== undefined) {
+    const vDotOut = -(obj.vx * nx + obj.vy * ny);
+    if (vDotOut > 0) { obj.vx += nx * vDotOut; obj.vy += ny * vDotOut; }
+  }
+  obj.gaudiInMound = false;
+}
+function gaudiSolidCollisionPass(world, dt, trackStuck) {
+  if (!world.gaudiMound) return;
+  const m = world.gaudiMound;
+  const moundSkipR = m.boundR + 40;
+  const moundSkipR2 = moundSkipR * moundSkipR;
+  world.bodies.forEach(b => {
+    if (b._anchored) { b.gaudiInMound = false; b._gaudiStuckMs = 0; return; }
+    gaudiSolidPushPoint(m, moundSkipR2, b, dt, trackStuck);
+  });
+}
+// Convenience wrapper for cosmetic entities living OUTSIDE world.bodies
+// (ECO.seedHexagons, ECO.honeycombFlyers, ...): computes the mound/skip-
+// radius itself since these arrays are small (a handful of entries) and
+// called at most once per frame per entity, so the per-call setup cost that
+// gaudiSolidCollisionPass amortizes across the whole world.bodies array is
+// negligible here.
+function gaudiSolidPushObject(world, obj, dt, trackStuck) {
+  if (!world || !world.gaudiMound) return;
+  const m = world.gaudiMound;
+  const moundSkipR = m.boundR + 40;
+  gaudiSolidPushPoint(m, moundSkipR * moundSkipR, obj, dt, trackStuck);
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Object.assign(module.exports || {}, { gaudiSolidCollisionPass, gaudiSolidPushObject });
 }
 
 function stepWorld(world, dt, rng) {
@@ -1578,64 +1743,15 @@ function stepWorld(world, dt, rng) {
     }
   });
 
-  // Gaudi brain structure solid-mass collision (item 1/2 of this round's
-  // task): world.gaudiMound is null whenever the structure isn't risen, so
-  // this whole pass costs one property read per body the rest of the time.
-  // Bodies with `dragging` are skipped, same exclusion the collision loop
-  // below and the platform check above both already use (their position is
-  // externally driven).
-  if (world.gaudiMound) {
-    const m = world.gaudiMound;
-    // PERF (this round): cheap distance pre-check before the expensive
-    // point-in-polygon + nearest-tunnel-point geometry below -- this pass
-    // used to run that full check for EVERY body EVERY physics tick whenever
-    // the structure was risen, regardless of how far away the body actually
-    // was (typically the large majority of the population at any given
-    // moment, since the structure only occupies a small fraction of the
-    // play area). m.boundR (cached once per rise, see syncGaudiMoundCollision)
-    // is the outline's own max local radius from its center; a body whose
-    // distance to that center exceeds boundR+radius can't possibly be inside
-    // the silhouette, so it's skipped with one cheap squared-distance compare
-    // instead of the full polygon/tunnel scan.
-    const moundSkipR = m.boundR + 40; // + a little slack for body radius, matches the cheap-early-return convention used elsewhere in this file
-    const moundSkipR2 = moundSkipR * moundSkipR;
-    world.bodies.forEach(b => {
-      if (b.dragging) { b.gaudiInMound = false; return; }
-      const lx = b.x - m.cx, ly = b.y - m.cy;
-      if (lx*lx + ly*ly > moundSkipR2) { if (b.gaudiInMound) b.gaudiInMound = false; return; }
-      const inside = pointInPolygonLocal(lx, ly, m.ring);
-      if (!inside) { b.gaudiInMound = false; return; }
-      // TASK (this round, item 5): only sizeTier-1 (small) bodies are allowed
-      // to resolve to the dedicated narrow tunnel's own open space -- for
-      // everyone else nearestPointOnMoundTunnels skips it entirely and finds
-      // the nearest point in the wide (fits-all-sizes) network instead, so a
-      // medium/big body drifting toward the narrow mouth gets treated as
-      // hitting solid rock there, same push-back path as any other wall.
-      const near = nearestPointOnMoundTunnels(lx, ly, m.tunnels, b.sizeTier === 1);
-      const margin = near.halfWidth + b.radius * 0.6;
-      if (near.d > margin) {
-        // Inside the mound silhouette but past the open tunnel's own wall --
-        // "in solid rock". Push back toward the nearest open tunnel/chamber
-        // point (this doubles as pushing a body back OUT through whichever
-        // mouth it just tried to clip through, since the nearest open point
-        // from just-inside-the-wall near a mouth IS the mouth opening) and
-        // kill/reflect the velocity component that was driving it further
-        // in, mirroring the platform landing block's position-correction +
-        // velocity-zeroing pattern above, just aimed at this local normal
-        // instead of a flat surface's fixed one.
-        const dx = near.point.x - lx, dy = near.point.y - ly;
-        const dl = Math.max(1, Math.hypot(dx, dy));
-        const nx = dx / dl, ny = dy / dl;
-        const push = (near.d - margin) + 1;
-        b.x += nx * push; b.y += ny * push;
-        const vDotOut = -(b.vx * nx + b.vy * ny); // positive when velocity points further INTO the rock (away from the open point)
-        if (vDotOut > 0) { b.vx += nx * vDotOut; b.vy += ny * vDotOut; }
-        b.gaudiInMound = false; // shoved back to the tunnel edge, not genuinely inside open space this step
-      } else {
-        b.gaudiInMound = true; // genuinely inside open tunnel/chamber space -- position-based flag the ECO layer reads to set _insideBrainStructure (see updateBrainStructureEntry)
-      }
-    });
-  }
+  // Gaudi brain structure solid-mass collision (items 2/4 of this round's
+  // task) -- see gaudiSolidCollisionPass's own header comment (just above
+  // stepWorld) for the full writeup: applies to EVERY body in world.bodies
+  // (no kind filter, only the same b.dragging exemption anchored fixtures
+  // already rely on), and runs a SECOND time after the circle-circle pass
+  // below so a body shoved into rock by an inter-body collision this same
+  // tick still gets caught before the frame ends, instead of only being
+  // caught next tick (the actual cause of visible pass-through).
+  gaudiSolidCollisionPass(world, dt, true);
 
   // circle-circle collisions (rising edge events only)
   //
@@ -1737,6 +1853,16 @@ function stepWorld(world, dt, rng) {
     }
   }
   world._collidingPairs = currentPairs;
+
+  // TASK (this round, item 2): second Gaudi solidity pass, same tick -- the
+  // circle-circle loop just above can shove a body (e.g. Green Obsidian
+  // getting bumped by one or more chords) straight into/through solid rock
+  // via its overlap-separation correction; without this second call that
+  // new position would go completely unchecked until next tick, which is
+  // exactly how a body could visibly clip through the structure with no
+  // resistance. trackStuck=false here so the item-4 stuck-timer above only
+  // accumulates once per tick (the first call already did it).
+  gaudiSolidCollisionPass(world, dt, false);
 
   // Final hard safety net: collision-separation can shove a body a large
   // distance in one step (e.g. two bodies spawned almost exactly on top of
@@ -5098,15 +5224,33 @@ function liveRootRaw(b){ return zoneRootFor(b.zone) + (b.transposeOffset||0) + c
 // semantics, same mechanism as a user's manual drag) and detach into free
 // movement after a hold period (see shouldDetachFromNursery in FORCES).
 // Repositioned on every resize since its geometry is in absolute world coords.
+// TASK (this round): the Gaudi brain-labyrinth structure grew to
+// structW = Math.max(400, w*0.64) centered at w*0.5 (see
+// updateGaudiBrainStructure/its setup), which now visually overlaps this
+// plant's central stems while risen. Rather than reflowing the fixed stem
+// layout below, each stem keeps its normal design-time x in `origX` and
+// updateNurserySpread (FORCES/PER-FRAME section, called from loop()) eases
+// `x` outward from baseX while ECO.gaudiBrain.state==='risen', then eases
+// back to origX once it sinks. Because every downstream consumer -- the
+// bezier stem draw, the leaf points (computed via quadBezierPointEco off
+// the CURRENT s.x/s.y), the tip bud, AND the spawn/sway logic in
+// updateNursery -- all read s.x/s.y directly, mutating it here is enough to
+// stretch the whole stem+leaves+tip+attachment point coherently as one
+// piece; nothing needs a separate "visual scale" path.
 function setupNursery(w,h){
+  const baseX = w*0.5;
+  const stemDefs = [
+    { x:w*0.36, y:h*0.10 },
+    { x:w*0.46, y:h*0.05 },
+    { x:w*0.56, y:h*0.07 },
+    { x:w*0.66, y:h*0.12 },
+  ];
   ECO.nursery = {
-    baseX: w*0.5, baseY: -8,
-    stems: [
-      { x:w*0.36, y:h*0.10 },
-      { x:w*0.46, y:h*0.05 },
-      { x:w*0.56, y:h*0.07 },
-      { x:w*0.66, y:h*0.12 },
-    ],
+    baseX, baseY: -8,
+    // preserve in-flight widen/narrow animation progress across resizes
+    // (window resize shouldn't cause a visible snap back to narrow)
+    spreadT: ECO.nursery ? ECO.nursery.spreadT : 0,
+    stems: stemDefs.map(d => ({ x:d.x, y:d.y, origX:d.x })),
   };
 }
 
@@ -5786,7 +5930,7 @@ function updateSpawning(nowMs){
   if(ECO.isNewMoonNight) return;
   if(currentChordCount < ECO.targetCount && nowMs >= ECO.nextSpawnAt){
     const sp = pickSpeciesToSpawn();
-    if(sp) spawnChord(sp);
+    const spawned = sp ? spawnChord(sp) : null;
     // Revision round 11: "ha decaido mucho la poblacion promedio de las
     // shapes vivas cosa que no me gusta" -- reverted round 10's deliberate
     // ~20% trickle slowdown (was dropped to 1700-3600ms specifically "to make
@@ -5806,8 +5950,39 @@ function updateSpawning(nowMs){
     // floods instantly even at the slider's max of 20). Below/at default,
     // spawnSpeedMul is 1 (no change from the original pacing).
     const aboveDefault = Math.max(0, (ECO.maxPopulation||4) - 4);
-    const spawnSpeedMul = Math.max(0.55, 1 - aboveDefault*0.06);
-    ECO.nextSpawnAt = nowMs + (1400 + ECO.rng()*1600)*EVENT_PACE_MUL*spawnSpeedMul; // trickle in, not all at once -- faster trickle the higher above default max is set
+    let spawnSpeedMul = Math.max(0.55, 1 - aboveDefault*0.06);
+    // TASK (this round): "no noto el aumento -- cuando aparece la estructura
+    // se tiene que llenar de shapes interactuando mas de lo normal". The
+    // prior attempt here was too timid to actually notice: a 0.55x kicker
+    // gated behind BOTH ECO.gaudiBrain.state==='risen' AND live population
+    // sitting below 75% of target -- in practice the population rarely dips
+    // that low for long, so the boost mostly never engaged. Replaced with a
+    // much stronger, unconditional multiplier: ANY time the structure is
+    // risen, the trickle gap is simply cut to 30% of whatever it would
+    // otherwise be (on top of the existing maxPopulation-scaled
+    // spawnSpeedMul above), no population-threshold gate at all -- chords
+    // keep arriving steadily fast for the entire time the structure is up,
+    // not just in a brief catch-up window near the start. This stacks with
+    // the immediate rise-time burst and the temporary maxPopulation ceiling
+    // raise (both applied at the rising->risen transition -- see
+    // triggerGaudiRiseBurst/applyGaudiPopulationBoost near
+    // updateGaudiBrainStructure), and with the mouth-biased placement below.
+    // Falls straight back to the ordinary rate the instant the structure
+    // stops being 'risen' ('rising'/'sinking'/null), nothing to undo
+    // manually.
+    const gaudiRisen = ECO.gaudiBrain && ECO.gaudiBrain.state === 'risen';
+    if(gaudiRisen){
+      spawnSpeedMul *= 0.3;
+      // TASK item 4: bias roughly half of these risen-window trickle spawns
+      // to appear right at one of the structure's own mouths (same world
+      // positions updateGaudiMouthPull steers toward) instead of only ever
+      // starting from the nursery plant / top-drop -- so newly arriving
+      // shapes are already at an entrance, ready to be pulled in and
+      // interact inside the structure, rather than needing to wander across
+      // the map first.
+      if(spawned && ECO.rng()<0.5) repositionChordNearGaudiMouth(spawned, ECO.gaudiBrain, nowMs);
+    }
+    ECO.nextSpawnAt = nowMs + (1400 + ECO.rng()*1600)*EVENT_PACE_MUL*spawnSpeedMul; // trickle in, not all at once -- faster trickle the higher above default max is set, much faster still while the Gaudi structure is risen
   }
 }
 function handleDeath(info){
@@ -8027,177 +8202,49 @@ const BRAIN_RISE_MS = 4600, BRAIN_SINK_MS = 3400;
 // proximity+coinflip constants are gone -- entry is now real movement through
 // a real tunnel mouth (see updateGaudiMouthPull's per-chord _gaudiPullStrength
 // roll for where the probabilistic "not literally every chord" element lives now).
-function createGaudiMoundOutline(rng, w, h){
-  // The outer bisected-mound silhouette -- one big organic (not geometric)
-  // rounded-blob outline, Gaudi-curved via a jittered ring of control points
-  // fed through quadraticCurveTo the same way the old lobe rings were, just
-  // used for a single enclosing shape now instead of several overlapping
-  // ones. LOCAL coordinates relative to the structure's own (cx,cy).
-  const pts = 12 + Math.floor(rng()*3);
-  const ring = [];
-  for(let j=0;j<pts;j++){
-    const a = (j/pts)*Math.PI*2;
-    const rx = w*0.5*(0.82+rng()*0.24);
-    const ry = h*0.5*(0.82+rng()*0.24);
-    ring.push({ x: Math.cos(a)*rx, y: Math.sin(a)*ry - h*0.04 });
-  }
-  return ring;
+// TASK (this round): "quiero que tenga exactamente esta forma, vectorizala y
+// usala en vez de la actual" -- the user provided exact reference artwork
+// for this structure. A prior step vectorized their actual PNG reference
+// images (real contour extraction, not hand-drawn) into the two fixed point
+// arrays below, normalized to a 0..1 space within the source art's own
+// bounding box. This REPLACES all RNG-based procedural mound/tunnel
+// generation (the old createGaudiMoundOutline/createGaudiBrainTunnels/
+// nearestPointOnGaudiTunnels are gone) with that exact fixed silhouette.
+//   GAUDI_ENVELOPE_NORM -- closed polygon, the outer solid silhouette.
+//   GAUDI_TUNNEL_NORM -- closed polygon, the ENTIRE open/hollow tunnel
+//     network as ONE connected region carved out of the solid interior.
+//   GAUDI_MOUTHS_NORM -- [x,y,weight] points where the tunnel polygon
+//     touches/comes close to the envelope boundary -- the real entrances.
+//   GAUDI_NARROW_ZONE_NORM -- the one genuinely narrow patch of tunnel in
+//     the actual artwork, used for the small-shapes-only gate (item 6).
+//   GAUDI_ASPECT -- source bbox width/height, so scaling by structW alone
+//     (structH = structW/GAUDI_ASPECT) reproduces the true proportions.
+const GAUDI_ASPECT = 1.2691790040376851;
+const GAUDI_ENVELOPE_NORM = [[0.0573,0.4065],[0.0954,0.5343],[0.0255,0.5585],[0.0021,0.6312],[0.0403,0.6756],[0.123,0.6891],[0.1113,0.8008],[0.1336,0.8735],[0.1803,0.9314],[0.2566,0.9677],[0.6182,0.9987],[0.8102,0.9637],[0.9364,0.8385],[0.9905,0.6622],[0.9979,0.5209],[0.9714,0.4307],[0.7773,0.2436],[0.7444,0.2517],[0.7147,0.319],[0.7497,0.4172],[0.7466,0.5047],[0.6681,0.5007],[0.666,0.4307],[0.632,0.4065],[0.631,0.3742],[0.6543,0.3432],[0.6522,0.284],[0.6999,0.2153],[0.702,0.1467],[0.6617,0.0686],[0.5705,0.0081],[0.421,0.0094],[0.3107,0.0686],[0.211,0.2355]];
+const GAUDI_TUNNEL_NORM = [[0.0838,0.4913],[0.0785,0.5424],[0.1538,0.5626],[0.2619,0.4953],[0.299,0.5236],[0.2651,0.5882],[0.0954,0.6824],[0.1188,0.7362],[0.3701,0.568],[0.3616,0.6205],[0.1803,0.7672],[0.1951,0.8116],[0.2641,0.7335],[0.3118,0.7389],[0.3287,0.7954],[0.2778,0.8708],[0.3733,0.8896],[0.3499,0.8048],[0.5069,0.7995],[0.5907,0.8546],[0.509,0.9166],[0.7815,0.8789],[0.8558,0.825],[0.9152,0.6878],[0.9056,0.6528],[0.8303,0.8156],[0.7487,0.817],[0.8378,0.6676],[0.8303,0.5962],[0.7487,0.4886],[0.5907,0.498],[0.526,0.4441],[0.6532,0.3257],[0.649,0.284],[0.492,0.389],[0.4571,0.4886],[0.509,0.5343],[0.7413,0.5236],[0.7879,0.6178],[0.7635,0.7322],[0.5949,0.7927],[0.3712,0.7201],[0.3584,0.6689],[0.6055,0.6258],[0.4677,0.6716],[0.5578,0.7106],[0.7052,0.6353],[0.666,0.5855],[0.4486,0.5868],[0.3775,0.5303],[0.4401,0.2598],[0.5451,0.2328],[0.5133,0.1507],[0.4507,0.1184],[0.299,0.1978],[0.4189,0.3109],[0.3446,0.4711],[0.2333,0.3957],[0.2937,0.3149],[0.1644,0.3984],[0.2471,0.4428],[0.1686,0.5236]];
+const GAUDI_MOUTHS_NORM = [[0.1732,0.5261,907],[0.7387,0.3029,830]];
+const GAUDI_NARROW_ZONE_NORM = { cx:0.64, cy:0.36, r:0.05 };
+// Converts a normalized bbox-space point (0..1, image-style y-down) to the
+// structure's own LOCAL coordinate space (origin at the structure's center,
+// same convention every other piece of this system -- outline, tunnels,
+// gaudiMound sync -- already uses), at a given world-space width/height.
+function gaudiLocalFromNorm(nx, ny, structW, structH){
+  return { x: (nx-0.5)*structW, y: (ny-0.5)*structH };
 }
-function createGaudiBrainTunnels(rng, w, h, ring){
-  // Procedural branching tunnel network: a few main "trunk" tunnels starting
-  // low in the mound (entrances) that branch into progressively thinner
-  // tunnels, terminating either in another branch or a wider "chamber"
-  // bulge -- the ant-farm cross-section read. Each segment is a short
-  // jittered polyline (organic wander, never a straight line) tagged with a
-  // wall width that tapers from trunk to twig. Built ONCE at rise-time and
-  // cached, same convention the old lobes used.
-  //
-  // REAL PHYSICS (this round): the mound is now solid outside the tunnel
-  // network (see stepWorld's gaudiMound collision pass), so each trunk needs
-  // an actual "mouth" -- an opening that physically reaches the outer mound
-  // boundary -- or nothing could ever get in. `ring` (the mound silhouette,
-  // same LOCAL coord space) is optional purely so this function still runs
-  // standalone/unit-testable without it; when provided, each trunk's start
-  // point is extended straight outward along its own start angle, marching
-  // in small steps until it exits the ring polygon, and that boundary-
-  // crossing stretch is recorded both as an extra wide "mouth" segment
-  // (so it renders/collides as open tunnel all the way to the surface) and
-  // as a `mouths` entry (world-local point + inward direction) that
-  // updateGaudiMouthPull steers nearby chords toward.
-  // TASK (this round, item 5): "todos sus tuneles interconectados, y
-  // adaptados al tamaño de todas las formas, excepto uno un poco mas
-  // pequeño solo para formas pequeñas". Chord radius range (see spawnChord/
-  // transformChordToSpecies, both compute radius = (15+min(noteCount,8)*2.4)
-  // * tierMul with tierMul 0.76/1.0/1.55 for sizeTier 1/2/3): sizeTier-1
-  // (small) tops out around r=26, sizeTier 2/3 (medium/big) range from
-  // ~17 up to r=53 at the biggest. So "fits all shapes" needs a half-width
-  // comfortably above 53, while the one deliberately-narrow tunnel needs to
-  // sit below that so medium/big chords are actually blocked from it --
-  // enforced explicitly by sizeTier in stepWorld's collision pass below
-  // (not just implied by width, since the existing d<=margin test is too
-  // lenient on its own to guarantee a hard size gate -- see nearestPointOn-
-  // MoundTunnels' new `allowNarrow` param).
-  const segments = []; // { pts:[{x,y}...], width, isMouth?, narrow? }
-  const chambers = []; // { x, y, r, narrow? }
-  const mouths = []; // { x, y, dirX, dirY, narrow? } -- outer opening points, local coords
-  function addSegment(x0, y0, angle, depth, width, narrow){
-    if(depth > 3){ chambers.push({ x:x0, y:y0, r: (narrow?10:26)+rng()*(narrow?6:14), narrow }); return; }
-    const stepLen = 13 + rng()*7;
-    const nPts = 3 + Math.floor(rng()*2);
-    const pts = [{ x:x0, y:y0 }];
-    let x=x0, y=y0, a=angle;
-    for(let i=0;i<nPts;i++){
-      a += (rng()-0.5)*0.75; // organic wander -- keeps walls curved, never straight
-      x += Math.cos(a)*stepLen;
-      y += Math.sin(a)*stepLen*0.82;
-      pts.push({ x, y });
-    }
-    segments.push({ pts, width, narrow });
-    const endX=x, endY=y, endA=a;
-    // Taper floor raised well above the biggest chord's r=53 for the normal
-    // (non-narrow) network -- was Math.max(4, width*0.68), which shrank main
-    // tunnels down to a twig-thin 4px half-width-ish by depth 3, nowhere near
-    // big enough for any chord to actually pass. The narrow branch keeps the
-    // old aggressive taper (still floored above small chords' own r~26).
-    const floor = narrow ? 24 : 78;
-    const taper = narrow ? 0.78 : 0.9;
-    if(depth<3 && rng()<0.82){
-      const nChildren = depth===0 ? (2+Math.floor(rng()*2)) : (rng()<0.55?2:1);
-      for(let c=0;c<nChildren;c++){
-        const childA = endA + (rng()-0.5)*1.5 + (c-(nChildren-1)/2)*0.75;
-        addSegment(endX, endY, childA, depth+1, Math.max(floor, width*taper), narrow);
-      }
-    } else {
-      chambers.push({ x:endX, y:endY, r: (narrow?14:34)+rng()*(narrow?8:16), narrow });
-    }
-  }
-  // One extra trunk vs before (3 -> 4), intensifying entry (item 3: more
-  // mouths = more chances a wandering chord's pull-radius check above finds
-  // one nearby) -- the LAST trunk (i === trunkCount-1) is the dedicated
-  // narrow one, everything else is the wide, fits-all-sizes network.
-  const trunkCount = 4;
-  const trunkEnds = []; // {x,y} of each trunk's start point, local coords -- used below to add cross-links so the whole network is one connected graph, not N separate un-joined branches
-  for(let i=0;i<trunkCount;i++){
-    const narrow = (i === trunkCount-1);
-    const startAngle = -Math.PI/2 + (i-(trunkCount-1)/2)*0.5 + (rng()-0.5)*0.2;
-    const sx = (i-(trunkCount-1)/2)*w*0.14;
-    const sy = h*0.38;
-    trunkEnds.push({ x:sx, y:sy, narrow });
-    if(ring){
-      // March outward from the trunk's start point along startAngle until it
-      // crosses the ring boundary (reuses the exact same point-in-polygon
-      // test stepWorld's collision pass runs, so "touches the boundary" here
-      // means the same thing physically that it means during collision).
-      const dirX = Math.cos(startAngle), dirY = Math.sin(startAngle)*0.82;
-      const dl = Math.max(1e-4, Math.hypot(dirX, dirY));
-      const ndx = dirX/dl, ndy = dirY/dl;
-      let mx = sx, my = sy, steps = 0;
-      while(pointInPolygonLocal(mx, my, ring) && steps < 200){ mx += ndx*3; my += ndy*3; steps++; }
-      // mx,my is now just outside (or at) the boundary -- add a short wide
-      // "mouth" segment from the true trunk start out to that outer point so
-      // the opening is genuinely walkable/collidable all the way to the
-      // mound's surface, not just up to the trunk's original inset start.
-      // Widened (was 22-26) so the wide trunks' mouths themselves aren't a
-      // choke point smaller than their own trunk; the narrow trunk's mouth
-      // stays deliberately tight.
-      const mouthWidth = narrow ? (26+rng()*4) : (110+rng()*14);
-      segments.push({ pts:[{x:sx,y:sy},{x:mx,y:my}], width: mouthWidth, isMouth:true, narrow });
-      mouths.push({ x:mx, y:my, dirX:-ndx, dirY:-ndy, narrow }); // dir points back INTO the structure, toward the trunk
-    }
-    addSegment(sx, sy, startAngle, 0, narrow ? (26+rng()*6) : (96+rng()*14), narrow);
-  }
-  // "Que todos sus tuneles esten interconectados" -- as built above, each
-  // trunk is its own disconnected branch fanning out from a separate start
-  // point with no path between them except back out through the mound
-  // surface. Add explicit cross-link segments joining each adjacent pair of
-  // trunk start points (straight-ish jittered connector, same organic-wander
-  // shape as addSegment's own polylines) so the whole network forms one
-  // connected graph -- a chord entering via any mouth can reach any other
-  // trunk's territory without leaving the tunnel network. Cross-links use
-  // the WIDE width (never narrow), even when they touch the narrow trunk's
-  // start point, so the narrow trunk is only actually narrow at its own
-  // branch/mouth, not at the point where it joins the rest of the network.
-  for(let i=0;i<trunkEnds.length-1;i++){
-    const a = trunkEnds[i], b = trunkEnds[i+1];
-    const midX = (a.x+b.x)/2 + (rng()-0.5)*20, midY = (a.y+b.y)/2 + h*0.12 + (rng()-0.5)*14;
-    segments.push({ pts:[{x:a.x,y:a.y},{x:midX,y:midY},{x:b.x,y:b.y}], width: 84+rng()*10, isCrossLink:true, narrow:false });
-  }
-  return { segments, chambers, mouths };
-}
-// Nearest point on the tunnel/chamber network to a given LOCAL-space point,
-// used by updateBrainStructureWander to keep captured chords confined to
-// the open tunnel space instead of a generic circular bound. Segment count
-// stays small (a handful of trunks x depth-3 branching), so a per-chord
-// linear scan every physics tick is cheap.
-// allowNarrow (item 5, same convention as nearestPointOnMoundTunnels above)
-// -- updateBrainStructureWander passes c.sizeTier===1 so a captured
-// medium/big chord's wander-confinement never treats the narrow tunnel as
-// part of its own open space (it could never have gotten in through it in
-// the first place, since stepWorld's collision pass already blocks that
-// entry -- this just keeps the two systems' notion of "open space" consistent).
-function nearestPointOnGaudiTunnels(px, py, tunnels, allowNarrow){
-  if (allowNarrow === undefined) allowNarrow = true;
-  let bestD = Infinity, bestPt = null, bestHalfWidth = 20;
-  tunnels.segments.forEach(seg=>{
-    if (seg.narrow && !allowNarrow) return;
-    const pts = seg.pts;
-    for(let i=0;i<pts.length-1;i++){
-      const a = pts[i], b = pts[i+1];
-      const abx = b.x-a.x, aby = b.y-a.y;
-      const len2 = abx*abx+aby*aby || 1;
-      let t = ((px-a.x)*abx + (py-a.y)*aby)/len2;
-      t = Math.max(0, Math.min(1, t));
-      const cx = a.x+abx*t, cy = a.y+aby*t;
-      const d = Math.hypot(px-cx, py-cy);
-      if(d < bestD){ bestD = d; bestPt = { x:cx, y:cy }; bestHalfWidth = seg.width/2; }
-    }
+// Builds the fixed envelope/tunnel/mouths/narrowZone geometry, scaled+offset
+// to the structure's current world size, in LOCAL coords. Called ONCE at
+// rise-time and cached on ECO.gaudiBrain, same "build once, reuse" convention
+// the old procedural outline/tunnels/specks already used.
+function buildGaudiStructureGeometry(structW, structH){
+  const envelope = GAUDI_ENVELOPE_NORM.map(p => gaudiLocalFromNorm(p[0], p[1], structW, structH));
+  const tunnel = GAUDI_TUNNEL_NORM.map(p => gaudiLocalFromNorm(p[0], p[1], structW, structH));
+  const mouths = GAUDI_MOUTHS_NORM.map(m => {
+    const pt = gaudiLocalFromNorm(m[0], m[1], structW, structH);
+    return { x: pt.x, y: pt.y, weight: m[2] };
   });
-  tunnels.chambers.forEach(ch=>{
-    if (ch.narrow && !allowNarrow) return;
-    const d = Math.max(0, Math.hypot(px-ch.x, py-ch.y) - ch.r*0.35);
-    if(d < bestD){ bestD = d; bestPt = { x:ch.x, y:ch.y }; bestHalfWidth = ch.r*0.7; }
-  });
-  return { point: bestPt, d: bestD, halfWidth: bestHalfWidth };
+  const nzCenter = gaudiLocalFromNorm(GAUDI_NARROW_ZONE_NORM.cx, GAUDI_NARROW_ZONE_NORM.cy, structW, structH);
+  const narrowZone = { cx: nzCenter.x, cy: nzCenter.y, rx: GAUDI_NARROW_ZONE_NORM.r*structW, ry: GAUDI_NARROW_ZONE_NORM.r*structH };
+  return { envelope, tunnel, mouths, narrowZone };
 }
 function createGaudiBrainSpecks(rng, w, h){
   // Small trencadís (broken-tile mosaic) speckle detail -- fixed-position
@@ -8210,29 +8257,118 @@ function createGaudiBrainSpecks(rng, w, h){
   }
   return specks;
 }
+// TASK (this round): "cuando aparece la estructura se tiene que llenar de
+// shapes interactuando mas de lo normal" -- helpers for the three assertive
+// population effects tied to the Gaudi structure's rise, called from
+// updateGaudiBrainStructure's rising->risen and risen->sinking transitions
+// right below.
+//
+// Item 4 helper: drops an already-spawned chord at one of the structure's
+// real mouth entrances (GAUDI_MOUTHS_NORM, converted to world space exactly
+// the way updateGaudiMouthPull already does: g.cx/gaudiBrainCurrentY(g,nowMs)
+// plus the mouth's local offset), with a small random jitter so a whole
+// burst doesn't stack on the exact same pixel, and clears any
+// nursery/dragging state spawnChord may have set so it's a free, falling
+// body immediately eligible for updateGaudiMouthPull's own pull-in logic.
+function repositionChordNearGaudiMouth(child, g, nowMs){
+  if(!child || !g || !g.mouths || !g.mouths.length) return;
+  const m = g.mouths[Math.floor(ECO.rng()*g.mouths.length)];
+  const cy = gaudiBrainCurrentY(g, nowMs);
+  const wx = g.cx + m.x, wy = cy + m.y;
+  const ang = ECO.rng()*Math.PI*2, jitter = 20+ECO.rng()*40;
+  child.x = Math.max(child.radius, Math.min(ECO.world.width-child.radius, wx+Math.cos(ang)*jitter));
+  child.y = Math.max(child.radius, Math.min(ECO.world.height-child.radius, wy+Math.sin(ang)*jitter));
+  child.vx = (ECO.rng()-0.5)*20; child.vy = 0;
+  child.gravity = true; child.dragging = false; child.nurseryPinned = false; child.nurseryStemIdx = -1;
+}
+// Item 2: temporarily raises ECO.maxPopulation (the single source of truth
+// updateSpawning's targetCount, the lag-cull threshold in
+// measureAndHandleLag, and the God Settings slider display all read from)
+// for as long as the structure stays 'risen', so the much faster trickle
+// above (and the burst below) actually has room to fill the world instead of
+// being capped at the user's normal ceiling. +75%, at least +4 so even a low
+// slider setting (min 1) gets a felt boost. The exact amount added is cached
+// on the gaudiBrain instance so revertGaudiPopulationBoost can subtract
+// precisely that much back off (rather than snapshotting/restoring the raw
+// value), which correctly preserves any slider change the user makes with
+// the God Settings panel open while the boost is active.
+function applyGaudiPopulationBoost(g){
+  const base = ECO.maxPopulation||4;
+  const boostAmount = Math.max(4, Math.round(base*0.75));
+  g._popBoostAmount = boostAmount;
+  ECO.maxPopulation = base + boostAmount;
+}
+function revertGaudiPopulationBoost(g){
+  if(g && g._popBoostAmount){
+    ECO.maxPopulation = Math.max(1, (ECO.maxPopulation||4) - g._popBoostAmount);
+    g._popBoostAmount = 0;
+  }
+}
+// Item 1: fired once, exactly at the rising->risen transition (see below) --
+// an immediate, force-spawned batch of extra chords rather than relying on
+// the (now much faster, but still gradual) trickle above to catch up on its
+// own, so the population jump reads as instantly, obviously tied to the
+// structure fully arriving. Modeled on triggerFullMoonFertility's per-spawn
+// try/catch isolation so one bad spawn can't swallow the rest of the burst.
+// Half the batch (even indices) is placed right at a mouth entrance via
+// repositionChordNearGaudiMouth so the structure visibly starts filling
+// immediately; the other half spawns from spawnChord's own normal nursery/
+// top-drop placement, same as any ordinary trickle spawn.
+const GAUDI_RISE_BURST_COUNT = 10;
+function triggerGaudiRiseBurst(nowMs, g){
+  if(ECO.midiInExclusive) return; // respect "only MIDI-played shapes may spawn" -- see updateSpawning
+  const pool = effectivePool();
+  if(!pool.length) return;
+  for(let i=0;i<GAUDI_RISE_BURST_COUNT;i++){
+    try{
+      const liveCount = ECO.world.bodies.filter(b=>b.kind==='chord' && !b.beingEaten && !b.dying).length;
+      if(liveCount >= (ECO.maxPopulation||20)+3) break; // same small allowance spawnNewbornFromParents/spawnSiameseFusion use above their own cap
+      const sp = pickSpeciesToSpawn();
+      if(!sp) break;
+      const child = spawnChord(sp);
+      if(!child) continue;
+      if(i%2===0) repositionChordNearGaudiMouth(child, g, nowMs);
+      child.eatPulseUntil = nowMs+320;
+    }catch(err){ console.error('[ecosystem] triggerGaudiRiseBurst: one spawn failed, skipping just this one:', err); }
+  }
+  spawnBurst('ankh', g.cx, g.cy, 260); // one shared golden flash marking the burst -- individual spawns already get their own eatPulse pop
+}
 function updateGaudiBrainStructure(nowMs){
   const active = ECO.platformCyclePhase === 'submerged';
   if(!ECO.gaudiBrain){
     if(!active) return; // nothing to do, nothing to draw -- cheap early return every 'present'-phase frame
     const w = ECO.world.width, waterY = ECO.world.height - ECO.world.cfg.floorThickness;
-    // BUG FIX (this round): "tiene que ser MAS GRANDE" -- 0.22*w read as
-    // modest next to the rest of the world; raised to 0.36*w (a genuinely
-    // noticeable ~64% area-linear increase), floor raised to match so it
-    // still reads big on narrow viewports. structH's 0.78 aspect ratio is
-    // kept, and gaudiBrainCurrentY/cy still anchor it just above the
-    // waterline (cy = waterY - structH*0.5), so a bigger structH here only
-    // pushes the TOP of the silhouette higher above the water -- checked
-    // against typical viewport heights (ECO.world.height), this stays well
-    // clear of any fixed HUD/UI chrome which lives in screen-space, not
-    // world-space, and is drawn in its own separate pass after this.
-    const structW = Math.max(260, w*0.36), structH = structW*0.78;
+    // BUG FIX (this round, again): "tiene que ser MAS GRANDE" -- a prior
+    // round already bumped this once (0.22*w -> 0.36*w) but that still read
+    // as modest; raised further to 0.52*w (~44% wider, ~108% more area than
+    // the 0.36 value), floor raised to match so it still reads big on narrow
+    // viewports. structH is now derived from the FIXED artwork's own bbox
+    // aspect (GAUDI_ASPECT) instead of an arbitrary 0.78 constant, so scaling
+    // structW alone reproduces the source art's true proportions exactly.
+    // gaudiBrainCurrentY/cy still anchor it just above the waterline
+    // (cy = waterY - structH*0.5), so a bigger structH here only pushes the
+    // TOP of the silhouette higher above the water -- checked against
+    // typical viewport heights (ECO.world.height), this stays well clear of
+    // any fixed HUD/UI chrome which lives in screen-space, not world-space,
+    // and is drawn in its own separate pass after this.
+    // BUG FIX (this round, item 5, again): "hazla mas grande otra vez" -- this
+    // time the ask is explicitly FUNCTIONAL, not just visual: 0.52*w still
+    // left the tunnel network (and, more importantly, GAUDI_NARROW_ZONE_NORM's
+    // small-only gate) scaled tight enough that only sizeTier-1 bodies could
+    // ever fit through the narrowest patch, and even the open tunnel width
+    // elsewhere read cramped for mid-tier shapes brushing its walls right
+    // after entering through a mouth. Every length in this system (envelope,
+    // tunnel, narrowZone rx/ry, mouth pull radii) scales directly off structW,
+    // so raising it is a real, linear increase in how much physical clearance
+    // every tunnel passage offers -- not just a bigger silhouette to look at.
+    // 0.52 -> 0.64*w (+~23% linear, ~51% more area); floor raised to match.
+    const structW = Math.max(400, w*0.64), structH = structW/GAUDI_ASPECT;
     const cx = w*0.5, cy = waterY - structH*0.5;
-    const outline = createGaudiMoundOutline(ECO.rng, structW, structH);
+    const geo = buildGaudiStructureGeometry(structW, structH);
     ECO.gaudiBrain = {
       state:'rising', startedAt: nowMs,
       cx, cy, w:structW, h:structH,
-      outline,
-      tunnels: createGaudiBrainTunnels(ECO.rng, structW, structH, outline), // ring passed so trunk mouths can be extended out to the actual boundary -- see createGaudiBrainTunnels' own comment
+      envelope: geo.envelope, tunnel: geo.tunnel, mouths: geo.mouths, narrowZone: geo.narrowZone,
       specks: createGaudiBrainSpecks(ECO.rng, structW, structH),
       splashBurstsLeft: 7, splashNextAt: nowMs,
       rippleNextAt: nowMs, // TASK (this round): "que deje ondas en el mar" -- expanding water-surface ripple rings timed to the emergence, see below
@@ -8275,11 +8411,22 @@ function updateGaudiBrainStructure(nowMs){
       spawnBurst('pillarRipple', g.cx + (ECO.rng()-0.5)*g.w*0.6, waterY, 350);
       g.rippleNextAt = nowMs + 300 + ECO.rng()*120;
     }
-    if(nowMs - g.startedAt >= BRAIN_RISE_MS){ g.state='risen'; }
+    if(nowMs - g.startedAt >= BRAIN_RISE_MS){
+      g.state='risen';
+      // TASK (this round, items 1+2): the exact moment the structure is
+      // fully up -- force an immediately-visible population burst and lift
+      // the effective population ceiling for the duration it stays risen.
+      // Both are undone the instant it leaves 'risen' below.
+      applyGaudiPopulationBoost(g);
+      triggerGaudiRiseBurst(nowMs, g);
+    }
     return;
   }
   if(g.state==='risen'){
-    if(!active){ g.state='sinking'; g.startedAt=nowMs; }
+    if(!active){
+      revertGaudiPopulationBoost(g); // instant revert, per spec -- the moment it stops being 'risen'
+      g.state='sinking'; g.startedAt=nowMs;
+    }
     return;
   }
   if(g.state==='sinking'){
@@ -8359,113 +8506,277 @@ function drawGaudiBrainStructure(nowMs){
   // settle (0.85->1) instead of a full 0->1 shrink.
   const scaleAmt = 0.85 + 0.15*frac;
   ctx2d.scale(scaleAmt, scaleAmt);
-  // ---- 1) Outer bisected-mound silhouette: one big organic Gaudi-curved
-  // outline (a duller, darker packed-earth rose-red/coral) so the structure
-  // reads as SOLID material with something carved through it, not a hollow
-  // outline or a bright blob.
-  const ring = g.outline;
-  // PERF (this round): all of the gradients below are defined purely in the
+  // ---- 1) Outer solid silhouette (g.envelope, the user's own vectorized
+  // reference art) -- a duller, darker packed-earth rose-red/coral fill so
+  // the structure reads as SOLID material with something carved through it,
+  // not a hollow outline or a bright blob. Edges are smoothed via the same
+  // quadratic-curve-through-midpoints treatment the old procedural ring
+  // used (fillSmoothPolygon below), so the fixed polygon reads as an organic
+  // Gaudi-curved form rather than a harsh straight-edged silhouette, without
+  // distorting the actual recognizable shape.
+  // POLISH (this round, item 1): "la vectorizacion es buena, pero puliela" --
+  // the previous single quadratic-curve-through-midpoints pass is already
+  // C1-continuous, but with only 34/62 source points per ring, long straight
+  // runs between distant vertices still read as gently faceted rather than
+  // genuinely Gaudi-organic, especially at close zoom. fillSmoothPolygon
+  // itself is unchanged (still the exact same curve-fit technique, still
+  // draws in one closed path); what feeds it now is a Chaikin-subdivided
+  // (corner-cutting) version of the SAME point ring instead of the raw one --
+  // see chaikinSubdivide below. This roughly quadruples the point density
+  // (2 iterations) purely for the curve the fill/stroke follow, giving the
+  // quadratic pass far more resolution to round through, without moving a
+  // single one of the original vectorized vertices or changing the collision
+  // geometry (stepWorld/gaudiSolidCollisionPass still test against the RAW
+  // g.envelope/g.tunnel arrays, never these subdivided render-only copies --
+  // shape stays byte-for-byte the same, only the paint quality improves).
+  function fillSmoothPolygon(poly){
+    ctx2d.beginPath();
+    ctx2d.moveTo((poly[0].x+poly[poly.length-1].x)/2, (poly[0].y+poly[poly.length-1].y)/2);
+    for(let i=0;i<poly.length;i++){
+      const p0 = poly[i], p1 = poly[(i+1)%poly.length];
+      const mx = (p0.x+p1.x)/2, my = (p0.y+p1.y)/2;
+      ctx2d.quadraticCurveTo(p0.x, p0.y, mx, my);
+    }
+    ctx2d.closePath();
+  }
+  // Chaikin corner-cutting subdivision, closed-ring form: each iteration
+  // replaces every original edge with two new points at the 1/4 and 3/4
+  // marks along it, doubling point count and pulling the ring toward a
+  // smooth limit curve while staying anchored to the original silhouette
+  // (each new point is a plain affine blend of two real source vertices, so
+  // it can never bulge outside the original polygon's own convex regions).
+  // Purely a render-quality helper -- never touches collision geometry.
+  function chaikinSubdivide(poly, iterations){
+    let pts = poly;
+    for(let it=0; it<iterations; it++){
+      const next = new Array(pts.length*2);
+      for(let i=0;i<pts.length;i++){
+        const p0 = pts[i], p1 = pts[(i+1)%pts.length];
+        next[i*2] = { x: p0.x*0.75+p1.x*0.25, y: p0.y*0.75+p1.y*0.25 };
+        next[i*2+1] = { x: p0.x*0.25+p1.x*0.75, y: p0.y*0.25+p1.y*0.75 };
+      }
+      pts = next;
+    }
+    return pts;
+  }
+  // PERF: subdivision is pure geometry off g.envelope/g.tunnel, which never
+  // change for the lifetime of this ECO.gaudiBrain instance (same "build
+  // once, reuse" convention as g._gradCache/g.specks below) -- computed once
+  // per rise and cached on g itself, not redone every visible frame.
+  if(!g._smoothGeo){
+    g._smoothGeo = { envelope: chaikinSubdivide(g.envelope, 2), tunnel: chaikinSubdivide(g.tunnel, 2) };
+  }
+  const envelope = g._smoothGeo.envelope, tunnel = g._smoothGeo.tunnel;
+  // Round joins/caps read cleaner on an organic Gaudi silhouette than the
+  // canvas default miter joins, particularly at the mouths/entrances where
+  // the tunnel and envelope strokes meet the clip boundary -- a small,
+  // free (state-only) polish with no shape/geometry impact.
+  ctx2d.lineJoin = 'round';
+  ctx2d.lineCap = 'round';
+  // PERF (this round): the gradients below are defined purely in the
   // structure's own LOCAL coordinate space (relative to the translate/
-  // rotate/scale already applied above), and that local geometry (ring,
-  // tunnels.segments, tunnels.chambers) is built ONCE at rise-start and never
-  // changes for the lifetime of this ECO.gaudiBrain instance -- so every one
-  // of these CanvasGradient objects is identical frame to frame. Canvas
-  // gradients are evaluated against whatever transform is active at PAINT
-  // time (not creation time), so caching them on `g` and reusing them under a
-  // fresh translate/rotate/scale every frame is visually identical to
-  // rebuilding from scratch, just without the repeated createRadialGradient/
-  // createLinearGradient + addColorStop calls this was doing on every single
-  // visible frame (this structure stays on-screen for the whole ~risen
-  // window, so that was a lot of avoidable gradient churn).
+  // rotate/scale already applied above), and that local geometry (envelope,
+  // tunnel) is built ONCE at rise-start and never changes for the lifetime
+  // of this ECO.gaudiBrain instance -- so every one of these CanvasGradient
+  // objects is identical frame to frame. Canvas gradients are evaluated
+  // against whatever transform is active at PAINT time (not creation time),
+  // so caching them on `g` and reusing them under a fresh translate/rotate/
+  // scale every frame is visually identical to rebuilding from scratch, just
+  // without the repeated createRadialGradient + addColorStop calls this
+  // would otherwise redo on every single visible frame.
+  // COLOR CORRECTION (this round): "que su color y acabado se parezca mas al
+  // que te mande" -- the previous palette (hue ~350-357 but with L 20-82%,
+  // S 44-62%) rendered as a pale dusty rose/pink across the WHOLE structure,
+  // solid wall included. K-means sampling of the user's actual reference
+  // image gives a much narrower, much darker real palette: #270000 (32% of
+  // pixels, darkest), #640001 (38%, the single most common tone), #870108
+  // (17%), #b90112 (10%, brightest saturated red), and #a5474b/#c99093
+  // (~3% combined, the palest tones -- clearly a small concentrated
+  // highlight, not a broad wash, since they're the rarest pixels in the
+  // sample). Re-tuned below so the solid envelope reads as the dark
+  // #270000->#640001 range (hsl(0,100,8) - hsl(0,100,20)) and the tunnel
+  // interior reads as the brighter #870108->#b90112 range (hsl(357,98,27) -
+  // hsl(354,98,37)), with the pale #a5474b/#c99093 tones (hsl(357,40,46) /
+  // hsl(357,35,68)) reserved for small radial glows centered on each of the
+  // two fixed mouths (g.mouths, the real vectorized entrance points) rather
+  // than spread across the whole tunnel gradient -- matching how those pale
+  // pixels are a small minority concentrated at specific spots in the
+  // reference, most plausibly the entrances where light would read as
+  // entering. Alpha values kept close to the prior ones (0.88-0.96) so the
+  // existing day/night global tint pass still darkens/lightens this element
+  // the same way it did before -- only the base hue/saturation/lightness
+  // changed, not how it composites with that system.
   if(!g._gradCache){
     const moundGrad = ctx2d.createRadialGradient(0,-10,6, 0,-10, g.w*0.6);
-    moundGrad.addColorStop(0, hsl(9, 44, 38, 0.95));
-    moundGrad.addColorStop(0.6, hsl(6, 48, 30, 0.94));
-    moundGrad.addColorStop(1, hsl(357, 52, 20, 0.92));
-    const tunnelGrads = g.tunnels.segments.map(seg=>{
-      const tgrad = ctx2d.createLinearGradient(seg.pts[0].x,seg.pts[0].y,seg.pts[seg.pts.length-1].x,seg.pts[seg.pts.length-1].y);
-      tgrad.addColorStop(0, hsl(350, 62, 82, 0.92));
-      tgrad.addColorStop(1, hsl(340, 55, 72, 0.9));
-      return tgrad;
+    moundGrad.addColorStop(0, hsl(0, 100, 20, 0.96));   // ~#640001, dark red -- brightest point of the SOLID wall, still dark
+    moundGrad.addColorStop(0.6, hsl(0, 100, 14, 0.95)); // between #640001 and #270000
+    moundGrad.addColorStop(1, hsl(0, 100, 8, 0.94));    // ~#270000, near-black maroon at the silhouette edge
+    // Tunnel/hollow-interior fill -- now the BRIGHTER end of the sampled
+    // palette (#870108->#b90112) so the carved-out network still reads as
+    // lighter than the solid wall (open negative space), but as saturated
+    // reds rather than pale pink -- the previous version was too light/pink
+    // across the entire tunnel area, not just at genuine highlight points.
+    let tMinX=Infinity,tMaxX=-Infinity,tMinY=Infinity,tMaxY=-Infinity;
+    tunnel.forEach(p=>{ tMinX=Math.min(tMinX,p.x); tMaxX=Math.max(tMaxX,p.x); tMinY=Math.min(tMinY,p.y); tMaxY=Math.max(tMaxY,p.y); });
+    const tcx=(tMinX+tMaxX)/2, tcy=(tMinY+tMaxY)/2, tR=Math.max(20, Math.hypot(tMaxX-tMinX, tMaxY-tMinY)*0.5);
+    const tunnelGrad = ctx2d.createRadialGradient(tcx,tcy,1, tcx,tcy,tR);
+    tunnelGrad.addColorStop(0, hsl(354, 98, 37, 0.92));  // ~#b90112, brightest saturated red at tunnel center
+    tunnelGrad.addColorStop(0.55, hsl(357, 98, 27, 0.9)); // ~#870108, medium-bright red
+    tunnelGrad.addColorStop(1, hsl(0, 100, 14, 0.88));    // fades toward the dark wall tone at the tunnel's own edge
+    // Concentrated pale highlight/glow, one per fixed mouth (g.mouths, local
+    // coords already in this same translated space) -- small radius so it
+    // stays a tight glow AT the entrance rather than washing the interior,
+    // matching how the palest sampled pixels are only ~3% of the image.
+    // ENTRANCE LEGIBILITY PASS (this round): "no es lo bastante claro donde
+    // estan las entradas a los tuneles" -- the previous mouthGlows (a single
+    // soft, pale radial tint) was judged too subtle to read as "this is
+    // where things go in/out" at a glance. Strengthened here with THREE
+    // cached, reused-every-frame pieces per mouth (built once, same
+    // "build once, reuse" convention as moundGrad/tunnelGrad above -- none
+    // of this is rebuilt per frame):
+    //   mg.grad -- the old glow, but bigger/brighter/more saturated, with a
+    //     genuinely bright core so it reads as light spilling out of the
+    //     opening rather than a faint tint.
+    //   mg.rim -- a small, tight, near-white-warm rim-light gradient right
+    //     at the opening's edge (much smaller radius than mg.grad), giving
+    //     the "light source at the threshold" read the wide glow alone
+    //     couldn't.
+    //   mg.arch -- a cached Path2D of two short curved accent strokes
+    //     framing the opening on its outward side, echoing Park Guell's
+    //     grotto archways -- geometry is fixed (built once off g.mouths'
+    //     fixed local coords), so per-frame cost is one ctx2d.stroke() call,
+    //     not a path rebuild.
+    //   mg.wisps -- a handful of cached drift-anchors (angle/radius/speed/
+    //     phase only, no per-frame allocation) for the small light-wisp
+    //     touch in the render pass below.
+    const mouthGlows = (g.mouths||[]).map(m => {
+      const glowR = Math.max(70, g.w*0.24);
+      const mg = ctx2d.createRadialGradient(m.x, m.y, 1, m.x, m.y, glowR);
+      mg.addColorStop(0, hsl(357, 55, 88, 0.95));   // bright near-white-rose core -- "light coming through the opening"
+      mg.addColorStop(0.28, hsl(357, 50, 72, 0.7)); // pale saturated rose
+      mg.addColorStop(0.6, hsl(357, 40, 46, 0.32)); // ~#a5474b, transitioning out
+      mg.addColorStop(1, hsl(357, 40, 46, 0));      // fully transparent past the glow radius
+      const rimR = Math.max(16, g.w*0.045);
+      const rim = ctx2d.createRadialGradient(m.x, m.y, 0, m.x, m.y, rimR);
+      rim.addColorStop(0, hsl(20, 85, 96, 0.95));  // near-white warm rim right at the threshold
+      rim.addColorStop(0.55, hsl(357, 70, 82, 0.55));
+      rim.addColorStop(1, hsl(357, 60, 70, 0));
+      // Small arch framing the opening on its outward-facing side (away
+      // from the structure's own local origin at (0,0)) -- two short
+      // curved strokes like a grotto archway, cached as a Path2D so
+      // restroking it every frame is free.
+      const ulen = Math.max(1, Math.hypot(m.x, m.y));
+      const ux = m.x/ulen, uy = m.y/ulen; // outward unit vector from structure center through this mouth
+      const tx = -uy, ty = ux;            // tangent, perpendicular to it
+      const archR = Math.max(30, g.w*0.075);
+      const arch = new Path2D();
+      [1, 0.62].forEach(scale=>{
+        const r = archR*scale;
+        const baseX = m.x + ux*r*0.35, baseY = m.y + uy*r*0.35;
+        const p0x = baseX - tx*r, p0y = baseY - ty*r;
+        const p1x = baseX + tx*r, p1y = baseY + ty*r;
+        const ctrlX = baseX + ux*r*1.15, ctrlY = baseY + uy*r*1.15;
+        arch.moveTo(p0x, p0y);
+        arch.quadraticCurveTo(ctrlX, ctrlY, p1x, p1y);
+      });
+      // Fixed drift-wisp anchors -- only numbers, actual per-frame position
+      // is cheap trig off these in the render pass, never reallocated.
+      const wisps = [];
+      const wispCount = 4;
+      for(let wi=0; wi<wispCount; wi++){
+        wisps.push({
+          angle: (wi/wispCount)*Math.PI*2 + wi*0.7,
+          orbitR: archR*0.5 + wi*6,
+          speed: 0.0009 + wi*0.00015,
+          phase: wi*1.7,
+          size: 1.6 + (wi%3)*0.7,
+        });
+      }
+      return { x: m.x, y: m.y, grad: mg, rim, arch, wisps };
     });
-    const chamberGrads = g.tunnels.chambers.map(ch=>{
-      const cgrad = ctx2d.createRadialGradient(ch.x,ch.y,1, ch.x,ch.y,ch.r);
-      cgrad.addColorStop(0, hsl(348, 65, 85, 0.95));
-      cgrad.addColorStop(1, hsl(340, 55, 70, 0.88));
-      return cgrad;
-    });
-    g._gradCache = { moundGrad, tunnelGrads, chamberGrads };
+    g._gradCache = { moundGrad, tunnelGrad, mouthGlows };
   }
   ctx2d.fillStyle = g._gradCache.moundGrad;
-  ctx2d.beginPath();
-  ctx2d.moveTo((ring[0].x+ring[ring.length-1].x)/2, (ring[0].y+ring[ring.length-1].y)/2);
-  for(let i=0;i<ring.length;i++){
-    const p0 = ring[i], p1 = ring[(i+1)%ring.length];
-    const mx = (p0.x+p1.x)/2, my = (p0.y+p1.y)/2;
-    ctx2d.quadraticCurveTo(p0.x, p0.y, mx, my);
-  }
-  ctx2d.closePath();
+  fillSmoothPolygon(envelope);
   ctx2d.fill();
-  ctx2d.strokeStyle = hsl(350, 50, 16, 0.6);
+  ctx2d.strokeStyle = hsl(0, 100, 5, 0.65); // near-black maroon edge line, matches the darkened solid-wall palette
   ctx2d.lineWidth = 3;
   ctx2d.stroke();
-  // Clip everything that follows (tunnels + specks) to the mound silhouette
-  // so the "bisected" tunnel network never visually spills outside the
-  // packed-earth mass it's supposedly carved through.
+  // Clip everything that follows (tunnel + specks) to the envelope
+  // silhouette so nothing ever visually spills outside the packed-earth
+  // mass it's supposedly carved through.
   ctx2d.save();
-  ctx2d.beginPath();
-  ctx2d.moveTo((ring[0].x+ring[ring.length-1].x)/2, (ring[0].y+ring[ring.length-1].y)/2);
-  for(let i=0;i<ring.length;i++){
-    const p0 = ring[i], p1 = ring[(i+1)%ring.length];
-    const mx = (p0.x+p1.x)/2, my = (p0.y+p1.y)/2;
-    ctx2d.quadraticCurveTo(p0.x, p0.y, mx, my);
-  }
-  ctx2d.closePath();
+  fillSmoothPolygon(envelope);
   ctx2d.clip();
-  // ---- 2) Tunnel/chamber network carved INTO the mound: rendered as
-  // lighter hollow rose-white negative space on top of the dark earth fill
-  // -- the ant-farm cross-section read. Each segment is stroked as a
-  // quadratic-curve path through its already-jittered points (organic
-  // Gaudi-grotto wobble, never straight-sided), tapering wall width from
-  // trunk to twig via seg.width. A darker inner-shadow stroke first, then a
-  // slightly narrower lighter fill on top, gives the tunnel a touch of
-  // carved depth instead of a flat lighter band.
-  const tunnels = g.tunnels;
-  ctx2d.lineCap = 'round'; ctx2d.lineJoin = 'round';
-  function strokeTunnelPath(pts){
-    ctx2d.beginPath();
-    ctx2d.moveTo(pts[0].x, pts[0].y);
-    for(let i=0;i<pts.length-1;i++){
-      const p0=pts[i], p1=pts[i+1];
-      const mx=(p0.x+p1.x)/2, my=(p0.y+p1.y)/2;
-      ctx2d.quadraticCurveTo(p0.x,p0.y,mx,my);
-    }
-    ctx2d.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
-  }
-  tunnels.segments.forEach(seg=>{
-    strokeTunnelPath(seg.pts);
-    ctx2d.strokeStyle = hsl(350, 30, 14, 0.55);
-    ctx2d.lineWidth = seg.width + 3;
-    ctx2d.stroke();
-  });
-  tunnels.segments.forEach((seg,i)=>{
-    strokeTunnelPath(seg.pts);
-    ctx2d.strokeStyle = g._gradCache.tunnelGrads[i];
-    ctx2d.lineWidth = seg.width;
-    ctx2d.stroke();
-  });
-  // Chambers -- wider bulges at tunnel ends, same hollow rose-white fill.
-  tunnels.chambers.forEach((ch,i)=>{
-    ctx2d.fillStyle = g._gradCache.chamberGrads[i];
-    ctx2d.beginPath();
-    ctx2d.arc(ch.x, ch.y, ch.r, 0, Math.PI*2);
+  // ---- 2) Tunnel network carved INTO the mound (g.tunnel, the SAME fixed
+  // polygon stepWorld's collision pass tests bodies against, so what's
+  // drawn as "open" here is exactly what's physically open) -- filled with
+  // the brighter sampled reds so it still reads as open negative space
+  // against the near-black solid fill, edges smoothed the same organic way
+  // as the envelope.
+  ctx2d.fillStyle = g._gradCache.tunnelGrad;
+  fillSmoothPolygon(tunnel);
+  ctx2d.fill();
+  // Concentrated pale glow at each mouth, painted on top of the tunnel fill
+  // (still inside the envelope clip) so the brightest sampled pixels land
+  // exactly where they do in the reference: small, localized spots at the
+  // entrances rather than smeared across the whole interior.
+  // Breathing pulse -- one shared calc, phase-offset per mouth below (mi*2.1)
+  // so the two entrances don't breathe in lockstep, slow enough (period
+  // ~5.7s) to read as alive rather than flickery.
+  const mouthPulseBase = nowMs*0.0011;
+  g._gradCache.mouthGlows.forEach((mg, mi) => {
+    const pulse = 0.72 + 0.28*Math.sin(mouthPulseBase + mi*2.1);
+    ctx2d.save();
+    ctx2d.globalAlpha = pulse;
+    ctx2d.fillStyle = mg.grad;
+    fillSmoothPolygon(tunnel);
     ctx2d.fill();
+    ctx2d.globalAlpha = Math.min(1, pulse*1.15);
+    ctx2d.fillStyle = mg.rim;
+    ctx2d.beginPath();
+    ctx2d.arc(mg.x, mg.y, Math.max(16, g.w*0.045), 0, Math.PI*2);
+    ctx2d.fill();
+    ctx2d.restore();
+    // Architectural threshold cue -- small grotto-archway accent framing the
+    // opening (mg.arch, a cached Path2D), just a stroke call per frame.
+    ctx2d.save();
+    ctx2d.strokeStyle = hsl(20, 70, 90, 0.2+0.5*pulse);
+    ctx2d.lineWidth = 2.5;
+    ctx2d.stroke(mg.arch);
+    ctx2d.restore();
+    // Light touch of drifting wisps right at the mouth, echoing the
+    // "things drift in/out here" read of this effect elsewhere in the
+    // ecosystem -- kept small (4 per mouth) and gated to only draw while
+    // the structure is fully 'risen' (not mid-rise/sink), so it never adds
+    // per-frame cost outside the window it's meant to read in.
+    if(g.state==='risen'){
+      ctx2d.save();
+      mg.wisps.forEach(w=>{
+        const a = w.angle + nowMs*w.speed;
+        const wx = mg.x + Math.cos(a)*w.orbitR;
+        const wy = mg.y + Math.sin(a)*w.orbitR;
+        const tw = 0.4 + 0.6*Math.abs(Math.sin(nowMs*0.002 + w.phase));
+        ctx2d.globalAlpha = tw*0.8;
+        ctx2d.fillStyle = hsl(20, 80, 94, 1);
+        ctx2d.beginPath();
+        ctx2d.arc(wx, wy, w.size, 0, Math.PI*2);
+        ctx2d.fill();
+      });
+      ctx2d.restore();
+    }
   });
-  // ---- 3) Trencadís mosaic speckle overlay -- small broken-tile-style dots
-  // in a warm rose/gold range scattered across the mound, giving the tunnel
-  // walls and earth surface the mosaic texture.
+  ctx2d.strokeStyle = hsl(357, 60, 12, 0.45);
+  ctx2d.lineWidth = 2;
+  ctx2d.stroke();
+  // ---- 3) Trencadís mosaic speckle overlay -- small broken-tile-style dots,
+  // re-tuned from the previous warm rose/gold (hue ~30) into the same
+  // saturated red family as the rest of the sampled palette so the mosaic
+  // texture reads as part of the same reference material rather than an
+  // unrelated gold accent.
   g.specks.forEach(sp=>{
-    ctx2d.fillStyle = hsl(30+sp.hueShift<0?30+sp.hueShift+360:30+sp.hueShift, 70, 62, sp.a);
+    const h = 355+sp.hueShift<0?355+sp.hueShift+360:355+sp.hueShift;
+    ctx2d.fillStyle = hsl(h%360, 60, 42, sp.a);
     ctx2d.beginPath();
     ctx2d.arc(sp.x, sp.y, sp.r, 0, Math.PI*2);
     ctx2d.fill();
@@ -8501,51 +8812,42 @@ function syncGaudiMoundCollision(nowMs){
   const g = ECO.gaudiBrain;
   if(!g || g.state!=='risen'){ ECO.world.gaudiMound = null; return; }
   // PERF (this round): cache a cheap outer bounding radius alongside the
-  // ring/tunnels data -- computed once per rise (memoized on g itself, same
-  // "build once, reuse" convention the tunnels/outline/specks already use),
-  // not recomputed every physics tick. stepWorld's collision pass uses this
-  // for a cheap distance pre-check so it can skip the expensive point-in-
-  // polygon + nearest-tunnel-point math entirely for any body that's nowhere
-  // near the structure, instead of running that geometry check unconditionally
-  // for every single body in the world every tick regardless of distance.
+  // envelope/tunnel data -- computed once per rise (memoized on g itself,
+  // same "build once, reuse" convention the specks already use), not
+  // recomputed every physics tick. stepWorld's collision pass uses this for
+  // a cheap distance pre-check so it can skip the expensive point-in-polygon
+  // math entirely for any body that's nowhere near the structure, instead of
+  // running that geometry check unconditionally for every single body in the
+  // world every tick regardless of distance.
   if(g._boundR==null){
     let maxR = 0;
-    g.outline.forEach(p=>{ maxR = Math.max(maxR, Math.hypot(p.x, p.y)); });
+    g.envelope.forEach(p=>{ maxR = Math.max(maxR, Math.hypot(p.x, p.y)); });
     g._boundR = maxR;
   }
-  ECO.world.gaudiMound = { cx: g.cx, cy: gaudiBrainCurrentY(g, nowMs), ring: g.outline, tunnels: g.tunnels, boundR: g._boundR };
+  ECO.world.gaudiMound = { cx: g.cx, cy: gaudiBrainCurrentY(g, nowMs), envelope: g.envelope, tunnel: g.tunnel, narrowZone: g.narrowZone, boundR: g._boundR };
 }
-// BUG FIX (this round): "que la gran mayoria de shapes entren" was still not
-// happening despite the steering force itself being correct in isolation --
-// traced to this radius. 95px is tiny next to the actual play area (typically
-// 1000+ px wide): a chord has to randomly wander within 95px of one of only 3
-// fixed mouth points to ever feel any pull at all, which in practice almost
-// never happened for most chords during the structure's active window -- the
-// earlier "verified" simulations tested the steering math itself (correct)
-// but never the realistic odds of a chord's normal wander ever entering such
-// a small capture radius. Raised sharply, and a second much-larger, weaker
-// "current" radius added below so chords anywhere reasonably close to the
-// structure get a gentle drift toward it long before they're near enough to
-// feel the strong near-mouth pull -- two-tier field instead of one small hard
-// circle, so most chords actually migrate toward and then through a mouth
-// over the course of the ~77s risen window instead of only the tiny fraction
-// that happen to wander directly past one.
-// TASK (this round, item 3): "intensifica" entry, again -- structW just went
-// from w*0.22 to w*0.36 (item 1), so a chord caught in the gentle "current"
-// now has noticeably farther to travel to reach a mouth at the same pull
-// strength as before. Radii raised further on top of the prior round's
-// 95->340/900 fix, and the gentle-current pull magnitude below raised too,
-// so the bigger structure doesn't quietly undo the "la gran mayoria entran"
-// fix by making the trip take longer than the risen window's real duration
-// (risen state persists for the whole 'submerged' macro-phase, not a short
-// fixed timer -- see updateGaudiBrainStructure -- so the real constraint
-// here is "does a chord actually get pulled in at all", not running out of
-// time once already moving).
-const BRAIN_MOUTH_PULL_RADIUS = 460; // strong, walks-you-through-the-mouth radius
-const BRAIN_STRUCTURE_CURRENT_RADIUS = 1250; // gentle long-range drift radius toward the structure itself
+// BUG FIX (this round, again): "que la gran mayoria de shapes entren, y que
+// se note el efecto que tiene" -- a prior round already raised these once
+// (95->340/900), then again (item 3: 340->460 / 900->1250) once the
+// structure itself got bigger. The structure just got bigger AGAIN this
+// round (w*0.36 -> w*0.52), so a chord caught in the gentle "current" now
+// has noticeably farther to travel to reach a mouth at the same pull
+// strength as before -- radii raised further on top of that, and the
+// gentle-current pull magnitude raised too, so the bigger structure doesn't
+// quietly undo the "la gran mayoria entran" fix by making the trip take
+// longer than the risen window's real duration (risen state persists for
+// the whole 'submerged' macro-phase, not a short fixed timer -- see
+// updateGaudiBrainStructure -- so the real constraint here is "does a chord
+// actually get pulled in at all", not running out of time once already
+// moving). The two fixed mouths (GAUDI_MOUTHS_NORM, from the real artwork)
+// are both wide-open entrances -- no narrow-mouth distinction anymore, since
+// the size-gated narrow patch now lives INSIDE the tunnel (GAUDI_NARROW_
+// ZONE_NORM), not at either mouth.
+const BRAIN_MOUTH_PULL_RADIUS = 560; // strong, walks-you-through-the-mouth radius
+const BRAIN_STRUCTURE_CURRENT_RADIUS = 1500; // gentle long-range drift radius toward the structure itself
 function updateGaudiMouthPull(nowMs, dt){
   const g = ECO.gaudiBrain;
-  if(!g || g.state!=='risen' || !g.tunnels.mouths || !g.tunnels.mouths.length) return;
+  if(!g || g.state!=='risen' || !g.mouths || !g.mouths.length) return;
   const cx = g.cx, cy = gaudiBrainCurrentY(g, nowMs);
   ECO.world.bodies.forEach(c=>{
     // Same eligibility exclusions capture used to use (already-inside/eaten/
@@ -8554,29 +8856,22 @@ function updateGaudiMouthPull(nowMs, dt){
     if(c.kind!=='chord' || c._insideBrainStructure || c.beingEaten || c.dying || c.dragging || c._pilgrimUntil) return;
     // Per-chord randomized pull eligibility/strength, rolled once and cached
     // -- "buenas chances de entrar" without literally forcing every chord to
-    // go in identically. BUG FIX (this round): raised from ~70% to ~93% and
-    // the strength floor raised too -- per the user's explicit "la gran
-    // mayoria" requirement (a bare majority reading of "70%" wasn't strong
-    // enough given the radius problem above was ALSO suppressing most of
-    // that 70% from ever getting a chance to act on the roll).
-    if(c._gaudiPullStrength==null){ c._gaudiPullStrength = ECO.rng()<0.97 ? 1.1+ECO.rng()*1.2 : 0; }
+    // go in identically. BUG FIX (this round, item 3/4, yet again): raised
+    // from ~93%/97% up further per the user's now THIRD "intensifica"
+    // request -- err on making entry obviously, reliably happen for most
+    // nearby chords.
+    if(c._gaudiPullStrength==null){ c._gaudiPullStrength = ECO.rng()<0.985 ? 1.2+ECO.rng()*1.3 : 0; }
     if(c._gaudiPullStrength<=0) return;
-    // BUG FIX (this round, item 5 side effect): createGaudiBrainTunnels now
-    // includes one deliberately-narrow mouth that only sizeTier-1 (small)
-    // bodies are actually allowed through (see stepWorld's collision pass /
-    // nearestPointOnMoundTunnels' allowNarrow param). Without this filter a
-    // medium/big chord could get steered straight at that mouth, only to be
-    // physically blocked on arrival -- reading as getting stuck/vibrating
-    // against invisible rock right at the opening. Skip narrow mouths
-    // entirely when picking a target for anyone but a small chord.
+    // Both fixed mouths are open to every size -- just pick whichever is
+    // nearer (no narrow-mouth eligibility filter needed anymore; the
+    // size-gated patch is an interior tunnel zone, not a mouth).
     let bestWx=0, bestWy=0, bestD=Infinity;
-    g.tunnels.mouths.forEach(m=>{
-      if(m.narrow && c.sizeTier!==1) return;
+    g.mouths.forEach(m=>{
       const wx = cx+m.x, wy = cy+m.y;
       const d = dist(c.x, c.y, wx, wy);
       if(d<bestD){ bestD=d; bestWx=wx; bestWy=wy; }
     });
-    if(bestD===Infinity) return; // no eligible mouth for this chord's size this tick (shouldn't normally happen -- trunkCount-1 wide mouths always exist)
+    if(bestD===Infinity) return;
     if(bestD<=BRAIN_MOUTH_PULL_RADIUS){
       // Close enough to a specific mouth -- strong steer aimed right at that
       // opening so the chord actually walks through it (huntSteer-shaped,
@@ -8592,7 +8887,7 @@ function updateGaudiMouthPull(nowMs, dt){
       // instead of relying on pure random wander to ever get there.
       const d = dist(c.x, c.y, cx, cy) || 1;
       const strengthFalloff = 1 - (bestD/BRAIN_STRUCTURE_CURRENT_RADIUS); // 1 near the strong radius edge, ->0 at the outer edge
-      const pull = 48 * strengthFalloff * c._gaudiPullStrength; // raised from 34 alongside the bigger radii above (item 3)
+      const pull = 58 * strengthFalloff * c._gaudiPullStrength; // raised again from 48 alongside the bigger radii/structure above
       c.vx += ((cx-c.x)/d) * pull * dt;
       c.vy += ((cy-c.y)/d) * pull * dt;
     }
@@ -8604,42 +8899,52 @@ function updateBrainStructureEntry(nowMs){
   ECO.world.bodies.forEach(c=>{
     if(c.kind!=='chord' || c._insideBrainStructure || c.beingEaten || c.dying || c.dragging) return;
     // gaudiInMound is set fresh THIS physics tick by stepWorld's collision
-    // pass -- true only when the chord's real position is inside the mound
-    // silhouette AND within the tunnel network's open space, i.e. it
-    // genuinely just walked in through a mouth. Position-based, not stale.
+    // pass -- true only when the chord's real position is inside the fixed
+    // envelope polygon AND inside the fixed tunnel polygon's open space
+    // (narrow-zone-gated for non-small bodies), i.e. it genuinely just
+    // walked in through a mouth. Position-based, not stale. This is the SAME
+    // flag updateGrayDeaths (3x lifespan) and updateHunting/updateFoodSeeking
+    // (10x eat/collision-seeking frequency+intensity) key off of via
+    // _insideBrainStructure below -- verified (item 5 of this round) that
+    // all three still read this exact flag, not some other stand-in.
     if(c.gaudiInMound){
       c._insideBrainStructure = true;
       c._brainEnteredAt = nowMs;
     }
   });
 }
-/* ---------- REDESIGNED (this round): wandering motion for captured chords
-   now confines them to the tunnel/chamber NETWORK rather than a generic
-   circular bound, so they visually read as "moving through tunnels" instead
-   of "floating inside a blob" (per the "vemos las formas entrar y hacer sus
-   comportamientos... adentro" correction). Approximated (not literal maze
-   pathfinding, still out of scope per the same crash post-mortem concern
-   noted before) via nearestPointOnGaudiTunnels: every physics tick, find the
-   closest point on the tunnel centerline/chamber to the chord's current
-   LOCAL position; if it has drifted further than that segment's own half-
-   width past the wall, ease it back toward the centerline, otherwise let it
-   jitter freely (it's already inside open tunnel space). Folded into the
-   same fixed-physics-step slot as updateHunting/updateSummon (both apply
-   velocity deltas the same way) rather than a new separate call site. ---------- */
+/* ---------- Wandering motion for captured chords confines them to the
+   FIXED tunnel polygon (g.tunnel, the user's own vectorized artwork) rather
+   than a generic circular bound, so they visually read as "moving through
+   tunnels" instead of "floating inside a blob". Every physics tick: is the
+   chord's LOCAL position inside the tunnel polygon (narrow-zone-gated for
+   non-small bodies, same convention as stepWorld's collision pass and
+   consistent with it -- a medium/big chord could never have gotten into the
+   narrow patch in the first place)? If not, ease it back toward the nearest
+   open tunnel-boundary point (nearestOpenGaudiPoint, shared with the physics
+   layer); otherwise let it jitter freely. Folded into the same fixed-
+   physics-step slot as updateHunting/updateSummon (both apply velocity
+   deltas the same way) rather than a new separate call site. ---------- */
 function updateBrainStructureWander(nowMs, dt){
   const g = ECO.gaudiBrain;
   if(!g) return;
   const cx = g.cx, cy = gaudiBrainCurrentY(g, nowMs);
   ECO.world.bodies.forEach(c=>{
     if(c.kind!=='chord' || !c._insideBrainStructure || c.beingEaten || c.dying || c.dragging) return;
-    const lx = c.x-cx, ly = c.y-cy; // into structure-local coords, same space the tunnel network is defined in
-    const near = nearestPointOnGaudiTunnels(lx, ly, g.tunnels, c.sizeTier === 1);
-    const margin = near.halfWidth + 6; // small slack so it doesn't hug the tunnel wall exactly
-    if(near.d > margin){
-      // Drifted past the tunnel wall -- ease back toward the nearest open
-      // tunnel/chamber point (not a fixed global center, so the pull always
-      // points back into whichever tunnel branch is actually nearby).
-      const dx = near.point.x-lx, dy = near.point.y-ly;
+    const lx = c.x-cx, ly = c.y-cy; // into structure-local coords, same space the tunnel polygon is defined in
+    const isSmall = c.sizeTier === 1;
+    let inside = pointInPolygonLocal(lx, ly, g.tunnel);
+    if(inside && !isSmall && g.narrowZone){
+      const ex = (lx-g.narrowZone.cx)/g.narrowZone.rx, ey = (ly-g.narrowZone.cy)/g.narrowZone.ry;
+      if(ex*ex+ey*ey <= 1) inside = false;
+    }
+    if(!inside){
+      // Drifted past the tunnel wall (or into the small-only patch while not
+      // small) -- ease back toward the nearest open tunnel-boundary point
+      // (not a fixed global center, so the pull always points back into
+      // whichever tunnel branch is actually nearby).
+      const near = nearestOpenGaudiPoint(lx, ly, g.tunnel, g.narrowZone, isSmall);
+      const dx = near.x-lx, dy = near.y-ly;
       const dl = Math.max(1, Math.hypot(dx,dy));
       c.vx += (dx/dl)*46*dt;
       c.vy += (dy/dl)*46*dt;
@@ -9184,6 +9489,36 @@ function updateCelestialSatellites(nowMs, dt){
       b.nurseryPinned = false;
     }
   });
+}
+
+// TASK (this round): "ahora mismo la estructura tapa la planta de la que
+// nacen las shapes, haz que la planta se ensanche con una animacion hasta
+// casi llegar a los bordes horizontales" -- while the Gaudi structure is
+// risen (same ECO.gaudiBrain.state==='risen' check every other
+// Gaudi-reactive system uses, e.g. line ~5952/8611), eases each stem tip's
+// x outward away from ECO.nursery.baseX so the plant's spawn/attachment
+// points spread out from the structure's now-large centered silhouette
+// (structW = Math.max(400, w*0.64), i.e. it can cover roughly the middle
+// 64%+ of the screen) toward near the left/right edges, leaving a margin
+// rather than literally touching them. NURSERY_SPREAD_SCALE=2.5 stretches
+// the widest stem's original ~0.16w offset from baseX out to ~0.40w (i.e.
+// stem tips land around x=0.10w..0.90w at full spread -- roughly a 10%
+// margin from each edge), up from the original ~0.36w..0.66w cluster.
+// Frame-rate-independent exponential ease (~0.65s time constant) both
+// widening on rise and narrowing back on sink, so it's a smooth animated
+// stretch rather than an instant snap either direction.
+const NURSERY_SPREAD_SCALE = 2.5;
+const NURSERY_SPREAD_TIME_CONST = 0.65; // seconds
+function updateNurserySpread(nowMs, dtSec){
+  const n = ECO.nursery;
+  if(!n) return;
+  const risen = !!(ECO.gaudiBrain && ECO.gaudiBrain.state === 'risen');
+  const target = risen ? 1 : 0;
+  const rate = 1 - Math.exp(-Math.max(0,dtSec||0)/NURSERY_SPREAD_TIME_CONST);
+  n.spreadT += (target - n.spreadT) * rate;
+  if(Math.abs(target - n.spreadT) < 0.0015) n.spreadT = target;
+  const mul = 1 + n.spreadT*(NURSERY_SPREAD_SCALE-1);
+  n.stems.forEach(s=>{ s.x = n.baseX + (s.origX - n.baseX)*mul; });
 }
 
 /* ---------- nursery: pinned chords sway gently at their stem tip and
@@ -11360,6 +11695,18 @@ function updateSeedHexagons(nowMs){
       const surfaceY = waterSurfaceYAt(hex.x, ECO.world.width, floorY, nowMs, quakeActive) - 6;
       hex.y += (surfaceY - hex.y)*0.09;
       if(Math.abs(hex.y-surfaceY) < 2) hex.state = 'active';
+      // GAP FIX (this round, item 1/"hexagonitos voladores"): ECO.seedHexagons
+      // is a plain cosmetic array (see this block's own header comment above),
+      // never a member of world.bodies -- gaudiSolidCollisionPass only ever
+      // walks world.bodies, so no filter tweak on that pass could ever have
+      // reached these; they need their own explicit push via the shared
+      // gaudiSolidPushPoint core (see gaudiSolidPushObject, physics.js section
+      // above stepWorld). trackStuck=true here is safe/harmless even though
+      // this array has no "stuck 3s+" escape-hatch consumer of its own --
+      // it just means a seed hexagon that somehow got wedged deep in rock
+      // (e.g. mound rising underneath one already at rest) gets the same
+      // eventual hard-eject safety net a physics body would.
+      gaudiSolidPushObject(ECO.world, hex, 0.016, true);
       return true;
     }
     if(hex.state==='active'){
@@ -11368,6 +11715,7 @@ function updateSeedHexagons(nowMs){
       hex.vx += (Math.sin(nowMs*0.0009+hex.huePhase)*5 - hex.vx)*0.01;
       hex.x = Math.max(16, Math.min(ECO.world.width-16, hex.x));
       hex.y = surfaceY + Math.sin(nowMs*0.0016+hex.huePhase)*3;
+      gaudiSolidPushObject(ECO.world, hex, 0.016, true); // see 'rising' branch comment above
       // Collision: any live chord touching it -- transform-on-subset-match,
       // otherwise just a normal bounce (no special interaction at all, so
       // this loop deliberately does nothing but move on when the check fails).
@@ -11397,6 +11745,7 @@ function updateSeedHexagons(nowMs){
     hex.vy = Math.max(hex.vy, -220);
     hex.y += hex.vy*0.016;
     hex.x += hex.vx*0.016;
+    gaudiSolidPushObject(ECO.world, hex, 0.016, true); // see 'rising' branch comment above -- departing hexagons drift straight up and could otherwise clip through an overhanging part of the structure on the way
     let nearestFlyer = null, nearestD = SEED_HEX_FLY_ATTRACT_RADIUS;
     flyingChords.forEach(fc=>{
       const d = dist(hex.x,hex.y,fc.x,fc.y);
@@ -12183,10 +12532,18 @@ function drawZoneCollapseIndicator(w,h,nowMs){
 function drawZoneDivider(w,h,nowMs){
   const t1=w/3, t2=w*2/3;
   ctx2d.save();
-  ctx2d.strokeStyle='rgba(255,255,255,0.12)'; ctx2d.setLineDash([6,8]);
-  ctx2d.beginPath(); ctx2d.moveTo(t1,0); ctx2d.lineTo(t1,h); ctx2d.stroke();
-  ctx2d.beginPath(); ctx2d.moveTo(t2,0); ctx2d.lineTo(t2,h); ctx2d.stroke();
-  ctx2d.setLineDash([]);
+  // Gated to the ZONES DILUTED event: the dashed divider lines used to draw
+  // unconditionally every frame even though A/B/C aren't really distinct
+  // zones outside that event -- now they only appear while
+  // ECO.zoneCollapseActive is true, same flag that drives the "ZONES
+  // DILUTED" banner in drawZoneCollapseIndicator, so the markers and the
+  // banner always appear/disappear together.
+  if(ECO.zoneCollapseActive){
+    ctx2d.strokeStyle='rgba(255,255,255,0.12)'; ctx2d.setLineDash([6,8]);
+    ctx2d.beginPath(); ctx2d.moveTo(t1,0); ctx2d.lineTo(t1,h); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(t2,0); ctx2d.lineTo(t2,h); ctx2d.stroke();
+    ctx2d.setLineDash([]);
+  }
   ctx2d.font="600 11px 'JetBrains Mono', monospace"; ctx2d.textAlign='center';
   // Revision round 11: "marca la zona b como zone 0" -- word-then-number
   // order (was number-then-word, "0 zone") so the middle zone reads exactly
@@ -13566,6 +13923,13 @@ function updateHoneycombFlyers(nowMs){
       f.vx += (Math.sin(nowMs*0.0017+f.driftSeed)*12 - f.vx*0.02);
       f.vy += (Math.cos(nowMs*0.0014+f.driftSeed)*12 - f.vy*0.02);
       f.x += f.vx*0.016; f.y += f.vy*0.016;
+      // GAP FIX (this round, item 1/"hexagonitos voladores"): same issue as
+      // ECO.seedHexagons (see updateSeedHexagons) -- ECO.honeycombFlyers is a
+      // plain cosmetic array outside world.bodies (see this block's own
+      // header comment above: "deliberately NOT a new physics body"), so
+      // gaudiSolidCollisionPass's world.bodies-only sweep structurally never
+      // reached these. Pushed through the same shared core directly.
+      gaudiSolidPushObject(ECO.world, f, 0.016, true);
       if(nowMs >= f.outUntil){
         const target = pickHoneycombSocket() || {x:f.x,y:f.y};
         f.state = 'returning'; f.targetX = target.x; f.targetY = target.y; f.returnStartedAt = nowMs; f.returnDurMs = 900+Math.random()*500;
@@ -13575,6 +13939,7 @@ function updateHoneycombFlyers(nowMs){
       const rf = Math.min(1, (nowMs-f.returnStartedAt)/f.returnDurMs);
       f.x = f.startX + (f.targetX-f.startX)*rf;
       f.y = f.startY + (f.targetY-f.startY)*rf;
+      gaudiSolidPushObject(ECO.world, f, 0.016, true); // see 'out' branch comment above -- the straight-line dive back into its socket can clip an overhanging part of the structure too
       if(rf>=1){
         f.state = 'resting';
         f.nextActionAt = nowMs + 3000 + Math.random()*5000;
@@ -18387,6 +18752,7 @@ function __loopFrameBody(t){
   updateAnchoredObjects(t); // revision round 5
   updatePadholdStem(t, delta); // revision round 6
   updateCelestialSatellites(t, delta); // revision round 12
+  updateNurserySpread(t, delta); // TASK (this round): widen/narrow easing, must run before updateNursery so pinned chords read the current-frame stem x
   updateNursery(t);
   updateFoodParticles(t);
   updateSeedHexagons(t); // NEW TASK: seed hexagons -- periodic ambient system, same loop() slot as the other periodic ambient updates above/below
