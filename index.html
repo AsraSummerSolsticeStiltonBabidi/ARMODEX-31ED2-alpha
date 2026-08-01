@@ -649,6 +649,11 @@
   .chord-chip .num{font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; color:#f4efe2;}
   .chord-nick{ font-weight:800; color:#5b9dea; font-size:1.15em; letter-spacing:.01em; background:#0a0b0d; padding:2px 7px; border-radius:5px; display:inline-block; }
   .identicroot-num{ font-weight:800; color:#e2903a; }
+  /* Sits over the top-right corner of a "part of" card's minimap: this parent shape does contain
+     the shape you're looking at, but rooted on a different one of its own notes. */
+  .different-root-note{ position:absolute; top:5px; right:7px; z-index:3; pointer-events:none;
+    font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:#ff5a70; text-shadow:0 1px 2px rgba(0,0,0,.9); }
   .first-iv{ font-weight:800; color:var(--text); text-decoration:underline; text-underline-offset:2px; font-size:1.08em; }
   .chip-hex-mini{width:42px; height:42px; margin-top:4px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
   .prog-card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
@@ -1544,7 +1549,7 @@ function hexPoints(cx,cy,size){
 }
 function buildHexSVG(opts){
   const {shape='diamond', range=5, cols=BOARD_COLS, rows=BOARD_ROWS, size=28, autoFit=true,
-         highlightRoot=null, tones=new Set(), mode='pc', showLabels=true, zeroLabelOnly=false, interactive=false, onHexClick=null, dim=false, focusPoints=null, focusRoot=null, focusTones=null, octaveHighlightPc=null, showCents=false, echoPcs=null, echoRaws=null, shapeDragEnabled=false, fallbackRaws=null, vividMarks=false, allowHScroll=false, showRootRing=true, rootLabelScale=1, labelScale=1, plainRootStroke=false} = opts;
+         highlightRoot=null, tones=new Set(), mode='pc', showLabels=true, zeroLabelOnly=false, interactive=false, onHexClick=null, dim=false, focusPoints=null, focusRoot=null, focusTones=null, octaveHighlightPc=null, showCents=false, echoPcs=null, echoRaws=null, shapeDragEnabled=false, fallbackRaws=null, vividMarks=false, allowHScroll=false, showRootRing=true, rootLabelScale=1, labelScale=1, plainRootStroke=false, cellAccents=null} = opts;
   const cells = shape==='rect' ? hexesRect(cols, rows) : shape==='rect-centered' ? hexesRectCentered(cols, rows) : hexesInRange(range);
   const positioned = cells.map(c=>{
     const {x,y}=axialToPixel(c.q,c.r,size);
@@ -1639,6 +1644,14 @@ function buildHexSVG(opts){
     else if(isRealEcho){ fill=`hsl(${hue} ${dim?34:44}% ${dim?25:32}%)`; stroke='var(--border-strong)'; sw=1.6; }
     else if(isKeyEcho){ fill=`hsl(${hue} ${dim?22:29}% ${dim?21:26}%)`; stroke='var(--border)'; sw=1.1; }
     else { fill=`hsl(${hue} ${dim?18:32}% ${dim?15:20}%)`; stroke='var(--border)'; sw=1; }
+    // cellAccents outlines whole hexagons (not their numbers) in gold: used by the progression map
+    // to ring every shape's own root, with the progression's anchor (0) ringed more heavily so it
+    // still reads as the reference point.
+    if(cellAccents){
+      const akey = (mode==='pc') ? c.pc : c.raw;
+      if(cellAccents.thick && cellAccents.thick.has(akey)){ stroke = 'var(--accent)'; sw = size*0.22; }
+      else if(cellAccents.thin && cellAccents.thin.has(akey)){ stroke = 'var(--accent)'; sw = size*0.12; }
+    }
     poly.setAttribute('fill', fill);
     poly.setAttribute('stroke', stroke);
     poly.setAttribute('stroke-width', sw);
@@ -4146,7 +4159,21 @@ function renderBigProgressionMap(root, tonesArr, forceRaw){
   const focusRoot = foldPositions ? null : (exact ? exact.focusRoot : clustered.focusRoot);
   const focusTones = foldPositions ? null : (exact ? exact.focusTones : clustered.focusTones);
   const echoPcs = state.octaveEquivalence ? new Set([root, ...tonesArr].map(mod31)) : null;
-  holder.appendChild(buildHexSVG({ shape:'rect-centered', cols, rows, size:26, autoFit:false, highlightRoot:hlRoot, tones:hlTones, mode, focusRoot, focusTones, echoPcs, interactive:true, onHexClick:playBigMapNote, allowHScroll:true, showRootRing:false, rootLabelScale:1.0, labelScale:0.85 }));
+  // Every shape's own root gets the gold outline too, thinner than the progression anchor's, so
+  // you can read at a glance where each chord is rooted without losing track of the 0 reference.
+  const cellAccents = (()=>{
+    const p = state.progressions.find(x=>x.id===state.selectedProgId);
+    if(!p || !p.chords.length) return null;
+    const anchor = p.chords[0].root;
+    const roots = p.chords.map(c=>c.root-anchor);
+    const thin = new Set(roots.filter(v=>v!==0));
+    const thick = new Set([0]);
+    if(!foldPositions) return { thick, thin };
+    // Folded view compares by pitch class; thick is checked first, so an octave of 0 can't
+    // downgrade the anchor to a thin outline.
+    return { thick:new Set([...thick].map(mod31)), thin:new Set([...thin].map(mod31)) };
+  })();
+  holder.appendChild(buildHexSVG({ shape:'rect-centered', cols, rows, size:26, autoFit:false, highlightRoot:hlRoot, tones:hlTones, mode, focusRoot, focusTones, echoPcs, interactive:true, onHexClick:playBigMapNote, allowHScroll:true, showRootRing:false, rootLabelScale:1.0, labelScale:0.85, cellAccents }));
   alignBigProgMapTop();
 }
 // Pin the big map's own top edge to the progression title's text baseline (its bottom edge),
@@ -4346,19 +4373,30 @@ function canonicalShapeSignature(intervals){
   });
   return best;
 }
-function findOctaveSibling(sp, speciesList){
-  if(state.octaveEquivalence) return null;
+// Every OTHER species with this exact pitch-class content measured from the same root -- i.e. the
+// same notes, revoiced across octaves. Returns them all: keeping only the first quietly hid real
+// relations whenever three or more voicings of one chord had been collected, while the sibling
+// "identical shape, different root" feature listed every match. Same kind of relation, so it has
+// to be reported the same way.
+function findOctaveSiblings(sp, speciesList){
+  if(state.octaveEquivalence) return [];
   const myPc = pcSignature(sp.intervals);
-  const siblings = speciesList.filter(o=>o.signature!==sp.signature && pcSignature(o.intervals)===myPc);
-  if(siblings.length===0) return null;
-  siblings.sort((a,b)=>a.num-b.num);
-  return siblings[0];
+  return (speciesList||[])
+    .filter(o=>o.signature!==sp.signature && pcSignature(o.intervals)===myPc)
+    .sort((a,b)=>a.num-b.num);
+}
+function findOctaveSibling(sp, speciesList){
+  const all = findOctaveSiblings(sp, speciesList);
+  return all.length ? all[0] : null;
 }
 function octaveNoteHtml(sp, speciesList){
-  const sib = findOctaveSibling(sp, speciesList);
-  if(!sib) return '';
-  const nick = state.nicknames[sib.signature];
-  return `<div class="rel-block"><div class="rel-label">${t('rel.partiallyoctaved')}</div><div class="rel-line" onclick="event.stopPropagation(); viewChordInChordsTab('${sib.signature}')" onmouseenter="hoverPlaySpecies('${sib.signature}')" onmouseleave="stopHoverPlay()" data-hover-root="0" data-hover-tones='${JSON.stringify(sib.intervals.filter(i=>i!==0))}' data-hover-sig="${sib.signature}">✦ #${sib.num}${nick ? ` <span class="chord-nick">"${escapeHtml(nick)}"</span>` : ''}</div></div>`;
+  const sibs = findOctaveSiblings(sp, speciesList);
+  if(sibs.length===0) return '';
+  const lines = sibs.map(sib=>{
+    const nick = state.nicknames[sib.signature];
+    return `<div class="rel-line" onclick="event.stopPropagation(); viewChordInChordsTab('${sib.signature}')" onmouseenter="hoverPlaySpecies('${sib.signature}')" onmouseleave="stopHoverPlay()" data-hover-root="0" data-hover-tones='${JSON.stringify(sib.intervals.filter(i=>i!==0))}' data-hover-sig="${sib.signature}">✦ #${sib.num}${nick ? ` <span class="chord-nick">"${escapeHtml(nick)}"</span>` : ''}</div>`;
+  }).join('');
+  return `<div class="rel-block"><div class="rel-label">${t('rel.partiallyoctaved')}</div>${lines}</div>`;
 }
 // Is this cataloged chord itself a fragment of some OTHER, bigger cataloged chord? (e.g. a plain
 // major triad is part of a maj7 you've also collected). Always compared by pitch class.
@@ -4380,6 +4418,15 @@ function relBlockHtml(label, chordList){
   if(chordList.length===0) return '';
   const lines = chordList.map(o=>`<div class="rel-line" onclick="event.stopPropagation(); viewChordInChordsTab('${o.signature}')" onmouseenter="hoverPlaySpecies('${o.signature}')" onmouseleave="stopHoverPlay()" data-hover-root="0" data-hover-tones='${JSON.stringify(o.intervals.filter(i=>i!==0))}' data-hover-sig="${o.signature}">✦ #${o.num}${state.nicknames[o.signature]?` <span class="chord-nick">"${escapeHtml(state.nicknames[o.signature])}"</span>`:''}</div>`).join('');
   return `<div class="rel-block"><div class="rel-label">${label}</div>${lines}</div>`;
+}
+// A fragment is "part of" a bigger chord if it fits starting from ANY of that chord's notes. When
+// it fits at offset 0 it is sitting on the SAME root as the parent -- e.g. 0 +5 +10 +18 inside
+// 0 +5 +10 +18 +28. Calling that "a different root" was simply wrong; only a fit that requires a
+// non-zero offset is genuinely rooted elsewhere.
+function partOfSharesRoot(sp, other){
+  const Fpc = Array.from(new Set(sp.intervals.map(mod31)));
+  const Sset = new Set(other.intervals.map(mod31));
+  return Fpc.every(f => Sset.has(mod31(f)));
 }
 function partOfHtml(sp, speciesList){
   return relBlockHtml(t('rel.partof'), findSpeciesPartialOf(sp, speciesList));
@@ -6639,6 +6686,11 @@ const I18N = {
     "en": "Root",
     "es": "Root",
     "ca": "Root"
+  },
+  "recog.differentroot": {
+    "en": "Different root",
+    "es": "Root distinta",
+    "ca": "Root diferent"
   },
   "recog.partofroot.title": {
     "en": "Part of shape with different root",
@@ -9664,7 +9716,11 @@ function mountProgMiniMap(p){
   // the example -- were silently absent from the minimap. Passing focusPoints directly uses the
   // real positions with no guessing involved, same as the non-exact fallback below already does.
   const cfg = exact
-    ? { shape:'rect-centered', cols:exact.cols, rows:exact.rows, root:0, tones:new Set(tonesArr), mode:'raw', focusPoints:[exact.focusRoot, ...exact.focusTones], focusRoot:exact.focusRoot, focusTones:exact.focusTones, echoPcs:null }
+    // Exact-position maps decide "is this cell marked" from the recorded (q,r), so an octave of a
+    // marked note is NOT automatically lit the way it is in a pitch-class map -- echoPcs is what
+    // lights it. Leaving it null here is why octave equivalence showed in some minimaps but not
+    // others. Purely a highlight: grid size and zoom are untouched.
+    ? { shape:'rect-centered', cols:exact.cols, rows:exact.rows, root:0, tones:new Set(tonesArr), mode:'raw', focusPoints:[exact.focusRoot, ...exact.focusTones], focusRoot:exact.focusRoot, focusTones:exact.focusTones, echoPcs: state.octaveEquivalence ? new Set([0, ...tonesArr].map(mod31)) : null }
     : chordHexConfig([0, ...tonesArr]);
   holder.appendChild(buildHexSVG({ shape:cfg.shape, cols:cfg.cols, rows:cfg.rows, size:19, highlightRoot:cfg.root, tones:cfg.tones, mode:'raw', showLabels:false, dim:true, focusPoints:cfg.focusPoints, focusRoot:cfg.focusRoot, focusTones:cfg.focusTones, echoPcs:cfg.echoPcs, showRootRing:false }));
 }
@@ -10299,7 +10355,17 @@ function renderIdenticRootsHtml(sp, speciesList){
   // i.e. a different one of its keys is marked as root. The shape's own species is excluded on
   // purpose: those occurrences are just transpositions with the same abstract root, which is not
   // what this feature is about.
-  const siblings = (speciesList||[]).filter(other=>other.signature!==sp.signature && canonicalShapeSignature(other.intervals)===Fpc);
+  // canonicalShapeSignature collapses EVERY rotation of a pitch-class set to one string, so on its
+  // own it also matched shapes whose root is the very same degree of that set and only the octave
+  // voicing differs (e.g. 0 +10 +18 +26 vs -21 -13 -5 0 -- identical pitch classes, both rooted on
+  // 0). Those aren't a different root at all; they belong under "partially octaved". Requiring a
+  // DIFFERENT pcSignature -- the set as measured from its own root -- keeps only genuine rotations.
+  const Froot = pcSignature(sp.intervals);
+  const siblings = (speciesList||[]).filter(other=>
+    other.signature!==sp.signature &&
+    canonicalShapeSignature(other.intervals)===Fpc &&
+    pcSignature(other.intervals)!==Froot
+  );
   const grouped = {};
   siblings.forEach(other=>{
     (other.occurrences||[]).forEach(o=>{
@@ -10341,10 +10407,17 @@ function renderIdenticRootsHtml(sp, speciesList){
 // recorded at, elsewhere in the collection. Hidden entirely (returns '') when there's nothing to
 // show.
 function renderPartOfDifferentRootHtml(sp, speciesList){
-  const partial = findSpeciesPartialOf(sp, speciesList);
+  // Only the parents this shape sits inside at a NON-ZERO offset belong here. Listing every
+  // part-of parent made the heading a false claim: 0 +5 +10 +18 inside 0 +5 +10 +18 +28 shares
+  // the parent's root exactly, and was still being announced as "a different root".
+  const partial = findSpeciesPartialOf(sp, speciesList).filter(big=>!partOfSharesRoot(sp, big));
   const blocks = partial.map(big=>{
     if(!big.occurrences || big.occurrences.length===0) return '';
-    const roots = Array.from(new Set(big.occurrences.map(o=>mod31(o.root)))).sort((a,b)=>a-b);
+    // Raw roots, not mod31 pitch classes -- exactly as the sibling "identical shape, different
+    // root" list does. Folding here meant the two features, both labelled "...different root",
+    // silently disagreed about what a root is: one treated roots 0 and 31 as the same, the other
+    // as two genuinely different registers of the same shape.
+    const roots = Array.from(new Set(big.occurrences.map(o=>o.root))).sort((a,b)=>a-b);
     if(roots.length===0) return '';
     return `<div class="rel-line" style="cursor:pointer;" onclick="event.stopPropagation(); viewChordInChordsTab('${big.signature}')" onmouseenter="hoverPlaySpecies('${big.signature}')" onmouseleave="stopHoverPlay()" data-hover-root="0" data-hover-tones='${JSON.stringify(big.intervals.filter(i=>i!==0))}' data-hover-sig="${big.signature}">✦ #${big.num}${state.nicknames[big.signature]?` <span class="chord-nick">"${escapeHtml(state.nicknames[big.signature])}"</span>`:''} — ${t('word.root')}: ${roots.join(', ')}</div>`;
   }).filter(Boolean);
@@ -10392,7 +10465,7 @@ function renderChordCardHtml(sp, opts={}){
         ${expanded ? `<button class="btn small primary" style="margin-left:auto;" data-hotkey="F" onclick="event.stopPropagation(); exportSpeciesMidi('${sp.signature}')" title="${t('word.dl.midi.title')}">⬇ MIDI</button>` : ''}
       </div>
       ${(state.chordTags[sp.signature]||[]).length ? `<div class="prog-tags" style="margin:2px 0 6px;">${(state.chordTags[sp.signature]||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-      <div class="hex-frame" style="${hexFrameStyle}"><div id="${holderId}"></div></div>
+      <div class="hex-frame" style="${hexFrameStyle}; position:relative;">${opts.differentRootNote ? `<span class="different-root-note">${t('recog.differentroot')}</span>` : ''}<div id="${holderId}"></div></div>
       ${buildStepLadderHtml(0, sp.intervals.filter(i=>i!==0))}
       <div class="occ-wrap ${expanded?'show':''}">
         ${octaveNoteHtml(sp, speciesList)}
@@ -10405,7 +10478,6 @@ function renderChordCardHtml(sp, opts={}){
         ${renderChordSimilarityHtml(sp, speciesList)}
         ${renderMostCommonPairsHtml(sp, speciesList)}
         ${renderIdenticRootsHtml(sp, speciesList)}
-        ${renderPartOfDifferentRootHtml(sp, speciesList)}
         <div class="field" style="margin-top:12px;" onclick="event.stopPropagation()">
           <label class="field-label">${t('word.tags')}</label>
           <input type="text" placeholder="${t('word.commatags')}" value="${escapeHtml((state.chordTags[sp.signature]||[]).join(', '))}" onchange="setChordTags('${sp.signature}', this.value)" onkeydown="handleTagAutocomplete(event)">
@@ -10520,7 +10592,7 @@ function renderSpecies(content){
         <div class="focus-col-scroll-wrap">
           <div class="focus-col" onscroll="updateFocusColArrow(this)">
             <div class="focus-col-title">${t('word.partof')}</div>
-            ${partOf.length ? partOf.map(sp=>renderChordCardHtml(sp, { speciesList: species.list })).join('') : `<p class="sub" style="max-width:none;">${t('word.nonecatalogued')}</p>`}
+            ${partOf.length ? partOf.map(sp=>renderChordCardHtml(sp, { speciesList: species.list, differentRootNote: !partOfSharesRoot(focusSp, sp) })).join('') : `<p class="sub" style="max-width:none;">${t('word.nonecatalogued')}</p>`}
           </div>
           <div class="focus-col-more-arrow">▼</div>
         </div>
