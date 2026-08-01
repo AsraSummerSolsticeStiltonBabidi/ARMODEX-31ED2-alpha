@@ -30,7 +30,12 @@
   }
   *{box-sizing:border-box;}
   button, a[href], input, textarea, select, label, [onclick], [role="button"], .btn, .species-card, .prog-card, .match-item, .chord-chip, .mini-chip, .tag, .prime-btn, .step-num, .occ-group-head, .help-continue-btn, .ji-hoverable{
-    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'%3E%3Ccircle cx='17' cy='17' r='13' fill='%23ffcf3f' stroke='%23000000' stroke-width='2.8'/%3E%3C/svg%3E") 17 17, pointer !important;
+    /* 32x32 is a hard ceiling for custom cursor bitmaps in browsers -- anything bigger is
+       silently discarded and the comma fallback (the plain `pointer` hand) is used instead.
+       This was 34x34, which is why hovering anything clickable lost the custom cursor while the
+       30x30 default kept it. Same visual weight, achieved with a bigger circle inside a legal
+       canvas rather than a bigger canvas. */
+    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ffcf3f' stroke='%23000000' stroke-width='2.8'/%3E%3C/svg%3E") 16 16, pointer !important;
   }
   html{ color-scheme:dark; }
   /* Switched from a JS/DOM-tracked custom cursor to a real native CSS cursor image. A DOM element
@@ -45,7 +50,7 @@
      movement is now bit-for-bit identical to the default arrow cursor's behavior.
   */
   html,body{margin:0;padding:0;background:transparent;color:var(--text); overflow-x:hidden;
-    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Ccircle cx='15' cy='15' r='10' fill='%23e0334d' stroke='%23000000' stroke-width='2.4'/%3E%3C/svg%3E") 15 15, auto !important;
+    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'%3E%3Ccircle cx='13' cy='13' r='10' fill='%23e0334d' stroke='%23000000' stroke-width='2.4'/%3E%3C/svg%3E") 13 13, auto !important;
   }
   /* Scrolling itself stays fully functional wherever content actually overflows (so a button
      that ends up out of reach is still reachable), but the scrollbar chrome is hidden everywhere
@@ -58,6 +63,14 @@
      reach below the fold), this class is removed and normal scrolling resumes (bar stays hidden
      regardless, per the rules above). */
   html.scroll-locked, body.scroll-locked{ overflow:hidden !important; }
+  /* Belt and braces: even if the class somehow lands on a phone, scrolling stays possible there.
+     Being unable to scroll is never an acceptable failure mode on a touch screen. */
+  html.mobile-mode, html.mobile-mode body,
+  html.mobile-mode.scroll-locked, html.mobile-mode body.scroll-locked{ overflow-y:auto !important; overflow-x:hidden !important; }
+  /* Nothing may force the page wider than the screen -- horizontal overflow puts controls out of
+     reach just as effectively as a clipped height. */
+  html.mobile-mode #app, html.mobile-mode .wrap, html.mobile-mode .builder-grid{ max-width:100%; }
+  html.mobile-mode .builder-grid > *, html.mobile-mode .focus-col > *{ max-width:100%; }
   /* One deliberate exception to "no visible scrollbar chrome anywhere": the exact-match card in
      the Hex Map's recognition panel can grow tall enough to push its own result info off screen,
      so instead of letting it do that, it caps its own height and scrolls internally -- and for
@@ -866,6 +879,24 @@
   .builder-grid{display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start;}
   @media (max-width:1000px){.builder-grid{grid-template-columns:1fr;}}
   @media (max-width:700px){.builder-right > .row{flex-direction:column;}}
+  /* Builder on a phone: every row that was side-by-side on desktop stacks, nothing keeps a fixed
+     pixel width, and the map is never squeezed into a narrow leftover column. */
+  html.mobile-mode .builder-grid{ grid-template-columns:1fr; gap:10px; }
+  html.mobile-mode .builder-right > .row,
+  html.mobile-mode .builder-top-row{ flex-direction:column; align-items:stretch !important; gap:10px !important; }
+  html.mobile-mode .builder-right, html.mobile-mode .builder-left{ min-width:0; width:100%; }
+  html.mobile-mode .builder-grid > *{ min-width:0; }
+  html.mobile-mode .hex-frame{ padding:6px; }
+  html.mobile-mode .builder-map-viewport svg.hexsvg{ max-height:56vh; }
+  html.mobile-mode #builderSearchPanel,
+  html.mobile-mode #builderSearchResultsList{ max-width:100% !important; width:100% !important; margin-top:6px !important; }
+  html.mobile-mode .builder-nickname-inline{ margin-left:0 !important; width:100%; }
+  html.mobile-mode .built-chord{ flex-wrap:wrap; gap:6px; }
+  html.mobile-mode .built-chord .built-chord-label-input{ width:100% !important; flex:1 1 100% !important; }
+  html.mobile-mode .builder-tutorial-float{ position:static !important; width:100% !important; margin-bottom:8px; }
+  /* The floating tutorial mascot overlaps the map badly on a narrow screen. */
+  html.mobile-mode .tut-bubble-wrap{ max-width:100%; }
+  html.mobile-mode .selection-strip{ gap:4px; }
   #builderProgressionTop, #mapViewTop, #speciesTabTop, #progDetailTitle, #builderViewTop, #builderTutorialBanner, #navTabsBar, #speciesFocusTop{scroll-margin-top:14px;}
   label.field-label.builder-section-label, .hex-frame .plate-label.builder-section-label, .builder-section-label{font-family:'Chakra Petch',sans-serif; font-size:17px; font-weight:800; color:#ffffff; letter-spacing:.01em; white-space:nowrap; text-transform:none;}
   .selection-strip{display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;}
@@ -1049,10 +1080,22 @@
      column with the focused shape's own card always first, "includes"/"part of" pushed below it --
      rather than the DOM order (includes, main, part-of) which used to put "part of" above the
      actual card once the columns wrapped on a narrow screen. */
-  @media (max-width:700px){
-    .chord-focus-layout{ flex-direction:column; }
-    .focus-col-main{ order:-1; }
-  }
+  /* The old rule here put order:-1 on .focus-col-main, but that element is nested inside
+     .focus-main-wrap -- it is NOT a flex item of .chord-focus-layout, so the reorder never
+     applied and "includes" stayed on top. Replaced by the mobile-mode block below, which keeps
+     the natural order (includes / card / part of) and instead brings the card into view. */
+  html.mobile-mode .chord-focus-layout{ flex-direction:column; align-items:stretch; gap:8px; }
+  html.mobile-mode .focus-main-wrap,
+  html.mobile-mode .focus-col-scroll-wrap{ flex:none; width:100%; min-width:0; max-width:none; }
+  /* No nested scrollers on a phone: the page scrolls as one continuous strip. */
+  html.mobile-mode .focus-col,
+  html.mobile-mode .focus-col:not(.focus-col-main){ max-height:none; overflow:visible; padding-right:0; }
+  html.mobile-mode .focus-col-more-arrow{ display:none; }
+  /* "Includes" sits at the BOTTOM of its own column so its heading lands directly above the
+     detail card, while "Part of" keeps its heading on top, directly below it -- the two labels
+     end up framing the card instead of floating at the far ends of the page. */
+  html.mobile-mode .chord-focus-layout > .focus-col-scroll-wrap:first-child .focus-col-title{ order:99; margin:10px 0 0; }
+  html.mobile-mode .focus-col-title{ font-size:18px; }
   .species-card{background:linear-gradient(to bottom, var(--card-bg-top), var(--card-bg)); border:1.5px solid var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.4); border-radius:var(--radius); padding:14px; cursor:pointer; transition:border-color .12s ease, box-shadow .12s ease; break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%; position:relative;}
   .species-card.expanded-pop{ column-span:all; width:auto; display:block; margin-left:auto; margin-right:auto; }
   .species-card:hover{border-color:var(--accent2); transform:translateY(-3px) scale(1.015); box-shadow:0 16px 34px rgba(0,0,0,.45), 0 0 0 3px var(--accent2), 0 22px 90px -25px rgba(255,255,255,.6); z-index:5;}
@@ -2089,7 +2132,16 @@ function scheduleChordAudio(rawNotes, timbre, startTime, dur, rootRaw, bypassInt
   const ordered = state.strumMode ? notes.slice().sort((a,b)=>a-b) : notes;
   const created = [];
   ordered.forEach((raw, idx)=>{
-    const noteStart = startTime + (state.strumMode ? idx*STRUM_GAP : 0);
+    // A note whose start time has already passed gets its whole attack ramp collapsed by the Web
+    // Audio API: setValueAtTime(0.0001) and the ramp to full gain both resolve at once, so the
+    // amplitude jumps 0 -> full in a single sample. That step IS the click. It happens whenever
+    // the scheduler falls behind real time -- rare on a desktop, routine on a phone, and
+    // guaranteed for any path that passes ctx.currentTime as the start. Keeping every note at
+    // least a few ms in the future means the ramp always has real time to run.
+    const noteStart = Math.max(
+      startTime + (state.strumMode ? idx*STRUM_GAP : 0),
+      ctx.currentTime + 0.006
+    );
     sendMidiOut(raw, noteStart, decayDur, idx);
     const freq = freqForRaw(raw);
     const gain = ctx.createGain();
@@ -2227,9 +2279,15 @@ function scheduleRandomTopline(notes, timbre, startTime, chordDur, rootRaw, full
    Replaying the SAME progression keeps whatever transposition it already had, so a loop stays put
    instead of drifting further away with every repeat.
    The octave guard keeps that chaining from wandering off the useful register: if the resulting
-   shift would drop the whole progression more than 49 steps below where it was written, it's
+   shift would carry the whole progression more than CONNECT_MAX_DRIFT steps from where it was written, it's
    folded back up by whole octaves (31 steps) -- and symmetrically for shifts upward. */
-const CONNECT_MAX_DRIFT = 49, OCTAVE_STEPS = 31;
+const OCTAVE_STEPS = 31;
+// How far the chaining is allowed to carry a progression from where it was written, in steps.
+// Folding by whole octaves can only ever land inside a window of width 2*D+1, so that window has
+// to be at least one octave wide or some inputs would overshoot it: D must be >= 15. Math.max
+// enforces that floor rather than leaving it as a comment nobody reads.
+// 18 keeps the drift under ~0.6 of an octave (49 allowed a minor tenth, which wandered too far).
+const CONNECT_MAX_DRIFT = Math.max(Math.ceil((OCTAVE_STEPS-1)/2), 18);
 let progConnectLastId = null;      // which progression the current offset belongs to
 let progConnectOffset = 0;         // steps currently applied to that progression
 let progConnectNextStart = null;   // absolute pitch the NEXT different progression should start on
@@ -2988,6 +3046,8 @@ let activeChordPadSession = null;
 let chordArpeggioTimer = null;
 let chordHoverToken = 0;
 function schedulePad(rawNotes, startTime, durSec){
+  // Same past-scheduling guard as scheduleChordAudio -- see the note there.
+  { const c = audioCtx; if(c) startTime = Math.max(startTime, c.currentTime + 0.006); }
   const ctx = getAudioCtx(); if(!ctx) return null;
   const nodes = rawNotes.map((raw,i)=>{
     const freq = freqForRaw(raw);
@@ -5868,9 +5928,9 @@ const I18N = {
     "ca": "Melodia aleatòria"
   },
   "interp.connectprogs.title": {
-    "en": "Chains progressions together: the next progression you play starts on the pitch the previous one's last shape ended on, instead of restarting from the same fixed reference. Replaying the same progression keeps its current position. If the chained shift would drop (or raise) it more than 49 steps from where it was written, it's folded back by whole octaves so it can't drift into an extreme register.",
-    "es": "Encadena las progresiones: la siguiente progresión que toques empieza en la altura en la que terminó la última shape de la anterior, en vez de reiniciar desde la misma referencia fija. Repetir la misma progresión mantiene su posición actual. Si el desplazamiento la bajara (o subiera) más de 49 pasos respecto a donde fue escrita, se pliega por octavas enteras para que no se vaya a un registro extremo.",
-    "ca": "Encadena les progressions: la següent progressió que toquis comença a l'altura on va acabar l'última shape de l'anterior, en comptes de reiniciar des de la mateixa referència fixa. Repetir la mateixa progressió manté la seva posició actual. Si el desplaçament la baixés (o pugés) més de 49 passos respecte d'on va ser escrita, es plega per octaves senceres perquè no se'n vagi a un registre extrem."
+    "en": "Chains progressions together: the next progression you play starts on the pitch the previous one's last shape ended on, instead of restarting from the same fixed reference. Replaying the same progression keeps its current position. If the chained shift would drop (or raise) it more than 18 steps (about half an octave) from where it was written, it's folded back by whole octaves so it can't drift into an extreme register.",
+    "es": "Encadena las progresiones: la siguiente progresión que toques empieza en la altura en la que terminó la última shape de la anterior, en vez de reiniciar desde la misma referencia fija. Repetir la misma progresión mantiene su posición actual. Si el desplazamiento la bajara (o subiera) más de 18 pasos (aproximadamente media octava) respecto a donde fue escrita, se pliega por octavas enteras para que no se vaya a un registro extremo.",
+    "ca": "Encadena les progressions: la següent progressió que toquis comença a l'altura on va acabar l'última shape de l'anterior, en comptes de reiniciar des de la mateixa referència fixa. Repetir la mateixa progressió manté la seva posició actual. Si el desplaçament la baixés (o pugés) més de 18 passos (aproximadament mitja octava) respecte d'on va ser escrita, es plega per octaves senceres perquè no se'n vagi a un registre extrem."
   },
   "interp.connectprogs": {
     "en": "Connect progressions",
@@ -8068,6 +8128,17 @@ function explorerHexClick(raw, e, q, r){
 function capBuilderProgressionHeight(){
   const el = document.getElementById('builderProgressionTop');
   if(!el) return;
+  // On a phone there is no room to split the screen between a map and a fixed-height panel with
+  // its own inner scroller. Let the panel be its natural height and let the whole page scroll --
+  // one scrollbar, everything reachable.
+  if(isMobileMode()){
+    el.style.maxHeight = 'none'; el.style.overflowY = 'visible';
+    el.style.display = ''; el.style.flexDirection = ''; el.style.minHeight = '';
+    const list = document.getElementById('builderChordsList');
+    if(list){ list.style.flex=''; list.style.minHeight=''; list.style.overflowY='visible'; list.style.maxHeight='none'; }
+    Array.from(el.children).forEach(ch=>{ ch.style.flex=''; });
+    return;
+  }
   const apply = ()=>{
     if(!document.body.contains(el)) return;
     const top = el.getBoundingClientRect().top;
@@ -8104,6 +8175,9 @@ function fitMapResultsPanel(){
   try{
     const el = document.getElementById('mapResultsPanel');
     if(!el) return;
+    if(isMobileMode()){ // full height, page scrolls -- see capBuilderProgressionHeight
+      el.style.marginTop = '0px'; el.style.maxHeight = 'none'; return;
+    }
     const BASE_PULL = -98, TOP_MARGIN = 10, BOTTOM_MARGIN = 12;
     const apply = ()=>{
       if(!document.body.contains(el)) return;
@@ -8125,6 +8199,7 @@ window.addEventListener('resize', ()=>{ if(state.tab==='map') fitMapResultsPanel
 function capExactMatchCardHeight(){
   const el = document.getElementById('exactMatchCardWrap');
   if(!el) return;
+  if(isMobileMode()){ el.style.maxHeight = 'none'; return; }
   const apply = ()=>{
     const top = el.getBoundingClientRect().top;
     const avail = Math.max(120, window.innerHeight - top - 16);
@@ -8917,6 +8992,16 @@ window.addEventListener('resize', fitWideDropdowns);
 // button or other bit of content that has genuinely fallen out of reach and needs scrolling to
 // reach. Re-checked after every render and on resize, since content height changes constantly.
 function updateScrollLock(){
+  // Never on a phone. This feature hides the scrollbar when everything fits, which is a nicety on
+  // a desktop and a trap on mobile: the height-capping helpers below shrink panels until the page
+  // "fits", this then concludes no scrolling is needed and sets overflow:hidden -- leaving the
+  // clipped content permanently unreachable. window.innerHeight also changes under you as the
+  // mobile URL bar hides, so the measurement it relies on isn't even stable.
+  if(isMobileMode()){
+    document.documentElement.classList.remove('scroll-locked');
+    document.body.classList.remove('scroll-locked');
+    return;
+  }
   const check = ()=>{
     if(Date.now() < suppressScrollLockUntil) return;
     // body has `min-height:100vh` plus its own top/bottom padding purely so the background
@@ -10704,6 +10789,17 @@ function renderSpecies(content){
     mountChordCardHex(focusSp, 'sp', {isFocusMain:true});
     [...includes, ...partOf].forEach(sp=>mountChordCardHex(sp, 'sp'));
     document.querySelectorAll('.focus-col-scroll-wrap .focus-col, .focus-main-wrap .focus-col').forEach(updateFocusColArrow);
+    // On a phone the three columns become one tall strip with the shape's own card in the middle.
+    // Land on that card rather than at the top of the "includes" list above it.
+    if(isMobileMode()){
+      const go = ()=>{
+        const el = document.querySelector('.focus-main-wrap');
+        if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'auto', block:'center' });
+      };
+      if(typeof requestAnimationFrame!=='undefined') requestAnimationFrame(()=>requestAnimationFrame(go)); else setTimeout(go,0);
+      // The minimaps mount after this and change the column heights, which shifts the card again.
+      setTimeout(go, 180);
+    }
     return;
   }
   const q = state.chordsFilterText.trim().toLowerCase();
@@ -11697,13 +11793,16 @@ function applyCursorHue(){
   const styleEl = document.getElementById('cursorHueStyle');
   if(!styleEl) return;
   const { def, hover } = CURSOR_HUES[cursorHueIdx];
-  const hoverUrl = cursorSvgUrl(hover, 34, 13, 2.8);
-  const defUrl = cursorSvgUrl(def, 30, 10, 2.4);
+  // Must stay <= 32x32: see the note on the static fallback rule in the stylesheet. The hover
+  // cursor keeps its larger look by filling more of a legal canvas (r14 of 32) rather than by
+  // using an oversized one, which browsers throw away.
+  const hoverUrl = cursorSvgUrl(hover, 32, 14, 2.8);
+  const defUrl = cursorSvgUrl(def, 26, 10, 2.4);
   styleEl.textContent = `
     button, a[href], input, textarea, select, label, [onclick], [role="button"], .btn, .species-card, .prog-card, .match-item, .chord-chip, .mini-chip, .tag, .prime-btn, .step-num, .occ-group-head, .help-continue-btn, .ji-hoverable{
-      cursor:${hoverUrl} 17 17, pointer !important;
+      cursor:${hoverUrl} 16 16, pointer !important;
     }
-    html,body{ cursor:${defUrl} 15 15, auto !important; }
+    html,body{ cursor:${defUrl} 13 13, auto !important; }
   `;
 }
 function startCursorColorCycle(){
